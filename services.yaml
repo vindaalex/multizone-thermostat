@@ -1,0 +1,93 @@
+reload:
+  description: Reload all multizone_thermostat entities.
+
+#proportional
+set_min_diff:
+  description: Set a new minimum difference
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    min_diff:
+      description: minimum difference value of proportional controller
+      example: 2
+
+
+# Describes the format for available PIDThermostat services
+# PID
+set_pid:
+  description: Set a new Kp value
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    control_mode:
+      description: control mode
+      example: pid or valve
+    kp:
+      description: kp value of PID controller
+      example: 2
+    ki:
+      description: kp value of PID controller
+      example: 2
+    kd:
+      description: kp value of PID controller
+      example: 2
+    update:
+      description: force values to controller
+      example: true (default) or false
+
+
+set_integral:
+  description: Set a new integral value
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    control_mode:
+      description: control mode
+      example: pid or valve
+    integral:
+      description: integral value of PID controller
+      example: 5
+
+#VALVE_PID
+set_goal:
+  description: Set a new goal value
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    goal:
+      description: goal value of valve mode controller
+      example: 60
+
+#weather mode
+set_ka_kb:
+  description: Set a new KA value
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    ka:
+      description: KA value of weather mode controller
+      example: 8
+    kb:
+      description: KB value of weather mode controller
+      example: 9
+

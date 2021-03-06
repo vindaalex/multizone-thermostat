@@ -1,0 +1,8 @@
+{
+  "domain": "multizone_thermostat",
+  "name": "MultiZone thermostat",
+  "documentation": "nowhere",
+  "requirements": ["numpy==1.20.0", "filterpy==1.4.4"],
+  "dependencies": ["sensor", "switch"],
+  "codeowners": ["a.."]
+}
