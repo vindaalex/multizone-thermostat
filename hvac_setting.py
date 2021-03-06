@@ -412,7 +412,7 @@ class HVAC_Setting:
     def get_pwm_mode(self):
         """return pwm interval time"""
         if self.is_hvac_proportional_mode:
-            return self._proportional[CONF_PWM]
+            return self._proportional[CONF_PWM].seconds
         else:
             return None
 

@@ -260,12 +260,7 @@ def check_presets_in_both_modes(*keys: str) -> Callable:
     return validate
 
 
-PID_control_options = {
-    vol.Required(CONF_KP): vol.Coerce(float),
-    vol.Required(CONF_KI): vol.Coerce(float),
-    vol.Required(CONF_KD): vol.Coerce(float),
-    vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
-    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
+PID_autotune = {
     vol.Optional(CONF_AUTOTUNE, default=DEFAULT_AUTOTUNE): cv.string,
     vol.Optional(
         CONF_AUTOTUNE_CONTROL_TYPE,
@@ -279,6 +274,24 @@ PID_control_options = {
         default=DEFAULT_STEP_SIZE,
     ): vol.Coerce(float),
     vol.Optional(CONF_NOISEBAND, default=DEFAULT_NOISEBAND): vol.Coerce(float),
+}
+
+PID_control_options_opt = {
+    vol.Optional(CONF_KP): vol.Coerce(float),
+    vol.Optional(CONF_KI): vol.Coerce(float),
+    vol.Optional(CONF_KD): vol.Coerce(float),
+    vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
+    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
+    **PID_autotune,
+}
+
+PID_control_options_req = {
+    vol.Required(CONF_KP): vol.Coerce(float),
+    vol.Required(CONF_KI): vol.Coerce(float),
+    vol.Required(CONF_KD): vol.Coerce(float),
+    vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
+    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
+    **PID_autotune,
 }
 
 hvac_control_options = {
@@ -326,7 +339,7 @@ hvac_control_options = {
                 cv.time_period, cv.positive_timedelta
             ),
             # PID mode
-            vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options),
+            vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options_req),
             # weather compensating mode"
             vol.Optional(CONF_WC_MODE): vol.Schema(
                 {
@@ -340,8 +353,8 @@ hvac_control_options = {
                 {
                     vol.Required(CONF_SATELITES): cv.ensure_list,
                     vol.Optional(CONF_GOAL): vol.Coerce(float),
+                    **PID_control_options_opt,
                 },
-                PID_control_options,
             ),
         }
     ),
@@ -1203,8 +1216,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.time_changed = time.time()
             elif self.control_output > self._hvac_on.min_diff:
                 await self._async_pwm_switch(
-                    pwm.seconds * self.control_output / difference,
-                    pwm.seconds * (difference - self.control_output) / difference,
+                    pwm * self.control_output / difference,
+                    pwm * (difference - self.control_output) / difference,
                     time.time() - self.time_changed,
                 )
             else:
@@ -1348,7 +1361,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return self.hass.states.is_state(entity_id, STATE_ON)
         else:
             sensor_state = self.hass.states.get(entity_id)
-            if sensor_state and sensor_state.state > 0:
+            if not sensor_state:
+                return False
+
+            if float(sensor_state.state) > 0:
                 return True
             else:
                 return False

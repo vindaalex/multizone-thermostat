@@ -219,7 +219,6 @@ climate:
     sensor_stale_duration:
       minutes: 20
     restore_from_old_state: True
-    restore_parameters: False
 
     heat:
       entity_id: switch.fake_heater_switch
@@ -249,8 +248,6 @@ climate:
     precision: 0.5
     sensor_stale_duration:
       minutes: 20
-    restore_from_old_state: False
-    restore_parameters: False
 
     heat:
       entity_id: switch.fake_heater_switch
@@ -283,84 +280,168 @@ climate:
 proportional mode
 
 ```
-climate:
   - platform: multizone_thermostat
-    name: satelite1
-    sensor: sensor.fake_sensor_1
+    name: PID_example
+    sensor: sensor.temp_sl1
     initial_hvac_mode: "off"
     initial_preset_mode: "none"
-    room_area: 100
-    precision: 0.5
+    room_area: 20
+    precision: 0.1
+    heat:
+      entity_id: switch.valve1
+      min_temp: 15
+      max_temp: 24
+      initial_target_temp: 18
+      away_temp: 16
+      proportional_mode:
+        control_interval:
+          seconds: 60
+        difference: 100
+        minimal_diff: 5
+        pwm:
+          seconds: 180
+        PID_mode:
+          kp: 30
+          ki: 0.003
+          kd: -24000
     sensor_stale_duration:
-      minutes: 20
+      hours: 12
     restore_from_old_state: True
     restore_parameters: False
     restore_integral: True
-
-    heat:
-      entity_id: switch.fake_heater_switch
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 19
-      away_temp: 12
-      proportional_mode:
-        control_interval:
-          minutes: 1
-        difference: 100
-        min_diff: 5
-        pwm:
-          minutes: 10
-        PID_mode:
-          kp: 5
-          ki: 0.001
-          kd: 100
-          derative_avg:
-            minutes: 20
 
 ```
 
 Linear mode (weather compensating)
 
 ```
+  - platform: multizone_thermostat
+    name: weather_example
+    sensor_out: sensor.br_temperature
+    initial_hvac_mode: "off"
+    initial_preset_mode: "none"
+    precision: 0.1
+    heat:
+      entity_id: switch.switch1
+      initial_target_temp: 20
+      away_temp: 16
       proportional_mode:
         control_interval:
-          minutes: 1
+          seconds: 60
         difference: 100
+        minimal_diff: 5
         pwm:
-          minutes: 10
+          seconds: 600
         weather_mode:
-          sensor_out: sensor.fake_sensor_out
-          ka: 1
-          kb: -5
+          ka: 2
+          kb: -6
+
+    sensor_stale_duration:
+      hours: 12
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
 ```
 
 master - satelite mode
 
 ```
-  - platform: generic_thermostat
-    name: main_valve
+
+  - platform: multizone_thermostat
+    name: master_example
+    sensor_out: sensor.br_temperature
     initial_hvac_mode: "off"
     initial_preset_mode: "none"
-
-    precision: 0.5
-
+    precision: 0.1
     heat:
-      entity_id: switch.fake_heater_master
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 19
-      away_temp: 12
+      entity_id: switch.mainvalve
+      initial_target_temp: 20
+      away_temp: 16
       proportional_mode:
         control_interval:
-          minutes: 1
+          seconds: 60
         difference: 100
+        minimal_diff: 5
         pwm:
-          minutes: 10
+          seconds: 600
+        PID_mode:
+          kp: 3
+          ki: 0
+          kd: 0
         weather_mode:
-          sensor_out: sensor.fake_sensor_out
-          ka: 1
-          kb: -5
+          ka: 2
+          kb: -6
         MASTER_mode:
-          satelites: [livingroom,]
+          satelites: [living, sleep1]
+          goal: 80
+          kp: -0.15
+          ki: 0
+          kd: 0
+    sensor_stale_duration:
+      hours: 12
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+  - platform: multizone_thermostat
+    name: living
+    sensor: sensor.temp_living
+    initial_hvac_mode: "off"
+    initial_preset_mode: "none"
+    room_area: 60
+    precision: 0.1
+    heat:
+      entity_id: switch.valve_living
+      min_temp: 15
+      max_temp: 24
+      initial_target_temp: 20
+      away_temp: 16
+      proportional_mode:
+        control_interval:
+          seconds: 60
+        difference: 100
+        minimal_diff: 5
+        pwm:
+          seconds: 180
+        PID_mode:
+          kp: 30
+          ki: 0.005
+          kd: -24000
+    sensor_stale_duration:
+      hours: 12
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+
+  - platform: multizone_thermostat
+    name: sleep1
+    sensor: sensor.temp_sl1
+    initial_hvac_mode: "off"
+    initial_preset_mode: "none"
+    room_area: 20
+    precision: 0.1
+    heat:
+      entity_id: switch.valve_sleep1
+      min_temp: 15
+      max_temp: 24
+      initial_target_temp: 18
+      away_temp: 16
+      proportional_mode:
+        control_interval:
+          seconds: 60
+        difference: 100
+        minimal_diff: 5
+        pwm:
+          seconds: 180
+        PID_mode:
+          kp: 30
+          ki: 0.003
+          kd: -24000
+    sensor_stale_duration:
+      hours: 12
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
 ```
 
