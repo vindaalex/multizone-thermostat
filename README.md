@@ -32,6 +32,11 @@ Two control modes are included to control the thermostat:
 proportional controller will be called periodically.
 If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value. Else, it will turn off and on the heater proportionally.
 
+#### sensor filter:
+An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
+The filter intesity is defined by a factor between 0 to 5 (integer).
+0 = no filter
+5 = max smoothing
 
 #### PID controller:
 https://en.wikipedia.org/wiki/PID_controller
@@ -111,6 +116,7 @@ To save the parameters read the climate entity attributes, and copy the values t
 * unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
 * room_area (Optional): ratio (room area) for averiging thermostat when required when operating as satelite. Default is 0
 * sensor_stale_duration (Optional): safety to turn switches of when sensor has not updated wthin specified period. Default no check
+* passive_switch_check (Optional): check at midnight if switch hasn't been operated for a secified time (passive_switch_duration) to avoid stuck/jammed valve. Default is False.
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. (setpoints, KP,KI,PD values, modes). Default is False
 * restore_parameters (Optional): specify if previous controller parameters need to be restored. Default is false
 * restore_integral (Optional): If PID integral needs to be restored. Avoid long restoration times. Default is false
@@ -124,7 +130,7 @@ with the data (as sub)::
 * max_temp (Optional): Set maximum set point available (default: 24(heat) or 35 (cool)).
 * initial_target_temp (Optional): Set initial target temperature. Failure to set this variable will result in target temperature being set to null on startup.(default: 19(heat) or 28 (cool)).
 * away_temp (Optional): Set the temperature used by “away_mode”. If this is not specified, away_mode feature will not get activated.
-
+* passive_swith_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve.
 further define one of: 'on_off_mode' or 'proportional_mode'
 
 #### on_off mode:
@@ -143,6 +149,7 @@ with the data (as sub):
 * minimal_diff (Optional): Set the minimal difference before activating swtich. To avoid very short off-on-off changes. Default is off
 * difference (Optional): Set analog output offset to 0 (default 100). Example: If it's 500 the output Value can be everything between 0 and 500.
 * pwm (Optional): Set period time for pwm signal in seconds. If it's not set, pwm is sending proportional value to switch. Default = 0
+* sensor_filter(Optional): use unscented kalman filter to smoothen the temperature sensor readings. Especially usefull in case of irregular sensor updates such as battery operated devices (for instance zigbee sensor). Default = 0 (off) (see section 'sensor filter' for more details)
 
 controller modes: (PID, Linear, Master)
 
@@ -445,3 +452,23 @@ master - satelite mode
     restore_integral: True
 ```
 
+
+examples to use attribute data
+
+get valve position
+```
+  - platform: template
+    sensors:
+      valve_position:
+        friendly_name: 'main valveposition'
+        value_template: "{{ state_attr('climate.mainswitch', 'hvac_def')['heat']['valve_pos'] | float}}"
+        unit_of_measurement: "%"
+
+get (filtered) room temperature
+
+  - platform: template
+    sensors:
+      temperature_room1:
+        friendly_name: 'temperature room1'
+        value_template: "{{ state_attr('climate.room1', 'current_temp_filt') | float}}"
+        unit_of_measurement: "°C"

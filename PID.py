@@ -92,6 +92,10 @@ class PIDController(object):
                 return self._last_output
             time_diff = now - self._last_calc_timestamp
 
+        if type(input_val) != type(self._last_input):
+            # reset previous result in case filter mode changed the output
+            self._last_input = input_val
+
         if isinstance(input_val, (list, tuple, np.ndarray)):
             current_temp, self._differential = input_val
             self._LOGGER.debug(

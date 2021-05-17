@@ -91,3 +91,17 @@ set_ka_kb:
       description: KB value of weather mode controller
       example: 9
 
+#filter mode
+set_filter_mode:
+  description: Set a new filter variable
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    mode:
+      description: mode of filter (integral)
+      example: 5
+
