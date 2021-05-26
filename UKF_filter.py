@@ -41,15 +41,19 @@ class filterr:
     def set_Q_R(self, dt=None):
         """ process noise """
         # default Q .002 R 4
+        if dt:
+            tmp_interval = dt
+        else:
+            tmp_interval = self._interval
         self._kf_temp.Q = Q_discrete_white_noise(
             dim=2,
-            dt=self._interval,
-            var=((0.01 / self.filter_mode) / (self._interval ** 1.2)) ** 2,
+            dt=tmp_interval,
+            var=((0.01 / self.filter_mode) / (tmp_interval ** 1.2)) ** 2,
         )
 
         """measurement noise std**2 """
         self._kf_temp.R = np.diag(
-            [(self.filter_mode * (1800 / self._interval) ** 0.8) ** 2]
+            [(self.filter_mode * (1800 / tmp_interval) ** 0.8) ** 2]
         )
 
     @property
@@ -66,11 +70,10 @@ class filterr:
     def filter_mode(self):
         return self._mode
 
-    @filter_mode.setter
-    def filter_mode(self, val):
+    def set_filter_mode(self, val, dt=None):
         if val != self._mode:
             self._mode = val
-            self.set_Q_R()
+            self.set_Q_R(dt=dt)
 
 
 def fx(x, dt):

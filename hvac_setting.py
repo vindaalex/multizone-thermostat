@@ -105,6 +105,8 @@ class HVAC_Setting:
         self._wc = None
         self._master = None
 
+        self._stuck_loop = False
+
         self._on_off = self._hvac_settings.get(CONF_ON_OFF_MODE)
         self._proportional = self._hvac_settings.get(CONF_PROPORTIONAL_MODE)
 
@@ -410,6 +412,14 @@ class HVAC_Setting:
             return None
 
     @property
+    def stuck_loop(self):
+        return self._stuck_loop
+
+    @stuck_loop.setter
+    def stuck_loop(self, val):
+        self._stuck_loop = val
+
+    @property
     def get_target_temp_limits(self):
         """get range of allowed setpoint range"""
         return [
@@ -631,12 +641,19 @@ class HVAC_Setting:
     @property
     def filter_mode(self):
         """Return the UKF mode."""
-        return self._proportional[CONF_SENSOR_FILTER]
+        if self.is_hvac_proportional_mode:
+            return self._proportional[CONF_SENSOR_FILTER]
+        else:
+            return 0
 
     @filter_mode.setter
     def filter_mode(self, mode):
         """Set the UKF mode."""
-        self._proportional[CONF_SENSOR_FILTER] = mode
+        if self.is_hvac_proportional_mode:
+            self._proportional[CONF_SENSOR_FILTER] = mode
+        else:
+            self._LOGGER.error("not filter supported for on-off control")
+            return
 
     def set_pid_param(self, hvac_data, kp=None, ki=None, kd=None, update=False):
         """Set PID parameters."""
