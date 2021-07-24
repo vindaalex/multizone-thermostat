@@ -797,9 +797,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "hvac_def": tmp_dict,
         }
 
-    @property
-    def unique_id(self):
-        return self._unique_id
+
 
     async def async_set_min_diff(self, hvac_mode, min_diff):
         """Set new PID Controller min pwm value."""
@@ -1260,11 +1258,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._LOGGER.debug("kp update temp %s", self._kf_temp.get_temp)
                         self._current_temperature = self._kf_temp.get_temp
 
-                        if self._hvac_on and not self._hvac_on.is_master_mode:
-                            self._hvac_on.current_state = [
-                                self._kf_temp.get_temp,
-                                self._kf_temp.get_vel,
-                            ]
+                        if self._hvac_on: 
+                            if not self._hvac_on.is_master_mode:
+                                self._hvac_on.current_state = [
+                                    self._kf_temp.get_temp,
+                                    self._kf_temp.get_vel,
+                                ]
 
             self.async_write_ha_state()
         except ValueError as ex:
