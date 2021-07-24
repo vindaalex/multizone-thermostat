@@ -797,6 +797,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "hvac_def": tmp_dict,
         }
 
+    @property
+    def unique_id(self):
+        return self._unique_id
+
     async def async_set_min_diff(self, hvac_mode, min_diff):
         """Set new PID Controller min pwm value."""
         self._LOGGER.warning(
@@ -850,9 +854,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         )
                     else:
                         self._LOGGER.warning(
-                            "new sensor filter mode but no temperature reading for %s to: %s",
-                            hvac_mode,
+                            "new sensor filter mode (%s) but no temperature reading for %s",
                             mode,
+                            hvac_mode,
                         )
                         return
                 # update active filter
