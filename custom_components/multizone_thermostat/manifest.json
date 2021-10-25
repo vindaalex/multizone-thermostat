@@ -2,8 +2,12 @@
   "domain": "multizone_thermostat",
   "name": "MultiZone thermostat",
   "documentation": ["https://github.com/vindaalex/multizone_thermostat","https://community.home-assistant.io/t/multizone-thermostat-incl-various-control-options/308898"],
-  "requirements": ["numpy==1.20.0", "filterpy==1.4.4"],
+  "requirements": [
+    "numpy==1.21.2",
+    "git+git://github.com//vindaalex/filterpy.git@fix_requirements#egg=filterpy"
+    ],
   "dependencies": ["sensor", "switch"],
   "codeowners": ["vindaalex"],
   "version": "0.1"
 }
+https://github.com/vindaalex/filterpy.git
