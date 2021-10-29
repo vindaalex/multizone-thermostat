@@ -2,7 +2,7 @@ import numpy as np
 import time
 from .UKF_filter.UKF import UnscentedKalmanFilter
 from .UKF_filter.discretization import Q_discrete_white_noise
-from .UKF_filter.sigma_points import JulierSigmaPoints, MerweScaledSigmaPoints
+from .UKF_filter.sigma_points import  MerweScaledSigmaPoints
 
 class filterr:
     def __init__(self, current_temp, dt, filter_mode):
@@ -10,7 +10,6 @@ class filterr:
         self._interval = 0
         self._last_update = time.time()
         self._mode = filter_mode
-        # sigmas = JulierSigmaPoints(n=2, kappa=0)
         sigmas = MerweScaledSigmaPoints(n=2, alpha=0.001, beta=2, kappa=0)
         self._kf_temp = UnscentedKalmanFilter(
             dim_x=2, dim_z=1, dt=dt, hx=hx, fx=fx, points=sigmas
