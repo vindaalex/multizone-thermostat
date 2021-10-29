@@ -737,7 +737,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
                 if "hvac_def" in old_state.attributes:
                     try:
-                        self._LOGGER.debug("restore old controller settings")
+                        self._LOGGER.info("restore old controller settings")
                         old_def = old_state.attributes["hvac_def"]
                         for key, data in old_def.items():
                             if key in list(self._hvac_def.keys()):
@@ -799,7 +799,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_min_diff(self, hvac_mode, min_diff):
         """Set new PID Controller min pwm value."""
-        self._LOGGER.warning(
+        self._LOGGER.info(
             "new minimum PID difference for %s to: %s", hvac_mode, min_diff
         )
         self._hvac_def[hvac_mode].min_diff(min_diff)
@@ -809,7 +809,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, hvac_mode, control_mode, kp=None, ki=None, kd=None, update=False
     ):
         """Set new PID Controller Kp,Ki,Kd value."""
-        self._LOGGER.warning(
+        self._LOGGER.info(
             "new PID for %s %s to: %s;%s;%s", hvac_mode, control_mode, kp, ki, kd
         )
         self._hvac_def[hvac_mode].set_pid_param(
@@ -830,7 +830,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
         else:
             mode = self._hvac_on.filter_mode
-            self._LOGGER.debug("new sensor filter mode for %s to: %s", hvac_mode, mode)
+            self._LOGGER.info("new sensor filter mode for %s to: %s", hvac_mode, mode)
 
         if hvac_mode != self._hvac_mode:
             self._hvac_def[hvac_mode].current_state = None
@@ -849,7 +849,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                             self._hvac_on.filter_mode,
                         )
                     else:
-                        self._LOGGER.warning(
+                        self._LOGGER.info(
                             "new sensor filter mode (%s) but no temperature reading for %s",
                             mode,
                             hvac_mode,
@@ -865,7 +865,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_integral(self, hvac_mode, control_mode, integral):
         """Set new PID Controller integral value."""
-        self._LOGGER.warning(
+        self._LOGGER.info(
             "new PID integral for %s %s to: %s", hvac_mode, control_mode, integral
         )
         self._hvac_def[hvac_mode].integral(control_mode, integral)
@@ -873,13 +873,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_goal(self, hvac_mode, goal):
         """Set new valve Controller goal value."""
-        self._LOGGER.warning("new PID valve goal for %s to: %s", hvac_mode, goal)
+        self._LOGGER.info("new PID valve goal for %s to: %s", hvac_mode, goal)
         self._hvac_def[hvac_mode].goal(goal)
         self.async_write_ha_state()
 
     async def async_set_ka_kb(self, hvac_mode, ka=None, kb=None):
         """Set new weather Controller ka,kb value."""
-        self._LOGGER.warning("new weatehr ka,kb %s to: %s;%s", hvac_mode, ka, kb)
+        self._LOGGER.info("new weatehr ka,kb %s to: %s;%s", hvac_mode, ka, kb)
         self._hvac_def[hvac_mode].set_ka_kb(ka=ka, kb=kb)
         self.async_write_ha_state()
 
@@ -891,7 +891,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if hvac_mode not in self.hvac_modes:
             self._LOGGER.error("Unrecognized hvac mode: %s", hvac_mode)
             return
-        self._LOGGER.debug("HVAC mode changed to %s", hvac_mode)
+        self._LOGGER.info("HVAC mode changed to %s", hvac_mode)
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
 
@@ -915,7 +915,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_switch_turn_off(hvac_mode=key)
 
         if self._hvac_mode == HVAC_MODE_OFF:
-            self._LOGGER.debug("HVAC mode is OFF. Turn the devices OFF and exit")
+            self._LOGGER.info("HVAC mode is OFF. Turn the devices OFF and exit")
             self._hvac_on = None
             self.async_write_ha_state()
             return
@@ -1120,7 +1120,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     )
                 )
                 self._LOGGER.warning(
-                    "Sensor %s is stalled, call the emergency stop" % (entity_id)
+                    "Sensor %s has stalled, call the emergency stop" % (entity_id)
                 )
                 await self._async_activate_emergency_stop()
 
@@ -1555,7 +1555,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_activate_emergency_stop(self):
         """Send an emergency OFF order to HVAC switch."""
-        self._LOGGER.debug("Emergency OFF order send")
+        self._LOGGER.warning("Emergency OFF order send")
         self._emergency_stop = True
         await self._async_switch_turn_off(force=True)
 
