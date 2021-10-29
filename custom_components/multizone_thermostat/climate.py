@@ -1641,9 +1641,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not self._hvac_mode == HVAC_MODE_OFF:
                 if self.preset_mode == PRESET_AWAY:
                     return self._hvac_on.get_away_temp
-                if self._hvac_on.is_master_mode:
+                elif self._hvac_on.is_master_mode:
                     return self._hvac_on._master_setpoint
-                if self._hvac_on.min_target_temp:
+                elif self._hvac_on.min_target_temp:
                     return self._hvac_on.min_target_temp
 
             # Get default temp from super class
@@ -1658,9 +1658,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._hvac_mode != HVAC_MODE_OFF:
                 if self.preset_mode == PRESET_AWAY:
                     return self._hvac_on.get_away_temp
-                if self._hvac_on.is_master_mode:
+                elif self._hvac_on.is_master_mode:
                     return self._hvac_on._master_setpoint
-                if self._hvac_on.max_target_temp:
+                elif self._hvac_on.max_target_temp:
                     return self._hvac_on.max_target_temp
 
         # Get default temp from super class
