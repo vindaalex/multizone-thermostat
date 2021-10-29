@@ -1,7 +1,6 @@
 from math import sqrt
 import numpy as np
 
-
 def cholesky(A, upper=True):
     """Performs a Cholesky decomposition of A, which must 
     be a symmetric and positive definite matrix."""
