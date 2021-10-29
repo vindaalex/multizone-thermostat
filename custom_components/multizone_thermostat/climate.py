@@ -70,7 +70,7 @@ from homeassistant.util import slugify
 
 from . import DOMAIN, PLATFORMS
 from . import hvac_setting
-from . import UKF_filter
+from . import UKF_config
 
 # DEFAULT_NAME = "MultiZone Thermostat"
 DEFAULT_TARGET_TEMP_HEAT = 19.0
@@ -843,7 +843,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             else:
                 if not self._kf_temp:
                     if self._current_temperature:
-                        self._kf_temp = UKF_filter.filterr(
+                        self._kf_temp = UKF_config.filterr(
                             self._current_temperature,
                             self._hvac_on.get_operate_cycle_time.seconds,
                             self._hvac_on.filter_mode,
