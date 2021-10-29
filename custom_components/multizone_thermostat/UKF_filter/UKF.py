@@ -23,22 +23,21 @@ from math import log, exp, sqrt
 import sys
 import numpy as np
 from numpy import eye, zeros, dot, isscalar, outer
-# from scipy.linalg import cholesky
-from unscented_transform import unscented_transform
-from helpers import pretty_str
-from cholesky import cholesky
+from .unscented_transform import unscented_transform
+from .helpers import pretty_str
+from .cholesky import cholesky
 
 
 def logpdf(x, mean, cov):
     """http://gregorygundersen.com/blog/2020/12/12/group-multivariate-normal-pdf/"""
     vals, vecs = np.linalg.eigh(cov)
-    logdet     = np.sum(np.log(vals))
-    valsinv    = 1./vals
-    U          = vecs * np.sqrt(valsinv)
-    dim        = len(vals)
-    dev        = x - mean
-    maha       = np.square(np.dot(dev, U)).sum()
-    log2pi     = np.log(2 * np.pi)
+    logdet = np.sum(np.log(vals))
+    valsinv = 1./vals
+    U = vecs * np.sqrt(valsinv)
+    dim = len(vals)
+    dev = x - mean
+    maha = np.square(np.dot(dev, U)).sum()
+    log2pi = np.log(2 * np.pi)
     return -0.5 * (dim * log2pi + maha + logdet)
 
 

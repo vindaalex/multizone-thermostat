@@ -18,8 +18,8 @@ for more information.
 from __future__ import division
 
 import numpy as np
-from cholesky import cholesky
-from helpers import pretty_str
+from .cholesky import cholesky
+from .helpers import pretty_str
 
 class MerweScaledSigmaPoints(object):
 
