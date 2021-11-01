@@ -904,6 +904,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         self._LOGGER.debug("Sensor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            self._LOGGER.warning("Sensor temperature {} invalid {}", format(new_state.name, new_state.state))
             await self._async_activate_emergency_stop()
             return
 
@@ -921,6 +922,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         self._LOGGER.debug("Sensor outdoor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            self._LOGGER.warning("Sensor temperature {} invalid {}", format(new_state.name, new_state.state))
             await self._async_activate_emergency_stop()
             return
 
@@ -1080,8 +1082,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_update_current_temp(self, current_temp=None):
         """Update thermostat, optionally with latest state from sensor."""
-        try:
+        if self._emergency_stop:
+            self._LOGGER.info("Recover from emergency mode, new temperature updated to %s", current_temp)
             self._emergency_stop = False
+        try:
             if current_temp:
                 self._LOGGER.debug("Current temperature updated to %s", current_temp)
                 # store local in case current hvac mode is off
@@ -1124,9 +1128,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     def _update_outdoor_temperature(self, current_temp=None):
         """Update thermostat with latest state from outdoor sensor."""
-        try:
+        if self._emergency_stop:
+            self._LOGGER.info("Recover from emergency mode, new outdoor temperature updated to %s", current_temp)
             self._emergency_stop = False
-
+        try:
             if current_temp:
                 self._LOGGER.debug(
                     "Current outdoor temperature updated to %s", current_temp
