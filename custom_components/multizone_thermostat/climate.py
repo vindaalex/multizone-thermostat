@@ -35,9 +35,11 @@ from . import hvac_setting
 from . import UKF_config
 
 from .const import *
+
 # from defaults_thermostat import *
 # from defaults_controller_input import *
 # from defaults_controller import *
+
 
 def validate_initial_control_mode(*keys: str) -> Callable:
     """If an initial preset mode has been set, check if the values are set in both modes."""
@@ -904,8 +906,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         self._LOGGER.debug("Sensor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            self._LOGGER.warning("Sensor temperature {} invalid {}", format(new_state.name, new_state.state))
-            await self._async_activate_emergency_stop()
+            self._LOGGER.warning(
+                "Sensor temperature {} invalid: {}".format(
+                    new_state.name, new_state.state
+                )
+            )
+            await self._async_activate_emergency_stop(new_state.name)
             return
 
         await self._async_update_current_temp(new_state.state)
@@ -922,8 +928,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         self._LOGGER.debug("Sensor outdoor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            self._LOGGER.warning("Sensor temperature {} invalid {}", format(new_state.name, new_state.state))
-            await self._async_activate_emergency_stop()
+            self._LOGGER.warning(
+                "Sensor temperature {} invalid {}",
+                format(new_state.name, new_state.state),
+            )
+            await self._async_activate_emergency_stop(new_state.name)
             return
 
         self._update_outdoor_temperature(new_state.state)
@@ -979,7 +988,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._LOGGER.warning(
                     "Sensor %s has stalled, call the emergency stop" % (entity_id)
                 )
-                await self._async_activate_emergency_stop()
+                await self._async_activate_emergency_stop(entity_id)
 
             return
 
@@ -1083,7 +1092,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def _async_update_current_temp(self, current_temp=None):
         """Update thermostat, optionally with latest state from sensor."""
         if self._emergency_stop:
-            self._LOGGER.info("Recover from emergency mode, new temperature updated to %s", current_temp)
+            self._LOGGER.info(
+                "Recover from emergency mode, new temperature updated to %s",
+                current_temp,
+            )
             self._emergency_stop = False
         try:
             if current_temp:
@@ -1129,7 +1141,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _update_outdoor_temperature(self, current_temp=None):
         """Update thermostat with latest state from outdoor sensor."""
         if self._emergency_stop:
-            self._LOGGER.info("Recover from emergency mode, new outdoor temperature updated to %s", current_temp)
+            self._LOGGER.info(
+                "Recover from emergency mode, new outdoor temperature updated to %s",
+                current_temp,
+            )
             self._emergency_stop = False
         try:
             if current_temp:
@@ -1151,9 +1166,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._emergency_stop:
                 if keepalive:
                     self._LOGGER.debug(
-                        "Keepalive in emergency stop = resend emergency stop"
+                        "Emergency stop active, exit routine. Re-send emergency stop"
                     )
-                    await self._async_activate_emergency_stop()
+                    await self._async_activate_emergency_stop("operate")
                 else:
                     self._LOGGER.warning("Cannot operate in emergency stop state")
                 return
@@ -1413,9 +1428,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         self._hvac_def[hvac_mode].stuck_loop = False
 
-    async def _async_activate_emergency_stop(self):
+    async def _async_activate_emergency_stop(self, source):
         """Send an emergency OFF order to HVAC switch."""
-        self._LOGGER.warning("Emergency OFF order send")
+        self._LOGGER.warning("Emergency OFF order send due to:", source)
         self._emergency_stop = True
         await self._async_switch_turn_off(force=True)
 
@@ -1446,7 +1461,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if _hvac_on:
             entity_id = _hvac_on.get_hvac_switch
         else:
-            entity_id = None            
+            entity_id = None
 
         if not entity_id:
             self._LOGGER.debug("No switch defined for {}".format(hvac_mode))
