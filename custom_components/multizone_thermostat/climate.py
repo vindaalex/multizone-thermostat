@@ -12,9 +12,9 @@ For more details about this platform, please refer to the README
 import asyncio
 import logging
 import datetime
+from datetime import timedelta
 from typing import Callable, Dict
 import time
-
 import voluptuous as vol
 
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
@@ -29,6 +29,7 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
+import homeassistant.util.dt as dt_util
 
 from . import DOMAIN, PLATFORMS
 from . import hvac_setting
@@ -532,12 +533,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # Add checker to track the hvac switches haven't changed for spec period
         if self._passive_switch:
+            _dt = dt_util.utcnow() + timedelta(hours=24)
             async_track_utc_time_change(
                 self.hass,
-                self._async_prevent_stuck_switch,
-                hour=0,
-                minute=0,
-                second=0,
+                self.prevent_stuck_switch,
+                hour=_dt.hour,
+                minute=_dt.minute,
+                second=_dt.second,
             )
 
         @callback
@@ -992,7 +994,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             return
 
-    async def _async_prevent_stuck_switch(self, now=None):
+    @callback
+    def prevent_stuck_switch(self, now):
         """Check if the switch has not changed for a cetrain period andforce operation to avoid stuck or jammed."""
         entity_list = {}
         for hvac_mode, mode_config in self._hvac_def.items():
@@ -1029,7 +1032,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 datetime.datetime.now(datetime.timezone.utc) - sensor_state.last_updated
                 > data[1]
             ):
-                self._LOGGER.info(
+                self._LOGGER.warning(
                     "Switch %s stuck prevention activated: not changed state for %s"
                     % (
                         data[0],
@@ -1430,7 +1433,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_activate_emergency_stop(self, source):
         """Send an emergency OFF order to HVAC switch."""
-        self._LOGGER.warning("Emergency OFF order send due to:", source)
+        self._LOGGER.warning("Emergency OFF order send due to:{}".format(source))
         self._emergency_stop = True
         await self._async_switch_turn_off(force=True)
 
