@@ -65,19 +65,13 @@ DEFAULT_PWM = 0
 
 DEFAULT_SENSOR_FILTER = 0
 
-DEFAULT_AUTOTUNE = "none"
-DEFAULT_AUTOTUNE_CONTROL_TYPE = "none"
-DEFAULT_STEP_SIZE = "10"
-DEFAULT_NOISEBAND = 0.5
-DEFAULT_HEAT_METER = "none"
-
 CONF_SENSOR = "sensor"
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
 CONF_INITIAL_PRESET_MODE = "initial_preset_mode"
 
 CONF_PASSIVE_SWITCH_CHECK = "passive_switch_check"
 
-# only requied for hcav_Settings
+# only requied for hvac_Settings
 # class defaults_controller:
 CONF_HVAC_MODE_INIT_TEMP = "initial_target_temp"
 CONF_HVAC_MODE_MIN_TEMP = "min_temp"
@@ -123,15 +117,6 @@ CONF_KI = "ki"
 CONF_KD = "kd"
 CONF_D_AVG = "derative_avg"
 
-CONF_AUTOTUNE = "autotune"
-CONF_AUTOTUNE_CONTROL_TYPE = "autotune_control_type"
-CONF_NOISEBAND = "noiseband"
-CONF_AUTOTUNE_LOOKBACK = "autotune_lookback"
-CONF_AUTOTUNE_STEP_SIZE = "tune_step_size"
-# CONF_HEAT_METER = "heat_meter"
-PRESET_PID_AUTOTUNE = "PID_autotune"
-PRESET_VALVE_AUTOTUNE = "VALVE_autotune"
-
 # weather compensating mode
 CONF_WC_MODE = "weather_mode"
 CONF_SENSOR_OUT = "sensor_out"
@@ -148,6 +133,4 @@ CONF_GOAL = "goal"
 SUPPORTED_PRESET_MODES = [
     PRESET_NONE,
     PRESET_AWAY,
-    PRESET_PID_AUTOTUNE,
-    PRESET_VALVE_AUTOTUNE,
 ]

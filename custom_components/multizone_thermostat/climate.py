@@ -125,29 +125,12 @@ def check_presets_in_both_modes(*keys: str) -> Callable:
     return validate
 
 
-PID_autotune = {
-    vol.Optional(CONF_AUTOTUNE, default=DEFAULT_AUTOTUNE): cv.string,
-    vol.Optional(
-        CONF_AUTOTUNE_CONTROL_TYPE,
-        default=DEFAULT_AUTOTUNE_CONTROL_TYPE,
-    ): cv.string,
-    vol.Optional(CONF_AUTOTUNE_LOOKBACK): vol.All(
-        cv.time_period, cv.positive_timedelta
-    ),
-    vol.Optional(
-        CONF_AUTOTUNE_STEP_SIZE,
-        default=DEFAULT_STEP_SIZE,
-    ): vol.Coerce(float),
-    vol.Optional(CONF_NOISEBAND, default=DEFAULT_NOISEBAND): vol.Coerce(float),
-}
-
 PID_control_options_opt = {
     vol.Optional(CONF_KP): vol.Coerce(float),
     vol.Optional(CONF_KI): vol.Coerce(float),
     vol.Optional(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
     vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
-    **PID_autotune,
 }
 
 PID_control_options_req = {
@@ -156,7 +139,6 @@ PID_control_options_req = {
     vol.Required(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
     vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
-    **PID_autotune,
 }
 
 hvac_control_options = {
@@ -754,13 +736,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
 
-        # stop autotune
         if self._hvac_on:
-            if self._hvac_on.is_pid_autotune_active:
-                self._hvac_on.start_pid("pid")
-            elif self._hvac_on.is_valve_autotune_active:
-                self._hvac_on.start_pid("valve")
-
             # restore preset mode
             self._preset_mode = PRESET_NONE
             # stop keep_live
@@ -1015,7 +991,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             sensor_state = self.hass.states.get(data[0])
 
             if not sensor_state:
-                self._LOGGER.waring(
+                self._LOGGER.warning(
                     "Stuck prevention no state (NoneType) for %s" % (data[0])
                 )
                 continue
@@ -1237,19 +1213,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # when mode is pwm
             else:
-                """calculate control output and handle autotune"""
+                """calculate control output"""
                 self._LOGGER.debug("update controller")
                 self._hvac_on.calculate(force)
-                # restore preset mode when autotune is off
-                if (
-                    self._preset_mode == PRESET_PID_AUTOTUNE
-                    and not self._hvac_on.is_pid_autotune_active
-                ) or (
-                    self._preset_mode == PRESET_VALVE_AUTOTUNE
-                    and not self._hvac_on.is_valve_autotune_active
-                ):
-                    self._preset_mode = PRESET_NONE
-
                 self.control_output = self._hvac_on.get_control_output
                 self._LOGGER.debug(
                     "Obtained current control output: %s", self.control_output
@@ -1622,9 +1588,5 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on:
             if self._hvac_on.get_away_temp:
                 modes = modes + [PRESET_AWAY]
-            if self._hvac_on.is_autotune_present("pid"):
-                modes = modes + [PRESET_PID_AUTOTUNE]
-            if self._hvac_on.is_autotune_present("valve"):
-                modes = modes + [PRESET_VALVE_AUTOTUNE]
 
         return modes
