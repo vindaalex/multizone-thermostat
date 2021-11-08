@@ -32,7 +32,6 @@ class PIDController(object):
         out_min=float("-inf"),
         out_max=float("inf"),
         time=time,
-        derative_avg=None,
         window_open=None,
     ):
         if kp is None:
@@ -64,7 +63,6 @@ class PIDController(object):
         self._last_output = 0
         self._last_calc_timestamp = 0
         self._time = time
-        self._averaging = derative_avg
         self._window_open = window_open
 
     def calc(self, input_val, setpoint, force=False):

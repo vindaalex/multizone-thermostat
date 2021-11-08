@@ -109,7 +109,6 @@ class HVAC_Setting:
         min_diff, max_diff = self.get_difference_limits(hvac_data)
         kp, ki, kd = self.get_pid_param(hvac_data)
         min_cycle_duration = self.get_operate_cycle_time
-        derative_avg = self.get_average
         window_open = self.get_window_open_tempdrop(hvac_data)
 
         hvac_data.PID["pidController"] = pid_controller.PIDController(
@@ -122,7 +121,6 @@ class HVAC_Setting:
             min_diff,
             max_diff,
             time.time,
-            derative_avg,
             window_open,
         )
 
@@ -273,11 +271,6 @@ class HVAC_Setting:
             return self._proportional[CONF_MIN_DIFF]
         else:
             return None
-
-    def get_average(self, hvac_data):
-        """get averaging time for derative"""
-        hvac_data = self.get_hvac_data(hvac_data)
-        return hvac_data[CONF_D_AVG]
 
     @min_diff.setter
     def min_diff(self, min_diff):
