@@ -110,6 +110,7 @@ class HVAC_Setting:
         kp, ki, kd = self.get_pid_param(hvac_data)
         min_cycle_duration = self.get_operate_cycle_time
         derative_avg = self.get_average
+        window_open = self.get_window_open_tempdrop(hvac_data)
 
         hvac_data.PID["pidController"] = pid_controller.PIDController(
             self._LOGGER.name,
@@ -122,6 +123,7 @@ class HVAC_Setting:
             max_diff,
             time.time,
             derative_avg,
+            window_open,
         )
 
         hvac_data["control_output"] = 0
@@ -408,6 +410,13 @@ class HVAC_Setting:
         if CONF_KD in hvac_data:
             kd = hvac_data[CONF_KD]
         return (kp, ki, kd)
+
+    def get_window_open_tempdrop(self, hvac_data):
+        """Return the temperature drop threshold value."""
+        if CONF_WINDOW_OPEN_TEMPDROP in hvac_data:
+            return hvac_data[CONF_WINDOW_OPEN_TEMPDROP]
+        else:
+            return None
 
     @property
     def filter_mode(self):

@@ -131,6 +131,7 @@ PID_control_options_opt = {
     vol.Optional(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
     vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
+    vol.Optional(CONF_WINDOW_OPEN_TEMPDROP): vol.Coerce(float),
 }
 
 PID_control_options_req = {
@@ -138,7 +139,7 @@ PID_control_options_req = {
     vol.Required(CONF_KI): vol.Coerce(float),
     vol.Required(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
-    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
+    vol.Optional(CONF_WINDOW_OPEN_TEMPDROP): vol.Coerce(float),
 }
 
 hvac_control_options = {

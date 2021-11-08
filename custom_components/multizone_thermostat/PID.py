@@ -33,6 +33,7 @@ class PIDController(object):
         out_max=float("inf"),
         time=time,
         derative_avg=None,
+        window_open=None,
     ):
         if kp is None:
             raise ValueError("kp must be specified")
@@ -44,6 +45,9 @@ class PIDController(object):
             raise ValueError("sampletime must be greater than 0")
         if out_min >= out_max:
             raise ValueError("out_min must be less than out_max")
+        if window_open:
+            if window_open > 0:
+                raise ValueError("window open should be less than 0")
 
         self._LOGGER = logging.getLogger(logger).getChild(PID_type)
         self._Kp = kp
@@ -61,6 +65,7 @@ class PIDController(object):
         self._last_calc_timestamp = 0
         self._time = time
         self._averaging = derative_avg
+        self._window_open = window_open
 
     def calc(self, input_val, setpoint, force=False):
         """Adjusts and holds the given setpoint.
@@ -104,9 +109,12 @@ class PIDController(object):
                     self._differential,
                 )
             )
-            if self._differential < -0.001:
-                self._LOGGER.warning("open window detected, maintain old control value")
-                return self._last_output
+            if self._window_open:
+                if self._differential < self._window_open / 3600:
+                    self._LOGGER.warning(
+                        "open window detected, maintain old control value"
+                    )
+                    return self._last_output
         else:
             # this is only triggered for master mode, velocity is less stable and open window check not required.
             if not input_val:
@@ -182,5 +190,3 @@ class PIDController(object):
             self._Ki = ki
         if kd is not None:
             self._Kd = kd
-
-

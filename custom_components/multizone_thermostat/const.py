@@ -107,6 +107,7 @@ CONF_DIFFERENCE = "difference"
 CONF_MIN_DIFFERENCE = "min_difference"
 CONF_MAX_DIFFERENCE = "max_difference"
 CONF_MIN_DIFF = "minimal_diff"
+CONF_WINDOW_OPEN_TEMPDROP = "window_open_tempdrop"
 
 CONF_SENSOR_FILTER = "sensor_filter"
 
