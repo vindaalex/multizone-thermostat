@@ -214,6 +214,30 @@ hvac_control_options = {
     ),
 }
 
+hvac_control_heat = {
+    **hvac_control_options,
+    vol.Required(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_HEAT): vol.Coerce(
+        float
+    ),
+    vol.Required(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_HEAT): vol.Coerce(
+        float
+    ),
+    vol.Required(
+        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_HEAT
+    ): vol.Coerce(float),
+}
+hvac_control_cool = {
+    **hvac_control_options,
+    vol.Required(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_COOL): vol.Coerce(
+        float
+    ),
+    vol.Required(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_COOL): vol.Coerce(
+        float
+    ),
+    vol.Required(
+        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_COOL
+    ): vol.Coerce(float),
+}
 
 PLATFORM_SCHEMA = vol.All(
     cv.has_at_least_one_key(HVAC_MODE_HEAT, HVAC_MODE_COOL),
@@ -250,8 +274,8 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(
                 CONF_ENABLE_OLD_INTEGRAL, default=DEFAULT_RESTORE_INTEGRAL
             ): cv.boolean,
-            vol.Optional(HVAC_MODE_HEAT): vol.Schema(hvac_control_options),
-            vol.Optional(HVAC_MODE_COOL): vol.Schema(hvac_control_options),
+            vol.Optional(HVAC_MODE_HEAT): vol.Schema(hvac_control_heat),
+            vol.Optional(HVAC_MODE_COOL): vol.Schema(hvac_control_cool),
         }
     ),
 )
