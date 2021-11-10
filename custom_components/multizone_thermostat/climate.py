@@ -553,7 +553,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
 
         @callback
-        def _async_startup(*_):
+        async def _async_startup(*_):
             """Init on startup."""
             if self._sensor_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_entity_id)
@@ -563,7 +563,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNAVAILABLE,
                 STATE_UNKNOWN,
             ):
-                self._async_update_current_temp(sensor_state.state)
+                await self._async_update_current_temp(sensor_state.state)
 
             if self._sensor_out_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
@@ -578,7 +578,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.async_write_ha_state()
 
         if self.hass.state == CoreState.running:
-            _async_startup()
+            await _async_startup()
         else:
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
