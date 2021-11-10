@@ -77,11 +77,17 @@ class HVACSetting:
     @property
     def min_target_temp(self):
         """return minimum target temperature"""
+        if self.is_master_mode:  # min/max similar for master
+            return self.target_temperature
+        else:
         return self._hvac_settings[CONF_HVAC_MODE_MIN_TEMP]
 
     @property
     def max_target_temp(self):
         """return maximum target temperature"""
+        if self.is_master_mode:  # min/max similar for master
+            return self.target_temperature
+        else:
         return self._hvac_settings[CONF_HVAC_MODE_MAX_TEMP]
 
     def start_on_off(self):
