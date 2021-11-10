@@ -457,6 +457,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._current_alive_time = None
         self._satelites = None
         self._kf_temp = None
+        self.time_changed = None
+        self.control_output = None
 
         self._temp_lock = asyncio.Lock()
         if not self._sensor_entity_id:
@@ -673,7 +675,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_pid(
         self, hvac_mode, control_mode, kp=None, ki=None, kd=None, update=False
-    ):
+    ):  # pylint: disable=invalid-name
         """Set new PID Controller Kp,Ki,Kd value."""
         self._logger.info(
             "new PID for %s %s to: %s;%s;%s", hvac_mode, control_mode, kp, ki, kd
@@ -743,7 +745,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def[hvac_mode].goal(goal)
         self.async_write_ha_state()
 
-    async def async_set_ka_kb(self, hvac_mode, ka=None, kb=None):
+    async def async_set_ka_kb(
+        self, hvac_mode, ka=None, kb=None
+    ):  # pylint: disable=invalid-name
         """Set new weather Controller ka,kb value."""
         self._logger.info("new weatehr ka,kb %s to: %s;%s", hvac_mode, ka, kb)
         self._hvac_def[hvac_mode].set_ka_kb(ka=ka, kb=kb)
@@ -1235,10 +1239,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     await self._async_switch_turn_off(force=force_resend)
                 elif current_temp <= target_temp_min:
                     await self._async_switch_turn_on(force=force_resend)
-
-            # when mode is pwm
             else:
-                """calculate control output"""
+                # when mode is pwm: calculate control output
                 self._logger.debug("update controller")
                 self._hvac_on.calculate(force)
                 self.control_output = self._hvac_on.get_control_output
@@ -1342,7 +1344,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 HA_DOMAIN, SERVICE_TURN_ON, data, context=self._context
             )
         else:
-            """valve mode"""
+            # valve mode
             if not control_val:
                 control_val = self.control_output
 
@@ -1386,7 +1388,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 HA_DOMAIN, SERVICE_TURN_OFF, data, context=self._context
             )
         else:
-            """valve mode"""
+            # valve mode
             self._logger.debug(
                 "Change state of switch %s to %s",
                 entity_id,
@@ -1472,7 +1474,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     return True
                 else:
                     return False
-            except:
+            except:  # pylint: disable=bare-except
                 self._logger.error(
                     "on-off switch defined for proportional control (pwm=0)"
                 )
@@ -1507,7 +1509,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def min_temp(self) -> float:
         """Return the minimum temperature."""
         if self._hvac_on:
-            if not self._hvac_mode == HVAC_MODE_OFF:
+            if self._hvac_mode != HVAC_MODE_OFF:
                 if self.preset_mode == PRESET_AWAY:
                     return self._hvac_on.get_away_temp
                 elif self._hvac_on.is_master_mode:
