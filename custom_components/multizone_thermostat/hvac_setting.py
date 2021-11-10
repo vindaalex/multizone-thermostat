@@ -1,3 +1,4 @@
+"""module where configuration of climate is handeled"""
 from . import PID as pid_controller
 import time
 import logging
@@ -9,6 +10,7 @@ from .const import *
 
 
 class HVACSetting:
+    """definition of hvac mode"""
     def __init__(self, log_id, mode, conf):
         self._logger = logging.getLogger(log_id).getChild(mode)
         self._logger.info("Config hvac settings for mode : %s", mode)
@@ -87,7 +89,7 @@ class HVACSetting:
         self._logger.debug("Init on_off settings for mode : %s", self._mode)
         try:
             self._on_off[CONF_KEEP_ALIVE]
-        except:
+        except:  # pylint: disable=bare-except
             self._on_off[CONF_KEEP_ALIVE] = None
 
     def start_master(self):
@@ -107,7 +109,7 @@ class HVACSetting:
             mode = "pid"
 
         min_diff, max_diff = self.get_difference_limits(hvac_data)
-        kp, ki, kd = self.get_pid_param(hvac_data)
+        kp, ki, kd = self.get_pid_param(hvac_data)  # pylint: disable=invalid-name
         min_cycle_duration = self.get_operate_cycle_time
         window_open = self.get_window_open_tempdrop(hvac_data)
 
@@ -128,7 +130,7 @@ class HVACSetting:
 
     def run_wc(self):
         """calcuate weather compension mode"""
-        KA, KB = self.get_ka_kb_param
+        KA, KB = self.get_ka_kb_param  # pylint: disable=invalid-name
         hvac_data = self.get_hvac_data("wc")
         _, max_diff = self.get_difference_limits(hvac_data)
 
@@ -229,10 +231,12 @@ class HVACSetting:
 
     @property
     def stuck_loop(self):
+        """return if stuck loop is active"""
         return self._stuck_loop
 
     @stuck_loop.setter
     def stuck_loop(self, val):
+        """set state stuck loop"""
         self._stuck_loop = val
 
     @property
@@ -328,6 +332,7 @@ class HVACSetting:
 
     @property
     def current_state(self):
+        """return current temperature and optionally velocity"""
         return self._current_state
 
     @current_state.setter
@@ -392,16 +397,16 @@ class HVACSetting:
 
     def get_pid_param(self, hvac_data):
         """Return the pid parameters of the thermostat."""
-        kp = None
-        ki = None
-        kd = None
+        kp = None  # pylint: disable=invalid-name
+        ki = None  # pylint: disable=invalid-name
+        kd = None  # pylint: disable=invalid-name
 
         if CONF_KP in hvac_data:
-            kp = hvac_data[CONF_KP]
+            kp = hvac_data[CONF_KP]  # pylint: disable=invalid-name
         if CONF_KI in hvac_data:
-            ki = hvac_data[CONF_KI]
+            ki = hvac_data[CONF_KI]  # pylint: disable=invalid-name
         if CONF_KD in hvac_data:
-            kd = hvac_data[CONF_KD]
+            kd = hvac_data[CONF_KD]  # pylint: disable=invalid-name
         return (kp, ki, kd)
 
     def get_window_open_tempdrop(self, hvac_data):
@@ -428,7 +433,9 @@ class HVACSetting:
             self._logger.error("not filter supported for on-off control")
             return
 
-    def set_pid_param(self, hvac_data, kp=None, ki=None, kd=None, update=False):
+    def set_pid_param(
+        self, hvac_data, kp=None, ki=None, kd=None, update=False
+    ):  # pylint: disable=invalid-name
         """Set PID parameters."""
         hvac_data = self.get_hvac_data(hvac_data)
         if kp is not None:
@@ -450,6 +457,7 @@ class HVACSetting:
             self._master.PID["pidController"].reset_time()
 
     def set_integral(self, hvac_data, integral):
+        """function to overwrite integral value"""
         hvac_data = self.get_hvac_data(hvac_data)
         hvac_data.PID["pidController"].integral = integral
 
@@ -457,8 +465,8 @@ class HVACSetting:
     def get_ka_kb_param(self):
         """Return the wc parameters of the thermostat."""
         if self.is_hvac_wc_mode:
-            ka = self._wc[CONF_KA]
-            kb = self._wc[CONF_KB]
+            ka = self._wc[CONF_KA]  # pylint: disable=invalid-name
+            kb = self._wc[CONF_KB]  # pylint: disable=invalid-name
             return (ka, kb)
         else:
             return (None, None)
@@ -479,7 +487,7 @@ class HVACSetting:
         else:
             return None
 
-    def set_ka_kb(self, ka=None, kb=None):
+    def set_ka_kb(self, ka=None, kb=None):  # pylint: disable=invalid-name
         """Set weather mode parameters."""
 
         if ka is not None:
@@ -663,11 +671,11 @@ class HVACSetting:
 
         if self.is_hvac_pid_mode:
             if restore_parameters and "PID_values" in data:
-                kp, ki, kd = data["PID_values"]
+                kp, ki, kd = data["PID_values"]  # pylint: disable=invalid-name
                 self.set_pid_param(self._pid, kp=kp, ki=ki, kd=kd, update=True)
         if self.is_hvac_valve_mode:
             if restore_parameters and "Valve_PID_values" in data:
-                kp, ki, kd = data["Valve_PID_values"]
+                kp, ki, kd = data["Valve_PID_values"]  # pylint: disable=invalid-name
                 self.set_pid_param(self._master, kp=kp, ki=ki, kd=kd, update=True)
 
         if restore_integral:
