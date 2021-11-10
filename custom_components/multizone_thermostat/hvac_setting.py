@@ -8,7 +8,7 @@ from .const import *
 # from .const.defaults_controller import *
 
 
-class HVAC_Setting:
+class HVACSetting:
     def __init__(self, log_id, mode, conf):
         self._LOGGER = logging.getLogger(log_id).getChild(mode)
         self._LOGGER.info("Config hvac settings for mode : %s", mode)

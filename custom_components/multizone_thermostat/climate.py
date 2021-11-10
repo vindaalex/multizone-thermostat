@@ -372,11 +372,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     if heat_conf:
         enabled_hvac_modes.append(HVAC_MODE_HEAT)
         hvac_def[HVAC_MODE_HEAT] = heat_conf
-        # hvac_def["heat"] = hvac_setting.HVAC_Setting(name, HVAC_MODE_HEAT, heat_conf)
+        # hvac_def["heat"] = hvac_setting.HVACSetting(name, HVAC_MODE_HEAT, heat_conf)
     if cool_conf:
         enabled_hvac_modes.append(HVAC_MODE_COOL)
         hvac_def[HVAC_MODE_COOL] = cool_conf
-        # hvac_def["cool"] = hvac_setting.HVAC_Setting(name, HVAC_MODE_COOL, cool_conf)
+        # hvac_def["cool"] = hvac_setting.HVACSetting(name, HVAC_MODE_COOL, cool_conf)
 
     async_add_entities(
         [
@@ -436,7 +436,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._unit = unit
         self._hvac_def = {}
         for mode, mode_config in hvac_def.items():
-            self._hvac_def[mode] = hvac_setting.HVAC_Setting(
+            self._hvac_def[mode] = hvac_setting.HVACSetting(
                 self._LOGGER.name, mode, mode_config
             )
         self._hvac_mode = initial_hvac_mode
