@@ -11,6 +11,7 @@ from .const import *
 
 class HVACSetting:
     """definition of hvac mode"""
+
     def __init__(self, log_id, mode, conf):
         self._logger = logging.getLogger(log_id).getChild(mode)
         self._logger.info("Config hvac settings for mode : %s", mode)
@@ -31,6 +32,8 @@ class HVACSetting:
         self._pid = None
         self._wc = None
         self._master = None
+        self._satelites = None
+        self._master_max_valve_pos = None
 
         self._stuck_loop = False
 
