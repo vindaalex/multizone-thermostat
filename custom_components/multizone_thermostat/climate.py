@@ -598,7 +598,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_restore_old_state(self, old_state):
         """function to restore old state/config"""
-            self._logger.debug("Old state stored : %s", old_state)
+        self._logger.debug("Old state stored : %s", old_state)
 
         try:
             if old_state is None:
@@ -627,26 +627,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             self._logger.info("restore old controller settings")
             self._hvac_mode_init = old_hvac_mode
-                self._preset_mode = old_preset_mode
+            self._preset_mode = old_preset_mode
 
             if self._hvac_mode_init != HVAC_MODE_OFF:
-                        old_def = old_state.attributes["hvac_def"]
-                        for key, data in old_def.items():
-                            if key in list(self._hvac_def.keys()):
-                                self._hvac_def[key].restore_reboot(
-                                    data,
-                                    self._restore_parameters,
-                                    self._restore_integral,
-                                )
+                old_def = old_state.attributes["hvac_def"]
+                for key, data in old_def.items():
+                    if key in list(self._hvac_def.keys()):
+                        self._hvac_def[key].restore_reboot(
+                            data,
+                            self._restore_parameters,
+                            self._restore_integral,
+                        )
 
                 # Restore the target temperature
                 min_temp, max_temp = self._hvac_def[
                     old_hvac_mode
                 ].get_target_temp_limits
-                    if (
-                        old_temperature is not None
-                        and min_temp <= old_temperature <= max_temp
-                    ):
+                if (
+                    old_temperature is not None
+                    and min_temp <= old_temperature <= max_temp
+                ):
                     self._hvac_def[old_hvac_mode].target_temperature = old_temperature
 
         except ValueError as eror:
@@ -810,7 +810,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # update listener
             await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
-                await self._async_operate()
+            await self._async_operate()
 
             # Ensure we update the current operation after changing the mode
             self.async_write_ha_state()
