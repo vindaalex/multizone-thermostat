@@ -101,7 +101,6 @@ class HVACSetting:
     def start_master(self):
         """Init the master mode"""
         self._satelites = {}
-        self._master_setpoint = 0
 
     def start_pid(self, hvac_data):
         """Init the PID controller"""
