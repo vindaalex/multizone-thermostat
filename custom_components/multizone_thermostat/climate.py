@@ -1164,11 +1164,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         except ValueError as ex:
             self._logger.error("Unable to update from sensor: %s", ex)
 
-    async def _async_operate(self, time=None, sensor_changed=False, force=False):
+    async def _async_operate(self, now=None, sensor_changed=False, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
             # time is passed by to the callback the async_track_time_interval function , and is set to "now"
-            keepalive = time is not None  # boolean
+            keepalive = now is not None  # boolean
 
             if self._emergency_stop:
                 if keepalive:
