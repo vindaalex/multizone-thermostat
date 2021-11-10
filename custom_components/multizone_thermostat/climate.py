@@ -712,7 +712,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             else:
                 if not self._kf_temp:
                     if self._current_temperature:
-                        self._kf_temp = UKF_config.filterr(
+                        self._kf_temp = UKF_config.UKFFilter(
                             self._current_temperature,
                             self._hvac_on.get_operate_cycle_time.seconds,
                             self._hvac_on.filter_mode,

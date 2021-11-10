@@ -4,9 +4,7 @@ from .UKF_filter.UKF import UnscentedKalmanFilter
 from .UKF_filter.discretization import Q_discrete_white_noise
 from .UKF_filter.sigma_points import  MerweScaledSigmaPoints
 
-class filterr:
-    def __init__(self, current_temp, dt, filter_mode):
-        """Unscented kalman filter"""
+class UKFFilter:
         self._interval = 0
         self._last_update = time.time()
         self._mode = filter_mode
