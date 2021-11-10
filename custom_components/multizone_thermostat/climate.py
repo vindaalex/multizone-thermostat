@@ -1552,7 +1552,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def current_temperature(self):
         """Return the sensor temperature."""
-        if self._hvac_mode == HVAC_MODE_OFF:
+        if self._hvac_mode in [HVAC_MODE_OFF, None]:
             return self._current_temperature
 
         return (
@@ -1589,7 +1589,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._hvac_mode == HVAC_MODE_OFF:
+        if self._hvac_mode in [HVAC_MODE_OFF, None]:
             return None
         return self._hvac_on.target_temperature
 
