@@ -4,7 +4,47 @@ import time
 import logging
 import numpy as np
 
-from .const import *
+from .const import (
+    PRESET_AWAY,
+    PRESET_NONE,
+    CONF_ENTITY_ID,
+    CONF_HVAC_MODE_INIT_TEMP,
+    CONF_HVAC_MODE_MIN_TEMP,
+    CONF_HVAC_MODE_MAX_TEMP,
+    CONF_AWAY_TEMP,
+    CONF_PASSIVE_SWITCH_DURATION,
+    # on_off thermostat
+    CONF_ON_OFF_MODE,
+    CONF_MIN_CYCLE_DURATION,
+    CONF_KEEP_ALIVE,
+    CONF_HYSTERESIS_TOLERANCE_ON,
+    CONF_HYSTERESIS_TOLERANCE_OFF,
+    # proportional mode
+    CONF_PROPORTIONAL_MODE,
+    CONF_PWM,
+    CONF_CONTROL_REFRESH_INTERVAL,
+    CONF_DIFFERENCE,
+    CONF_MIN_DIFFERENCE,
+    CONF_MAX_DIFFERENCE,
+    CONF_MIN_DIFF,
+    CONF_WINDOW_OPEN_TEMPDROP,
+    CONF_SENSOR_FILTER,
+    # PID controller
+    CONF_PID_MODE,
+    CONF_KP,
+    CONF_KI,
+    CONF_KD,
+    # weather compensating mode
+    CONF_WC_MODE,
+    CONF_SENSOR_OUT,
+    CONF_KA,
+    CONF_KB,
+    # Master mode
+    CONF_MASTER_MODE,
+    CONF_SATELITES,
+    # valve_control_mode
+    CONF_GOAL,
+)
 
 # from .const.defaults_controller import *
 
