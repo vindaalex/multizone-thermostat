@@ -556,13 +556,22 @@ class HVACSetting:
     def update_satelite(self, name, mode, setpoint, current, area, valve):
         """set new state of a satelite"""
         self._logger.debug("new data for : %s", name)
-        self._satelites[name] = {
-            "mode": mode,
-            "setpoint": setpoint,
-            "current": current,
-            "area": area,
-            "valve_pos": valve,
-        }
+        if None in [setpoint,current,area,valve]:
+            self._satelites[name] = {
+                "mode": None,
+                "setpoint": 0,
+                "current": 0,
+                "area": 0,
+                "valve_pos": 0,
+            }            
+        else:
+            self._satelites[name] = {
+                "mode": mode,
+                "setpoint": setpoint,
+                "current": current,
+                "area": area,
+                "valve_pos": valve,
+            }
 
         self.master_setpoint()
         self.master_current_temp()
