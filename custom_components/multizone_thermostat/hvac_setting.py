@@ -10,8 +10,8 @@ from .const import *
 
 class HVACSetting:
     def __init__(self, log_id, mode, conf):
-        self._LOGGER = logging.getLogger(log_id).getChild(mode)
-        self._LOGGER.info("Config hvac settings for mode : %s", mode)
+        self._logger = logging.getLogger(log_id).getChild(mode)
+        self._logger.info("Config hvac settings for mode : %s", mode)
 
         self._mode = mode
         self._preset_mode = PRESET_NONE
@@ -45,24 +45,24 @@ class HVACSetting:
     def init_mode(self):
         """init the defined control modes"""
         if self.is_hvac_on_off_mode:
-            self._LOGGER.debug("HVAC mode 'on_off' active")
+            self._logger.debug("HVAC mode 'on_off' active")
             self.start_on_off()
         if self.is_hvac_proportional_mode:
-            self._LOGGER.debug("HVAC mode 'proportional' active")
+            self._logger.debug("HVAC mode 'proportional' active")
             if self.is_master_mode:
-                self._LOGGER.debug("HVAC mode 'master' active")
+                self._logger.debug("HVAC mode 'master' active")
                 self.start_master()
                 self._master_max_valve_pos = 0
                 if self.is_hvac_valve_mode:
-                    self._LOGGER.debug("HVAC mode 'valve control' active")
+                    self._logger.debug("HVAC mode 'valve control' active")
                     self.start_pid(self._master)
                     self._master["control_output"] = 0
             if self.is_hvac_pid_mode:
-                self._LOGGER.debug("HVAC mode 'pid' active")
+                self._logger.debug("HVAC mode 'pid' active")
                 self.start_pid(self._pid)
                 self._pid["control_output"] = 0
             if self.is_hvac_wc_mode:
-                self._LOGGER.debug("HVAC mode 'weather control' active")
+                self._logger.debug("HVAC mode 'weather control' active")
                 self._wc["control_output"] = 0
 
     def calculate(self, force=None):
@@ -84,7 +84,7 @@ class HVACSetting:
 
     def start_on_off(self):
         """set basic settings for hysteris mode"""
-        self._LOGGER.debug("Init on_off settings for mode : %s", self._mode)
+        self._logger.debug("Init on_off settings for mode : %s", self._mode)
         try:
             self._on_off[CONF_KEEP_ALIVE]
         except:
@@ -97,7 +97,7 @@ class HVACSetting:
 
     def start_pid(self, hvac_data):
         """Init the PID controller"""
-        self._LOGGER.debug("Init pid settings for mode : %s", self._mode)
+        self._logger.debug("Init pid settings for mode : %s", self._mode)
         hvac_data = self.get_hvac_data(hvac_data)
         hvac_data.PID = {}
 
@@ -112,7 +112,7 @@ class HVACSetting:
         window_open = self.get_window_open_tempdrop(hvac_data)
 
         hvac_data.PID["pidController"] = pid_controller.PIDController(
-            self._LOGGER.name,
+            self._logger.name,
             mode,
             min_cycle_duration.seconds,
             kp,
@@ -136,7 +136,7 @@ class HVACSetting:
             temp_diff = self.target_temperature - self.outdoor_temperature
             self._wc["control_output"] = min(max(0, temp_diff * KA + KB), max_diff)
         else:
-            self._LOGGER.warning("no outdoor temperature; continue with previous data")
+            self._logger.warning("no outdoor temperature; continue with previous data")
 
     def run_pid(self, force=False):
         """calcuate the PID for current timestep"""
@@ -425,7 +425,7 @@ class HVACSetting:
         if self.is_hvac_proportional_mode:
             self._proportional[CONF_SENSOR_FILTER] = mode
         else:
-            self._LOGGER.error("not filter supported for on-off control")
+            self._logger.error("not filter supported for on-off control")
             return
 
     def set_pid_param(self, hvac_data, kp=None, ki=None, kd=None, update=False):
@@ -500,7 +500,7 @@ class HVACSetting:
 
     def update_satelite(self, name, mode, setpoint, current, area, valve):
         """set new state of a satelite"""
-        self._LOGGER.debug("new data for : %s", name)
+        self._logger.debug("new data for : %s", name)
         self._satelites[name] = {
             "mode": mode,
             "setpoint": setpoint,

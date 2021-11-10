@@ -426,10 +426,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     ):
         """Initialize the thermostat."""
         self._name = name
-        self._LOGGER = logging.getLogger().getChild(
+        self._logger = logging.getLogger().getChild(
             "multizone_thermostat." + self._name
         )
-        self._LOGGER.info("initialise: %s", self._name)
+        self._logger.info("initialise: %s", self._name)
         self._sensor_entity_id = sensor_entity_id
         self._sensor_out_entity_id = sensor_out_entity_id
         self._temp_precision = precision
@@ -437,7 +437,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def = {}
         for mode, mode_config in hvac_def.items():
             self._hvac_def[mode] = hvac_setting.HVACSetting(
-                self._LOGGER.name, mode, mode_config
+                self._logger.name, mode, mode_config
             )
         self._hvac_mode = initial_hvac_mode
         self._preset_mode = initial_preset_mode
@@ -492,7 +492,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Run when entity about to be added.
         Attach the listeners.
         """
-        self._LOGGER.info("init thermostat")
+        self._logger.info("init thermostat")
         await super().async_added_to_hass()
 
         # Add listeners to track changes from the sensor
@@ -583,11 +583,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         old_state = await self.async_get_last_state()
 
         if self._enable_old_state and old_state is not None:
-            self._LOGGER.debug("Old state stored : %s", old_state)
+            self._logger.debug("Old state stored : %s", old_state)
             old_preset_mode = old_state.attributes.get(ATTR_PRESET_MODE)
             old_hvac_mode = old_state.state
             old_temperature = old_state.attributes.get(ATTR_TEMPERATURE)
-            self._LOGGER.debug(
+            self._logger.debug(
                 "Old state preset mode %s, hvac mode %s, temperature %s",
                 old_preset_mode,
                 old_hvac_mode,
@@ -599,11 +599,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if old_hvac_mode is not None and old_hvac_mode in self.hvac_modes:
 
-                self._LOGGER.debug("activate old hvac mode : %s", old_hvac_mode)
+                self._logger.debug("activate old hvac mode : %s", old_hvac_mode)
 
                 if "hvac_def" in old_state.attributes:
                     try:
-                        self._LOGGER.info("restore old controller settings")
+                        self._logger.info("restore old controller settings")
                         old_def = old_state.attributes["hvac_def"]
                         for key, data in old_def.items():
                             if key in list(self._hvac_def.keys()):
@@ -613,11 +613,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                                     self._restore_integral,
                                 )
                     except:
-                        self._LOGGER.warning(
+                        self._logger.warning(
                             "error restoring old controller settings for: %s", key
                         )
                 else:
-                    self._LOGGER.warning("no old controller settings to restore")
+                    self._logger.warning("no old controller settings to restore")
 
                 # init hvac mode
                 await self.async_set_hvac_mode(old_hvac_mode, init=True)
@@ -632,7 +632,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._hvac_on.target_temperature = old_temperature
 
             else:
-                self._LOGGER.warning(
+                self._logger.warning(
                     "%s is not valid mode. restoring default mode: %s",
                     old_hvac_mode,
                     self._hvac_mode,
@@ -641,10 +641,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             # init in case no restore is required
             if not self._hvac_mode:
-                self._LOGGER.warning("no hvac mode specified: force off mode")
+                self._logger.warning("no hvac mode specified: force off mode")
                 self._hvac_mode = HVAC_MODE_OFF
 
-            self._LOGGER.info("init default hvac mode: %s", self._hvac_mode)
+            self._logger.info("init default hvac mode: %s", self._hvac_mode)
             await self.async_set_hvac_mode(self._hvac_mode, init=True)
 
         # Ensure we update the current operation after changing the mode
@@ -665,7 +665,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_min_diff(self, hvac_mode, min_diff):
         """Set new PID Controller min pwm value."""
-        self._LOGGER.info(
+        self._logger.info(
             "new minimum PID difference for %s to: %s", hvac_mode, min_diff
         )
         self._hvac_def[hvac_mode].min_diff(min_diff)
@@ -675,7 +675,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, hvac_mode, control_mode, kp=None, ki=None, kd=None, update=False
     ):
         """Set new PID Controller Kp,Ki,Kd value."""
-        self._LOGGER.info(
+        self._logger.info(
             "new PID for %s %s to: %s;%s;%s", hvac_mode, control_mode, kp, ki, kd
         )
         self._hvac_def[hvac_mode].set_pid_param(
@@ -691,12 +691,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if mode:
             self._hvac_def[hvac_mode].filter_mode = mode
-            self._LOGGER.info(
+            self._logger.info(
                 "modified sensor filter mode for %s to: %s", hvac_mode, mode
             )
         else:
             mode = self._hvac_on.filter_mode
-            self._LOGGER.info("new sensor filter mode for %s to: %s", hvac_mode, mode)
+            self._logger.info("new sensor filter mode for %s to: %s", hvac_mode, mode)
 
         if hvac_mode != self._hvac_mode:
             self._hvac_def[hvac_mode].current_state = None
@@ -715,7 +715,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                             self._hvac_on.filter_mode,
                         )
                     else:
-                        self._LOGGER.info(
+                        self._logger.info(
                             "new sensor filter mode (%s) but no temperature reading for %s",
                             mode,
                             hvac_mode,
@@ -731,7 +731,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_integral(self, hvac_mode, control_mode, integral):
         """Set new PID Controller integral value."""
-        self._LOGGER.info(
+        self._logger.info(
             "new PID integral for %s %s to: %s", hvac_mode, control_mode, integral
         )
         self._hvac_def[hvac_mode].integral(control_mode, integral)
@@ -739,13 +739,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_goal(self, hvac_mode, goal):
         """Set new valve Controller goal value."""
-        self._LOGGER.info("new PID valve goal for %s to: %s", hvac_mode, goal)
+        self._logger.info("new PID valve goal for %s to: %s", hvac_mode, goal)
         self._hvac_def[hvac_mode].goal(goal)
         self.async_write_ha_state()
 
     async def async_set_ka_kb(self, hvac_mode, ka=None, kb=None):
         """Set new weather Controller ka,kb value."""
-        self._LOGGER.info("new weatehr ka,kb %s to: %s;%s", hvac_mode, ka, kb)
+        self._logger.info("new weatehr ka,kb %s to: %s;%s", hvac_mode, ka, kb)
         self._hvac_def[hvac_mode].set_ka_kb(ka=ka, kb=kb)
         self.async_write_ha_state()
 
@@ -755,9 +755,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == hvac_mode:
             return
         if hvac_mode not in self.hvac_modes:
-            self._LOGGER.error("Unrecognized hvac mode: %s", hvac_mode)
+            self._logger.error("Unrecognized hvac mode: %s", hvac_mode)
             return
-        self._LOGGER.info("HVAC mode changed to %s", hvac_mode)
+        self._logger.info("HVAC mode changed to %s", hvac_mode)
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
 
@@ -775,7 +775,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_switch_turn_off(hvac_mode=key)
 
         if self._hvac_mode == HVAC_MODE_OFF:
-            self._LOGGER.info("HVAC mode is OFF. Turn the devices OFF and exit")
+            self._logger.info("HVAC mode is OFF. Turn the devices OFF and exit")
             self._hvac_on = None
             self.async_write_ha_state()
             return
@@ -814,7 +814,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_update_keep_alive(self, interval=None):
         """run main controller at specified interval"""
-        self._LOGGER.debug("update 'keep alive' for %s", self._hvac_mode)
+        self._logger.debug("update 'keep alive' for %s", self._hvac_mode)
         if not interval:
             self._current_alive_time()
         else:
@@ -842,7 +842,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     def _send_satelite(self, state):
         """send satelite data to current hvac mode"""
-        self._LOGGER.debug(
+        self._logger.debug(
             "update from satelite: %s to state %s", state.name, state.state
         )
         if state.state in [
@@ -873,7 +873,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if hvac_mode is None:
             hvac_mode = self._hvac_mode
         elif hvac_mode not in self.hvac_modes:
-            self._LOGGER.warning(
+            self._logger.warning(
                 "Try to update temperature to %s for mode %s but this mode is not enabled",
                 temperature,
                 hvac_mode,
@@ -881,17 +881,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
         if hvac_mode is None or hvac_mode == HVAC_MODE_OFF:
-            self._LOGGER.warning("You cannot update temperature for OFF mode")
+            self._logger.warning("You cannot update temperature for OFF mode")
             return
 
-        self._LOGGER.debug(
+        self._logger.debug(
             "Temperature updated to %s for mode %s", temperature, hvac_mode
         )
 
         if (
             self.preset_mode == PRESET_AWAY
         ):  # when preset mode is away, change the temperature but do not operate
-            self._LOGGER.debug(
+            self._logger.debug(
                 "Preset mode away when temperature is updated : skipping operate"
             )
             return
@@ -907,9 +907,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_temperature_changed(self, event):
         """Handle temperature changes."""
         new_state = event.data.get("new_state")
-        self._LOGGER.debug("Sensor temperature updated to %s", new_state.state)
+        self._logger.debug("Sensor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            self._LOGGER.warning(
+            self._logger.warning(
                 "Sensor temperature {} invalid: {}".format(
                     new_state.name, new_state.state
                 )
@@ -929,9 +929,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def _async_sensor_outdoor_temperature_changed(self, event):
         """Handle outdoor temperature changes."""
         new_state = event.data.get("new_state")
-        self._LOGGER.debug("Sensor outdoor temperature updated to %s", new_state.state)
+        self._logger.debug("Sensor outdoor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            self._LOGGER.warning(
+            self._logger.warning(
                 "Sensor temperature {} invalid {}",
                 format(new_state.name, new_state.state),
             )
@@ -950,9 +950,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Handle thermostat changes changes."""
         new_state = event.data.get("new_state")
         if not new_state:
-            self._LOGGER.error("error receiving thermostat update. 'None' received")
+            self._logger.error("error receiving thermostat update. 'None' received")
             return
-        self._LOGGER.debug(
+        self._logger.debug(
             "receiving thermostat %s update. new state: %s",
             new_state.name,
             new_state.state,
@@ -978,7 +978,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 datetime.datetime.now(datetime.timezone.utc) - sensor_state.last_updated
                 > self._sensor_stale_duration
             ):
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Time is %s, last changed is %s, stale duration is %s , limit is %s"
                     % (
                         datetime.datetime.now(datetime.timezone.utc),
@@ -988,7 +988,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._sensor_stale_duration,
                     )
                 )
-                self._LOGGER.warning(
+                self._logger.warning(
                     "Sensor %s has stalled, call the emergency stop" % (entity_id)
                 )
                 await self._async_activate_emergency_stop(entity_id)
@@ -1007,7 +1007,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 ]
 
         if not entity_list:
-            self._LOGGER.warning(
+            self._logger.warning(
                 "jamming/stuck prevention activated but no duration set for switches"
             )
             return
@@ -1016,12 +1016,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             sensor_state = self.hass.states.get(data[0])
 
             if not sensor_state:
-                self._LOGGER.warning(
+                self._logger.warning(
                     "Stuck prevention no state (NoneType) for %s" % (data[0])
                 )
                 continue
 
-            self._LOGGER.debug(
+            self._logger.debug(
                 "Switch %s stuck prevention check with last update %s"
                 % (
                     data[0],
@@ -1033,7 +1033,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 datetime.datetime.now(datetime.timezone.utc) - sensor_state.last_updated
                 > data[1]
             ):
-                self._LOGGER.warning(
+                self._logger.warning(
                     "Switch %s stuck prevention activated: not changed state for %s"
                     % (
                         data[0],
@@ -1051,7 +1051,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Handle device switch state changes."""
         new_state = event.data.get("new_state")
         entity_id = event.data.get("entity_id")
-        self._LOGGER.debug(
+        self._logger.debug(
             "Switch of %s changed to %s",
             entity_id,
             new_state.state,
@@ -1074,7 +1074,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     and data.get_hvac_switch == entity_id
                     and self._is_switch_active(hvac_mode=hvac_mode)
                 ):
-                    self._LOGGER.warning(
+                    self._logger.warning(
                         "No swithces should be 'on' in 'off' mode: switch of %s changed has to %s. Force off",
                         entity_id,
                         new_state.state,
@@ -1083,7 +1083,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if self._hvac_on:
             if entity_id != self._hvac_on.get_hvac_switch:
-                self._LOGGER.warning(
+                self._logger.warning(
                     "Wrong switch of %s changed from %s",
                     entity_id,
                     new_state.state,
@@ -1096,14 +1096,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def _async_update_current_temp(self, current_temp=None):
         """Update thermostat, optionally with latest state from sensor."""
         if self._emergency_stop:
-            self._LOGGER.info(
+            self._logger.info(
                 "Recover from emergency mode, new temperature updated to %s",
                 current_temp,
             )
             self._emergency_stop = False
         try:
             if current_temp:
-                self._LOGGER.debug("Current temperature updated to %s", current_temp)
+                self._logger.debug("Current temperature updated to %s", current_temp)
                 # store local in case current hvac mode is off
                 if not self._kf_temp:
                     self._current_temperature = float(current_temp)
@@ -1128,7 +1128,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._kf_temp.kf_update(tmp_temperature)
 
                         # store local in case current hvac mode is off
-                        self._LOGGER.debug("kp update temp %s", self._kf_temp.get_temp)
+                        self._logger.debug("kp update temp %s", self._kf_temp.get_temp)
                         self._current_temperature = self._kf_temp.get_temp
 
                         if self._hvac_on:
@@ -1140,26 +1140,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             self.async_write_ha_state()
         except ValueError as ex:
-            self._LOGGER.error("Unable to update from sensor: %s", ex)
+            self._logger.error("Unable to update from sensor: %s", ex)
 
     def _update_outdoor_temperature(self, current_temp=None):
         """Update thermostat with latest state from outdoor sensor."""
         if self._emergency_stop:
-            self._LOGGER.info(
+            self._logger.info(
                 "Recover from emergency mode, new outdoor temperature updated to %s",
                 current_temp,
             )
             self._emergency_stop = False
         try:
             if current_temp:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Current outdoor temperature updated to %s", current_temp
                 )
                 self._outdoor_temperature = float(current_temp)
                 if self._hvac_on:
                     self._hvac_on.outdoor_temperature = self._outdoor_temperature
         except ValueError as ex:
-            self._LOGGER.error("Unable to update from sensor: %s", ex)
+            self._logger.error("Unable to update from sensor: %s", ex)
 
     async def _async_operate(self, time=None, sensor_changed=False, force=False):
         """Check if we need to turn heating on or off."""
@@ -1169,12 +1169,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if self._emergency_stop:
                 if keepalive:
-                    self._LOGGER.debug(
+                    self._logger.debug(
                         "Emergency stop active, exit routine. Re-send emergency stop"
                     )
                     await self._async_activate_emergency_stop("operate")
                 else:
-                    self._LOGGER.warning("Cannot operate in emergency stop state")
+                    self._logger.warning("Cannot operate in emergency stop state")
                 return
 
             if not self._hvac_on:
@@ -1185,7 +1185,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_update_current_temp()
 
             if self._hvac_on.current_temperature is None:
-                self._LOGGER.warning("Current temp is None, cannot compare with target")
+                self._logger.warning("Current temp is None, cannot compare with target")
                 return
 
             # when mode is on_off
@@ -1207,7 +1207,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     )
 
                     if not long_enough:
-                        self._LOGGER.debug(
+                        self._logger.debug(
                             "Operate - Min duration not expired, exiting (%s, %s, %s)",
                             min_cycle_duration,
                             current_state,
@@ -1219,7 +1219,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 target_temp_max = target_temp + tolerance_off
                 current_temp = self._hvac_on.current_temperature
 
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Operate - tg_min %s, tg_max %s, current %s, tg %s, ka %s",
                     target_temp_min,
                     target_temp_max,
@@ -1239,10 +1239,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # when mode is pwm
             else:
                 """calculate control output"""
-                self._LOGGER.debug("update controller")
+                self._logger.debug("update controller")
                 self._hvac_on.calculate(force)
                 self.control_output = self._hvac_on.get_control_output
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Obtained current control output: %s", self.control_output
                 )
                 await self._async_set_controlvalue()
@@ -1285,7 +1285,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if self._is_switch_active():
             if time_on < time_passed:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Time exceeds 'on-time' by %s sec: turn off: %s",
                     entity_id,
                     round(time_on - time_passed, 0),
@@ -1294,12 +1294,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_switch_turn_off()
                 self.time_changed = time.time()
             else:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Time until %s turns off: %s sec", entity_id, time_on - time_passed
                 )
         else:
             if time_off < time_passed:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Time finshed 'off-time' by %s sec: turn on: %s",
                     entity_id,
                     round(time_passed - time_off, 0),
@@ -1308,7 +1308,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_switch_turn_on()
                 self.time_changed = time.time()
             else:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "Time until %s turns on: %s sec", entity_id, time_off - time_passed
                 )
 
@@ -1316,7 +1316,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, hvac_mode=None, control_val=None, force=False
     ):
         """Turn switch toggleable device on."""
-        self._LOGGER.debug("Turn ON")
+        self._logger.debug("Turn ON")
         if hvac_mode:
             _hvac_on = self._hvac_def[hvac_mode]
         else:
@@ -1329,15 +1329,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             entity_id = None
 
         if not entity_id:
-            self._LOGGER.debug("No switch defined for {}".format(hvac_mode))
+            self._logger.debug("No switch defined for {}".format(hvac_mode))
             return
 
         if _hvac_on.is_hvac_switch_on_off:
             if self._is_switch_active(hvac_mode=hvac_mode) and not force:
-                self._LOGGER.debug("Switch already ON")
+                self._logger.debug("Switch already ON")
                 return
             data = {ATTR_ENTITY_ID: entity_id}
-            self._LOGGER.debug("Order ON sent to switch device %s", entity_id)
+            self._logger.debug("Order ON sent to switch device %s", entity_id)
             await self.hass.services.async_call(
                 HA_DOMAIN, SERVICE_TURN_ON, data, context=self._context
             )
@@ -1346,7 +1346,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not control_val:
                 control_val = self.control_output
 
-            self._LOGGER.debug(
+            self._logger.debug(
                 "Change state of heater %s to %s",
                 entity_id,
                 control_val,
@@ -1361,7 +1361,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_switch_turn_off(self, hvac_mode=None, force=False):
         """Turn toggleable device off."""
-        self._LOGGER.debug("Turn OFF called")
+        self._logger.debug("Turn OFF called")
         if hvac_mode:
             _hvac_on = self._hvac_def[hvac_mode]
         else:
@@ -1373,21 +1373,21 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             entity_id = None
 
         if not entity_id:
-            self._LOGGER.debug("No switch defined for {}".format(hvac_mode))
+            self._logger.debug("No switch defined for {}".format(hvac_mode))
             return
 
         if _hvac_on.is_hvac_switch_on_off:
             if not self._is_switch_active(hvac_mode=hvac_mode) and not force:
-                self._LOGGER.debug("Switch already OFF")
+                self._logger.debug("Switch already OFF")
                 return
             data = {ATTR_ENTITY_ID: entity_id}
-            self._LOGGER.debug("Order OFF sent to switch device %s", entity_id)
+            self._logger.debug("Order OFF sent to switch device %s", entity_id)
             await self.hass.services.async_call(
                 HA_DOMAIN, SERVICE_TURN_OFF, data, context=self._context
             )
         else:
             """valve mode"""
-            self._LOGGER.debug(
+            self._logger.debug(
                 "Change state of switch %s to %s",
                 entity_id,
                 0,
@@ -1402,7 +1402,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def[hvac_mode].stuck_loop = True
 
         if self._is_switch_active(hvac_mode=hvac_mode):
-            self._LOGGER.info(
+            self._logger.info(
                 "switch %s toggle state temporarily to OFF for 3min" % (entity_id)
             )
             await self._async_switch_turn_off(hvac_mode=hvac_mode, force=True)
@@ -1411,7 +1411,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 hvac_mode=hvac_mode, control_val=100, force=True
             )
         else:
-            self._LOGGER.info(
+            self._logger.info(
                 "switch %s toggle state temporarily to ON for 3min" % (entity_id)
             )
             await self._async_switch_turn_on(
@@ -1424,7 +1424,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_activate_emergency_stop(self, source):
         """Send an emergency OFF order to HVAC switch."""
-        self._LOGGER.warning("Emergency OFF order send due to:{}".format(source))
+        self._logger.warning("Emergency OFF order send due to:{}".format(source))
         self._emergency_stop = True
         await self._async_switch_turn_off(force=True)
 
@@ -1433,14 +1433,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         This method must be run in the event loop and returns a coroutine.
         """
         if preset_mode not in self.preset_modes and preset_mode != PRESET_NONE:
-            self._LOGGER.error(
+            self._logger.error(
                 "This preset (%s) is not enabled (see the configuration)", preset_mode
             )
             return
 
         self._preset_mode = preset_mode
         self._hvac_on.preset_mode = preset_mode
-        self._LOGGER.debug("Set preset mode to %s", preset_mode)
+        self._logger.debug("Set preset mode to %s", preset_mode)
 
         await self._async_operate(force=True)
         self.async_write_ha_state()
@@ -1458,7 +1458,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             entity_id = None
 
         if not entity_id:
-            self._LOGGER.debug("No switch defined for {}".format(hvac_mode))
+            self._logger.debug("No switch defined for {}".format(hvac_mode))
             return False
 
         if _hvac_on.is_hvac_switch_on_off:
@@ -1473,7 +1473,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 else:
                     return False
             except:
-                self._LOGGER.error(
+                self._logger.error(
                     "on-off switch defined for proportional control (pwm=0)"
                 )
 

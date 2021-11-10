@@ -48,11 +48,11 @@ class PIDController(object):
             if window_open > 0:
                 raise ValueError("window open should be less than 0")
 
-        self._LOGGER = logging.getLogger(logger).getChild(PID_type)
+        self._logger = logging.getLogger(logger).getChild(PID_type)
         self._Kp = kp
         self._Ki = ki
         self._Kd = kd
-        self._LOGGER.debug("_sampletime: {0}".format(sampletime))
+        self._logger.debug("_sampletime: {0}".format(sampletime))
         self._sampletime = sampletime
         self._out_min = out_min
         self._out_max = out_max
@@ -76,7 +76,7 @@ class PIDController(object):
             A value between `out_min` and `out_max`.
         """
         if not setpoint:
-            self._LOGGER.warning(
+            self._logger.warning(
                 "no setpoint specified, return with previous control value {0}".format(
                     self._last_output
                 )
@@ -86,7 +86,7 @@ class PIDController(object):
         now = self._time()
         if self._last_calc_timestamp != 0:
             if (now - self._last_calc_timestamp) < self._sampletime and not force:
-                self._LOGGER.debug(
+                self._logger.debug(
                     "pid timediff: {0} < sampletime {1}: keep previous value".format(
                         round((now - self._last_calc_timestamp), 0),
                         self._sampletime,
@@ -101,7 +101,7 @@ class PIDController(object):
 
         if isinstance(input_val, (list, tuple, np.ndarray)):
             current_temp, self._differential = input_val
-            self._LOGGER.debug(
+            self._logger.debug(
                 "current temp {0} ; current velocity {1}".format(
                     current_temp,
                     self._differential,
@@ -109,14 +109,14 @@ class PIDController(object):
             )
             if self._window_open:
                 if self._differential < self._window_open / 3600:
-                    self._LOGGER.warning(
+                    self._logger.warning(
                         "open window detected, maintain old control value"
                     )
                     return self._last_output
         else:
             # this is only triggered for master mode, velocity is less stable and open window check not required.
             if not input_val:
-                self._LOGGER.warning(
+                self._logger.warning(
                     "no current value specified, return with previous control value {0}".format(
                         self._last_output
                     )
@@ -154,10 +154,10 @@ class PIDController(object):
         self._last_output = max(self._last_output, self._out_min)
 
         # Log some debug info
-        self._LOGGER.debug("P: {0}".format(p))
-        self._LOGGER.debug("I: {0}".format(i))
-        self._LOGGER.debug("D: {0}".format(d))
-        self._LOGGER.debug("output: {0}".format(self._last_output))
+        self._logger.debug("P: {0}".format(p))
+        self._logger.debug("I: {0}".format(i))
+        self._logger.debug("D: {0}".format(d))
+        self._logger.debug("output: {0}".format(self._last_output))
 
         # Remember some variables for next time
         self._last_input = input_val
@@ -173,7 +173,7 @@ class PIDController(object):
 
     @integral.setter
     def integral(self, integral):
-        self._LOGGER.info("forcing new integral: {0}".format(integral))
+        self._logger.info("forcing new integral: {0}".format(integral))
         self._integral = integral
 
     @property
