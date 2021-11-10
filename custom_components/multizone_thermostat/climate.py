@@ -439,7 +439,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._hvac_def[mode] = hvac_setting.HVACSetting(
                 self._logger.name, mode, mode_config
             )
-        self._hvac_mode = initial_hvac_mode
+        self._hvac_mode = None
+        self._hvac_mode_init = initial_hvac_mode
         self._preset_mode = initial_preset_mode
         self._enabled_hvac_mode = enabled_hvac_modes
         self._enable_old_state = enable_old_state
@@ -583,10 +584,30 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # Check if we have an old state, if so, restore it
         old_state = await self.async_get_last_state()
+        if not self._enable_old_state:
+            # init in case no restore is required
+            if not self._hvac_mode_init:
+                self._logger.warning("no initial hvac mode specified: force off mode")
+                self._hvac_mode_init = HVAC_MODE_OFF
+            self._logger.info("init default hvac mode: %s", self._hvac_mode_init)
+        else:
+            await self.async_restore_old_state(old_state)
 
-        if self._enable_old_state and old_state is not None:
+        await self.async_set_hvac_mode(self._hvac_mode_init)
+        self.async_write_ha_state()
+
+    async def async_restore_old_state(self, old_state):
+        """function to restore old state/config"""
             self._logger.debug("Old state stored : %s", old_state)
+
+        try:
+            if old_state is None:
+                self._hvac_mode_init = HVAC_MODE_OFF
+                raise ValueError("No old state, init in default off mode")
+
             old_preset_mode = old_state.attributes.get(ATTR_PRESET_MODE)
+            if old_preset_mode is None:
+                old_preset_mode = "none"
             old_hvac_mode = old_state.state
             old_temperature = old_state.attributes.get(ATTR_TEMPERATURE)
             self._logger.debug(
@@ -596,16 +617,19 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 old_temperature,
             )
 
-            if old_preset_mode is not None and old_preset_mode in self.preset_modes:
+            if (
+                old_hvac_mode is None
+                or old_preset_mode not in self.preset_modes
+                or old_hvac_mode not in self.hvac_modes
+                or "hvac_def" not in old_state.attributes
+            ):
+                raise ValueError("Invalid old state, init in default off mode")
+
+            self._logger.info("restore old controller settings")
+            self._hvac_mode_init = old_hvac_mode
                 self._preset_mode = old_preset_mode
 
-            if old_hvac_mode is not None and old_hvac_mode in self.hvac_modes:
-
-                self._logger.debug("activate old hvac mode : %s", old_hvac_mode)
-
-                if "hvac_def" in old_state.attributes:
-                    try:
-                        self._logger.info("restore old controller settings")
+            if self._hvac_mode_init != HVAC_MODE_OFF:
                         old_def = old_state.attributes["hvac_def"]
                         for key, data in old_def.items():
                             if key in list(self._hvac_def.keys()):
@@ -614,44 +638,21 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                                     self._restore_parameters,
                                     self._restore_integral,
                                 )
-                    except:
-                        self._logger.warning(
-                            "error restoring old controller settings for: %s", key
-                        )
-                else:
-                    self._logger.warning("no old controller settings to restore")
-
-                # init hvac mode
-                await self.async_set_hvac_mode(old_hvac_mode, init=True)
 
                 # Restore the target temperature
-                if self._hvac_on:
-                    min_temp, max_temp = self._hvac_on.get_target_temp_limits
+                min_temp, max_temp = self._hvac_def[
+                    old_hvac_mode
+                ].get_target_temp_limits
                     if (
                         old_temperature is not None
                         and min_temp <= old_temperature <= max_temp
                     ):
-                        self._hvac_on.target_temperature = old_temperature
+                    self._hvac_def[old_hvac_mode].target_temperature = old_temperature
 
-            else:
-                self._logger.warning(
-                    "%s is not valid mode. restoring default mode: %s",
-                    old_hvac_mode,
-                    self._hvac_mode,
-                )
-                await self.async_set_hvac_mode(self._hvac_mode, init=True)
-        else:
-            # init in case no restore is required
-            if not self._hvac_mode:
-                self._logger.warning("no hvac mode specified: force off mode")
-                self._hvac_mode = HVAC_MODE_OFF
-
-            self._logger.info("init default hvac mode: %s", self._hvac_mode)
-            await self.async_set_hvac_mode(self._hvac_mode, init=True)
-
-        # Ensure we update the current operation after changing the mode
-        await self._async_operate()
-        self.async_write_ha_state()
+        except ValueError as eror:
+            self._hvac_mode_init = HVAC_MODE_OFF
+            self._logger.warning("restoring old state failed:%s", str(eror))
+            return
 
     @property
     def device_state_attributes(self):
@@ -809,8 +810,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # update listener
             await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
-
-            if not init:
                 await self._async_operate()
 
             # Ensure we update the current operation after changing the mode
