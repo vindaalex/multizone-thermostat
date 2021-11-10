@@ -1,9 +1,10 @@
-import math
+"""module with PID controller"""
+# import math
 import logging
 import numpy as np
 
-from time import time
-from collections import deque, namedtuple
+# from time import time
+# from collections import namedtuple
 
 
 # Based on Arduino PID Library
@@ -29,9 +30,9 @@ class PIDController(object):
         kp,
         ki,
         kd,
+        time,
         out_min=float("-inf"),
         out_max=float("inf"),
-        time=time,
         window_open=None,
     ):
         if kp is None:
@@ -49,9 +50,9 @@ class PIDController(object):
                 raise ValueError("window open should be less than 0")
 
         self._logger = logging.getLogger(logger).getChild(PID_type)
-        self._Kp = kp
-        self._Ki = ki
-        self._Kd = kd
+        self._Kp = kp  # pylint: disable=invalid-name
+        self._Ki = ki  # pylint: disable=invalid-name
+        self._Kd = kd  # pylint: disable=invalid-name
         self._logger.debug("_sampletime: {0}".format(sampletime))
         self._sampletime = sampletime
         self._out_min = out_min
@@ -144,19 +145,19 @@ class PIDController(object):
                     self._out_min / (self._windupguard * abs(self._Ki)),
                 )
 
-        p = self._Kp * error
-        i = self._Ki * self._integral
-        d = self._Kd * self._differential
+        p_var = self._Kp * error
+        i_var = self._Ki * self._integral
+        d_var = self._Kd * self._differential
 
         # Compute PID Output
-        self._last_output = p + i + d
+        self._last_output = p_var + i_var + d_var
         self._last_output = min(self._last_output, self._out_max)
         self._last_output = max(self._last_output, self._out_min)
 
         # Log some debug info
-        self._logger.debug("P: {0}".format(p))
-        self._logger.debug("I: {0}".format(i))
-        self._logger.debug("D: {0}".format(d))
+        self._logger.debug("P: {0}".format(p_var))
+        self._logger.debug("I: {0}".format(i_var))
+        self._logger.debug("D: {0}".format(d_var))
         self._logger.debug("output: {0}".format(self._last_output))
 
         # Remember some variables for next time
@@ -165,22 +166,26 @@ class PIDController(object):
         return self._last_output
 
     def reset_time(self):
+        """reset time to void large intergrl buildup"""
         self._last_calc_timestamp = self._time()
 
     @property
     def integral(self):
+        """return integral"""
         return self._integral
 
     @integral.setter
     def integral(self, integral):
+        """set integral"""
         self._logger.info("forcing new integral: {0}".format(integral))
         self._integral = integral
 
     @property
     def differential(self):
+        """get differential"""
         return self._differential
 
-    def set_pid_param(self, kp=None, ki=None, kd=None):
+    def set_pid_param(self, kp=None, ki=None, kd=None):  # pylint: disable=invalid-name
         """Set PID parameters."""
         if kp is not None:
             self._Kp = kp

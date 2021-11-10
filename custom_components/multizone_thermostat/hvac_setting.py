@@ -1,5 +1,5 @@
 """module where configuration of climate is handeled"""
-from . import PID as pid_controller
+from . import pid_controller
 import time
 import logging
 import numpy as np
