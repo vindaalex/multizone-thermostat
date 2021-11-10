@@ -754,7 +754,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def[hvac_mode].set_ka_kb(ka=ka, kb=kb)
         self.async_write_ha_state()
 
-    async def async_set_hvac_mode(self, hvac_mode, init=False):
+    async def async_set_hvac_mode(self, hvac_mode):
         """Set hvac mode."""
         # No changes have been made
         if self._hvac_mode == hvac_mode:
