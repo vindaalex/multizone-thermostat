@@ -793,7 +793,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.time_changed = time.time()
 
                 if self._hvac_on.is_hvac_pid_mode or self._hvac_on.is_hvac_valve_mode:
-                    self._hvac_on.pid_reset_time
+                    self._hvac_on.pid_reset_time()
 
                 # start listening for outdoor sensors
                 if self._hvac_on.is_hvac_wc_mode and self.outdoor_temperature:

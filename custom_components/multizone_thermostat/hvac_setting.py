@@ -441,7 +441,6 @@ class HVACSetting:
         if update:
             hvac_data.PID["pidController"].set_pid_param(kp=kp, ki=ki, kd=kd)
 
-    @property
     def pid_reset_time(self):
         """Reset the current time for PID to avoid overflow of the intergral part
         when switching between hvac modes"""
@@ -509,11 +508,10 @@ class HVACSetting:
             "valve_pos": valve,
         }
 
-        self.master_setpoint
-        self.master_current_temp
-        self.master_valve_position
+        self.master_setpoint()
+        self.master_current_temp()
+        self.master_valve_position()
 
-    @property
     def master_setpoint(self):
         """set setpoint based on satelites"""
         sum_area = 0
@@ -528,7 +526,6 @@ class HVACSetting:
         else:
             self.target_temperature = None
 
-    @property
     def master_current_temp(self):
         """set current temperature by satelites"""
         sum_area = 0
@@ -543,7 +540,6 @@ class HVACSetting:
         else:
             self.current_temperature = None
 
-    @property
     def master_valve_position(self):
         """get maximal valve opening"""
         valve_pos = 0
