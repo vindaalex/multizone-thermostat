@@ -923,7 +923,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         await self._async_update_current_temp(new_state.state)
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if self._hvac_mode != HVAC_MODE_OFF:
+        if self._hvac_mode != HVAC_MODE_OFF or self._hvac_mode != None:
             if self._hvac_on.is_hvac_on_off_mode:
                 await self._async_operate(sensor_changed=True)
 
@@ -935,9 +935,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.debug("Sensor outdoor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             self._logger.warning(
-                "Sensor temperature {} invalid {}",
-                format(new_state.name, new_state.state),
-            )
+                "Sensor temperature {} invalid {}".
+                format(new_state.name, new_state.state))
             await self._async_activate_emergency_stop(new_state.name)
             return
 
@@ -1020,7 +1019,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if not sensor_state:
                 self._logger.warning(
-                    "Stuck prevention no state (NoneType) for %s" % (data[0])
+                    "Stuck prevention ignored %s, no state (NoneType)" % (data[0])
                 )
                 continue
 
@@ -1552,7 +1551,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def current_temperature(self):
         """Return the sensor temperature."""
-        if self._hvac_mode in [HVAC_MODE_OFF, None]:
+        if self._hvac_mode is HVAC_MODE_OFF or self._hvac_mode is None or self._hvac_on is None:
             return self._current_temperature
 
         return (
@@ -1589,7 +1588,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._hvac_mode in [HVAC_MODE_OFF, None]:
+        if self._hvac_mode is HVAC_MODE_OFF or self._hvac_mode is None or self._hvac_on is None:
             return None
         return self._hvac_on.target_temperature
 
