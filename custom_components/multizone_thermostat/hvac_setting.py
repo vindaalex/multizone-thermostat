@@ -680,4 +680,4 @@ class HVACSetting:
                         "Valve_PID_integral"
                     ]
 
-        self.pid_reset_time
+        self.pid_reset_time()
