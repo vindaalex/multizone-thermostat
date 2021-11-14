@@ -97,13 +97,6 @@ The valve control is based on NC actuators
 
 heat and cool mode: Kp & Ki negative, Kd positive
 
-### Autotune:
-WARNING: autotune is not tested, only code updates from above repo's are included as those seem to have 'improved things'. I'm not able to test these the autotune due to the slow reacting heating system. USE ON YOUR OWN RISK.
-
-You can use the autotune feature to set the PID parameters.
-The PID parmaters set by the autotune will overide the original PID values from the config and will be maintained when the restore_state is set the True. Restarting the climate with restore will maintain the autotune PID values. These are not written back to your climate yml file.
-To save the parameters read the climate entity attributes, and copy the values to your config.
-
 # Parameters:
 
 ## main:
@@ -115,8 +108,12 @@ To save the parameters read the climate entity attributes, and copy the values t
 * precision (Optional): specifiy precision of system: 0.1, 0.5 or 1
 * unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
 * room_area (Optional): ratio (room area) for averiging thermostat when required when operating as satelite. Default is 0
+
+checks for sensor and switch
 * sensor_stale_duration (Optional): safety to turn switches of when sensor has not updated wthin specified period. Default no check
-* passive_switch_check (Optional): check at midnight if switch hasn't been operated for a secified time (passive_switch_duration) to avoid stuck/jammed valve. Default is False.
+* passive_switch_check (Optional): check at midnight if switch hasn't been operated for a secified time (passive_switch_duration) to avoid stuck/jammed valve. Default is False. Per hvac_mode duration (where switch is specified) is specified
+
+recovery of settings
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. (setpoints, KP,KI,PD values, modes). Default is False
 * restore_parameters (Optional): specify if previous controller parameters need to be restored. Default is false
 * restore_integral (Optional): If PID integral needs to be restored. Avoid long restoration times. Default is false
@@ -162,7 +159,7 @@ with the data (as sub):
 * kd (Required): Set PID parameter, d control value.
 * min_diff (Optional): Overide global minimum output. Default varies with chosen settings.
 * max_diff (Optional): Overide global maximum output. Default = 'difference'
-* For autotune parameters see section 'autotune'
+*window_open_tempdrop (Optional): Notice temporarily open window. Define temperature drop velocity below which PID is frozen to avoid integral and derative build-up. drop in Celcius per hour. Should  be negative. Default = off.
 
 ##### weather compensation:
 Linear controller (sub of proportional mode)
@@ -185,32 +182,6 @@ Valve control mode is included as part of MASTER_mode
 * min_diff (Optional): Overide global minimum output. Default varies with chosen settings.
 * max_diff (Optional): Overide global maximum output. Default = 'difference'
 * For autotune parameters see section 'autotune'
-
-## Autotune parameters:
-* autotune (Optional): Choose a string for autotune settings.  If it's not set autotune is disabled.
-
-tuning_rules | Kp_divisor, Ki_divisor, Kd_divisor
------------- | -------------
-"ziegler-nichols" | 34, 40, 160
-"tyreus-luyben" | 44,  9, 126
-"ciancone-marlin" | 66, 88, 162
-"pessen-integral" | 28, 50, 133
-"some-overshoot" | 60, 40,  60
-"no-overshoot" | 100, 40,  60
-"brewing" | 2.5, 6, 380
-
-* autotune_control_type (Optional): (default none). Disables the
-tuning rules and sets the Ziegler-Nichols control type     according to: https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method
-
-  Possible values: p, pi, pd, classic_pid, pessen_integral_rule,
-                    some_overshoot, no_overshoot
-
-* noiseband (Optional): (default 0.5) Set noiseband (float).Determines by how much the input value must overshoot/undershoot the setpoint before the state changes during autotune.
-* autotune_lookback (Optional): (default 60s). The reference period in seconds for local minima/maxima.
-
-
-
-
 
 ## configuration.yaml
 on-off mode - heat only
