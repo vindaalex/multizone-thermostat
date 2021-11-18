@@ -108,7 +108,7 @@ class PIDController(object):
                     self._differential,
                 )
             )
-            if self._window_open:
+            if self._window_open and not force:
                 if self._differential < self._window_open / 3600:
                     self._logger.warning(
                         "open window detected, maintain old control value"
