@@ -1158,10 +1158,40 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         except ValueError as ex:
             self._logger.error("Unable to update from sensor: %s", ex)
 
+    async def _async_check_duration(self, sensor_changed):
+        # when mode is on_off
+        # on_off is also true when pwm = 0 therefore != _is_pwm_active
+        if self._hvac_on.is_hvac_on_off_mode:
+            # If the mode is OFF and the device is ON, turn it OFF and exit, else, just exit
+            min_cycle_duration = self._hvac_on.get_min_on_off_cycle
+            tolerance_on, tolerance_off = self._hvac_on.get_hysteris
+
+            # if the call was made by a sensor change, check the min duration
+            # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
+            if sensor_changed and min_cycle_duration is not None:
+
+                entity_id = self._hvac_on.get_hvac_switch
+                current_state = STATE_ON if self._is_switch_active() else STATE_OFF
+
+                long_enough = condition.state(
+                    self.hass, entity_id, current_state, min_cycle_duration
+                )
+
+                if not long_enough:
+                    self._logger.debug(
+                        "Operate - Min duration not expired, exiting (%s, %s, %s)",
+                        min_cycle_duration,
+                        current_state,
+                        entity_id,
+                    )
+                    return False
+
+        return True
+
     async def _async_operate(self, now=None, sensor_changed=False, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
-            # time is passed by to the callback the async_track_time_interval function , and is set to "now"
+            # now is passed by to the callback the async_track_time_interval function , and is set to "now"
             keepalive = now is not None  # boolean
 
             if self._emergency_stop:
@@ -1193,62 +1223,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
                 return
 
-            # when mode is on_off
-            # on_off is also true when pwm = 0 therefore != _is_pwm_active
-            if self._hvac_on.is_hvac_on_off_mode:
-                # If the mode is OFF and the device is ON, turn it OFF and exit, else, just exit
-                min_cycle_duration = self._hvac_on.get_min_on_off_cycle
-                tolerance_on, tolerance_off = self._hvac_on.get_hysteris
+            # for mode on_off
+            if not await self._async_check_duration(sensor_changed):
+                return
 
-                # if the call was made by a sensor change, check the min duration
-                # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
-                if sensor_changed and min_cycle_duration is not None:
-
-                    entity_id = self._hvac_on.get_hvac_switch
-                    current_state = STATE_ON if self._is_switch_active() else STATE_OFF
-
-                    long_enough = condition.state(
-                        self.hass, entity_id, current_state, min_cycle_duration
-                    )
-
-                    if not long_enough:
-                        self._logger.debug(
-                            "Operate - Min duration not expired, exiting (%s, %s, %s)",
-                            min_cycle_duration,
-                            current_state,
-                            entity_id,
-                        )
-                        return
-                target_temp = self._hvac_on.target_temperature
-                target_temp_min = target_temp - tolerance_on
-                target_temp_max = target_temp + tolerance_off
-                current_temp = self._hvac_on.current_temperature
-
-                self._logger.debug(
-                    "Operate - tg_min %s, tg_max %s, current %s, tg %s, ka %s",
-                    target_temp_min,
-                    target_temp_max,
-                    current_temp,
-                    target_temp,
-                    keepalive,
-                )
-
-                # If keep-alive case, we force the order resend (this is the goal of keep alive)
-                force_resend = keepalive
-
-                if current_temp > target_temp_max:
-                    await self._async_switch_turn_off(force=force_resend)
-                elif current_temp <= target_temp_min:
-                    await self._async_switch_turn_on(force=force_resend)
-            else:
-                # when mode is pwm: calculate control output
-                self._logger.debug("update controller")
-                self._hvac_on.calculate(force)
-                self.control_output = self._hvac_on.get_control_output
-                self._logger.debug(
-                    "Obtained current control output: %s", self.control_output
-                )
-                await self._async_set_controlvalue()
+            self._logger.debug("update controller")
+            self._hvac_on.calculate(force=force)
+            self.control_output = self._hvac_on.get_control_output
+            self._logger.debug(
+                "Obtained current control output: %s", self.control_output
+            )
+            await self._async_set_controlvalue()
         self.async_write_ha_state()
 
     async def _async_set_controlvalue(self):

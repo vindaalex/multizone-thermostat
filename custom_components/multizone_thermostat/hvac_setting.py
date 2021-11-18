@@ -91,6 +91,7 @@ class HVACSetting:
         if self.is_hvac_on_off_mode:
             self._logger.debug("HVAC mode 'on_off' active")
             self.start_on_off()
+            self._on_off["control_output"] = 0
         if self.is_hvac_proportional_mode:
             self._logger.debug("HVAC mode 'proportional' active")
             if self.is_master_mode:
@@ -111,10 +112,13 @@ class HVACSetting:
 
     def calculate(self, force=None):
         """Calculate the current control values for all activated modes"""
-        if self.is_hvac_pid_mode or self.is_hvac_valve_mode:
-            self.run_pid(force)
-        if self.is_hvac_wc_mode:
-            self.run_wc()
+        if self.is_hvac_on_off_mode:
+            self.run_on_off()
+        else:
+            if self.is_hvac_pid_mode or self.is_hvac_valve_mode:
+                self.run_pid(force)
+            if self.is_hvac_wc_mode:
+                self.run_wc()
 
     @property
     def min_target_temp(self):
@@ -175,6 +179,28 @@ class HVACSetting:
 
         hvac_data["control_output"] = 0
 
+    def run_on_off(self):
+        """function to determine state switch on_off"""
+        # If the mode is OFF and the device is ON, turn it OFF and exit, else, just exit
+        tolerance_on, tolerance_off = self.get_hysteris
+        target_temp = self.target_temperature
+        target_temp_min = target_temp - tolerance_on
+        target_temp_max = target_temp + tolerance_off
+        current_temp = self.current_temperature
+
+        self._logger.debug(
+            "Operate - tg_min %s, tg_max %s, current %s, tg %s",
+            target_temp_min,
+            target_temp_max,
+            current_temp,
+            target_temp,
+        )
+
+        if current_temp > target_temp_max:
+            self._on_off["control_output"] = 0
+        else:
+            self._on_off["control_output"] = 100
+
     def run_wc(self):
         """calcuate weather compension mode"""
         KA, KB = self.get_ka_kb_param  # pylint: disable=invalid-name
@@ -223,21 +249,24 @@ class HVACSetting:
         """Return the control output of the thermostat."""
         key = "control_output"
         control_output = 0
-        if self.is_hvac_pid_mode:
-            control_output += self._pid[key]
-        if self.is_hvac_wc_mode:
-            control_output += self._wc[key]
-        if self.is_hvac_valve_mode:
-            control_output += self._master[key]
+        if self.is_hvac_on_off_mode:
+            control_output += self._on_off[key]
+        else:
+            if self.is_hvac_pid_mode:
+                control_output += self._pid[key]
+            if self.is_hvac_wc_mode:
+                control_output += self._wc[key]
+            if self.is_hvac_valve_mode:
+                control_output += self._master[key]
 
-        if self.is_hvac_valve_mode:
-            if self._master_max_valve_pos == 0:
+            if self.is_hvac_valve_mode:
+                if self._master_max_valve_pos == 0:
+                    control_output = 0
+
+            if control_output > self.get_difference:
+                control_output = self.get_difference
+            elif control_output < 0:
                 control_output = 0
-
-        if control_output > self.get_difference:
-            control_output = self.get_difference
-        elif control_output < 0:
-            control_output = 0
 
         return round(control_output, 3)
 
@@ -321,7 +350,7 @@ class HVACSetting:
         if self.is_hvac_proportional_mode:
             return self._proportional[CONF_MIN_DIFF]
         else:
-            return None
+            return 50
 
     @min_diff.setter
     def min_diff(self, min_diff):
