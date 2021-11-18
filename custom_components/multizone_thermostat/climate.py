@@ -1180,6 +1180,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # update and check current temperatures
             if not sensor_changed and not self._hvac_on.is_master_mode:
                 await self._async_update_current_temp()
+            if not self._hvac_on.is_master_mode:
                 await self._async_update_controller_temp()
 
             if self._sensor_entity_id and self._hvac_on.current_temperature is None:
