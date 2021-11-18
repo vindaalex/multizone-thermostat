@@ -189,9 +189,6 @@ hvac_control_options = {
             vol.Optional(CONF_PWM, default=DEFAULT_PWM): vol.All(
                 cv.time_period, cv.positive_timedelta
             ),
-            vol.Optional(CONF_SENSOR_FILTER, default=DEFAULT_SENSOR_FILTER): vol.Coerce(
-                int
-            ),
             # PID mode
             vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options_req),
             # weather compensating mode"
@@ -249,6 +246,9 @@ PLATFORM_SCHEMA = vol.All(
         {
             vol.Required(CONF_NAME): cv.string,
             vol.Optional(CONF_SENSOR): cv.entity_id,
+            vol.Optional(CONF_SENSOR_FILTER, default=DEFAULT_SENSOR_FILTER): vol.Coerce(
+                int
+            ),
             vol.Optional(CONF_SENSOR_OUT): cv.entity_id,
             vol.Optional(
                 CONF_INITIAL_HVAC_MODE, default=DEFAULT_INITIAL_HVAC_MODE
@@ -314,7 +314,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     platform.async_register_entity_service(  # type: ignore
         "set_filter_mode",
         {
-            vol.Required("hvac_mode"): cv.string,
             vol.Optional("mode"): vol.Coerce(float),
         },
         "async_set_filter_mode",
@@ -349,6 +348,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     name = config.get(CONF_NAME)
     sensor_entity_id = config.get(CONF_SENSOR)
+    filter_mode = config.get(CONF_SENSOR_FILTER)
     sensor_out_entity_id = config.get(CONF_SENSOR_OUT)
     initial_hvac_mode = config.get(CONF_INITIAL_HVAC_MODE)
     precision = config.get(CONF_PRECISION)
@@ -387,6 +387,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 precision,
                 area,
                 sensor_entity_id,
+                filter_mode,
                 sensor_out_entity_id,
                 hvac_def,
                 enabled_hvac_modes,
@@ -413,6 +414,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         precision,
         area,
         sensor_entity_id,
+        filter_mode,
         sensor_out_entity_id,
         hvac_def,
         enabled_hvac_modes,
@@ -431,6 +433,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         )
         self._logger.info("initialise: %s", self._name)
         self._sensor_entity_id = sensor_entity_id
+        self._filter_mode = filter_mode
         self._sensor_out_entity_id = sensor_out_entity_id
         self._temp_precision = precision
         self._unit = unit
@@ -451,7 +454,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._area = area
         self._emergency_stop = False
         self._current_temperature = None
-        self._last_current_temperature = None
         self._outdoor_temperature = None
         self._old_mode = "off"
         self._hvac_on = None
@@ -564,6 +566,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNKNOWN,
             ):
                 await self._async_update_current_temp(sensor_state.state)
+                # setup filter after frist temp reading
+                if not self._kf_temp and self.filter_mode > 0:
+                    await self.async_set_filter_mode(self.filter_mode)
 
             if self._sensor_out_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
@@ -574,7 +579,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNKNOWN,
             ):
                 self._update_outdoor_temperature(sensor_state.state)
-
                 self.async_write_ha_state()
 
         if self.hass.state == CoreState.running:
@@ -686,50 +690,44 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         )
         self.async_write_ha_state()
 
-    async def async_set_filter_mode(self, hvac_mode, mode=None):
+    async def async_set_filter_mode(self, mode):
         """Set new filter for the temp sensor."""
+        self._filter_mode = mode
+        self._logger.info("modified sensor filter mode to: %s", mode)
 
-        if hvac_mode == HVAC_MODE_OFF:
-            return
-
-        if mode:
-            self._hvac_def[hvac_mode].filter_mode = mode
-            self._logger.info(
-                "modified sensor filter mode for %s to: %s", hvac_mode, mode
-            )
-        else:
-            mode = self._hvac_on.filter_mode
-            self._logger.info("new sensor filter mode for %s to: %s", hvac_mode, mode)
-
-        if hvac_mode != self._hvac_mode:
-            self._hvac_def[hvac_mode].current_state = None
-
-        elif hvac_mode == self._hvac_mode:
-            if mode == 0:
-                self._kf_temp = None
+        if mode == 0:
+            self._current_temperature = self.current_temperature
+            self._kf_temp = None
+            if self._hvac_on:
                 self._hvac_on.current_state = None
-                self._hvac_on.current_temperature = self._current_temperature
-            else:
-                if not self._kf_temp:
-                    if self._current_temperature:
-                        self._kf_temp = UKF_config.UKFFilter(
-                            self._current_temperature,
-                            self._hvac_on.get_operate_cycle_time.seconds,
-                            self._hvac_on.filter_mode,
-                        )
-                    else:
-                        self._logger.info(
-                            "new sensor filter mode (%s) but no temperature reading for %s",
-                            mode,
-                            hvac_mode,
-                        )
-                        return
-                # update active filter
-                else:
-                    self._kf_temp.set_filter_mode(
-                        self._hvac_on.filter_mode,
-                        self._hvac_on.get_operate_cycle_time.seconds,
+                self._hvac_on.current_temperature = self.current_temperature
+        else:
+            # if self._hvac_on:
+            #     cycle_time = self._hvac_on.get_operate_cycle_time.seconds
+            # else:
+            cycle_time = (
+                60  # dt is variable in . Need to make variable in future iteration?
+            )
+
+            if not self._kf_temp:
+                if self._current_temperature:
+                    self._kf_temp = UKF_config.UKFFilter(
+                        self._current_temperature,
+                        cycle_time,
+                        self.filter_mode,
                     )
+                else:
+                    self._logger.info(
+                        "new sensor filter mode (%s) but no temperature reading",
+                        mode,
+                    )
+                    return
+            # update active filter
+            else:
+                self._kf_temp.set_filter_mode(
+                    self.filter_mode,
+                    cycle_time,
+                )
         self.async_write_ha_state()
 
     async def async_set_integral(self, hvac_mode, control_mode, integral):
@@ -786,7 +784,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
         else:
             self._hvac_on = self._hvac_def[self._hvac_mode]
-            await self.async_set_filter_mode(hvac_mode=self._hvac_mode)
 
             # reset time stamp pid to avoid integral run-off
             if self._hvac_on.is_hvac_proportional_mode:
@@ -804,9 +801,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_track_satelites(
                     entity_list=self._hvac_on.get_satelites
                 )
-            else:
-                await self._async_update_current_temp()
-                # self._hvac_on.current_temperature = self.current_temperature
+            # else:
+            #     await self._async_update_current_temp()
+            # self._hvac_on.current_temperature = self.current_temperature
 
             # update listener
             await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
@@ -923,7 +920,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         await self._async_update_current_temp(new_state.state)
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if self._hvac_mode != HVAC_MODE_OFF or self._hvac_mode != None:
+        if self._hvac_mode != HVAC_MODE_OFF and self._hvac_mode is not None:
             if self._hvac_on.is_hvac_on_off_mode:
                 await self._async_operate(sensor_changed=True)
 
@@ -935,8 +932,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.debug("Sensor outdoor temperature updated to %s", new_state.state)
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             self._logger.warning(
-                "Sensor temperature {} invalid {}".
-                format(new_state.name, new_state.state))
+                "Sensor temperature {} invalid {}".format(
+                    new_state.name, new_state.state
+                )
+            )
             await self._async_activate_emergency_stop(new_state.name)
             return
 
@@ -1103,46 +1102,42 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 current_temp,
             )
             self._emergency_stop = False
+
+        if current_temp:
+            self._logger.debug("Current temperature updated to %s", current_temp)
+            # store local in case current hvac mode is off
+            self._current_temperature = float(current_temp)
+
         try:
-            if current_temp:
-                self._logger.debug("Current temperature updated to %s", current_temp)
-                # store local in case current hvac mode is off
-                if not self._kf_temp:
-                    self._current_temperature = float(current_temp)
+            if self._kf_temp:
+                self._kf_temp.kf_predict()
+                if current_temp:
+                    tmp_temperature = float(current_temp)
+                elif self._current_temperature:
+                    tmp_temperature = self._current_temperature
                 else:
-                    self._last_current_temperature = float(current_temp)
+                    tmp_temperature = None
 
-            if self._hvac_on:
-                if not self._hvac_on.filter_mode:
-                    self._hvac_on.current_temperature = self._current_temperature
-                else:
-                    if not self._kf_temp:
-                        await self.async_set_filter_mode(hvac_mode=self._hvac_mode)
-                    if self._kf_temp:
-                        self._kf_temp.kf_predict()
-                        if current_temp:
-                            tmp_temperature = float(current_temp)
-                        elif self._last_current_temperature:
-                            tmp_temperature = self._last_current_temperature
-                        else:
-                            tmp_temperature = self._current_temperature
+                if tmp_temperature:
+                    self._kf_temp.kf_update(tmp_temperature)
 
-                        self._kf_temp.kf_update(tmp_temperature)
-
-                        # store local in case current hvac mode is off
-                        self._logger.debug("kp update temp %s", self._kf_temp.get_temp)
-                        self._current_temperature = self._kf_temp.get_temp
-
-                        if self._hvac_on:
-                            if not self._hvac_on.is_master_mode:
-                                self._hvac_on.current_state = [
-                                    self._kf_temp.get_temp,
-                                    self._kf_temp.get_vel,
-                                ]
+                self._logger.debug("kp update temp %s", self._kf_temp.get_temp)
 
             self.async_write_ha_state()
         except ValueError as ex:
             self._logger.error("Unable to update from sensor: %s", ex)
+
+    async def _async_update_controller_temp(self):
+        """Update temperature to controller routines."""
+        if self._hvac_on:
+            if not self._kf_temp:
+                self._hvac_on.current_temperature = self._current_temperature
+            else:
+                if not self._hvac_on.is_master_mode:
+                    self._hvac_on.current_state = [
+                        self._kf_temp.get_temp,
+                        self._kf_temp.get_vel,
+                    ]
 
     def _update_outdoor_temperature(self, current_temp=None):
         """Update thermostat with latest state from outdoor sensor."""
@@ -1185,6 +1180,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # update and check current temperatures
             if not sensor_changed and not self._hvac_on.is_master_mode:
                 await self._async_update_current_temp()
+                await self._async_update_controller_temp()
 
             if self._hvac_on.current_temperature is None:
                 self._logger.warning("Current temp is None, cannot compare with target")
@@ -1551,14 +1547,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def current_temperature(self):
         """Return the sensor temperature."""
-        if self._hvac_mode is HVAC_MODE_OFF or self._hvac_mode is None or self._hvac_on is None:
+        if not self._kf_temp:
             return self._current_temperature
-
-        return (
-            round(self._hvac_on.current_temperature, 3)
-            if self._hvac_on.current_temperature
-            else self._hvac_on.current_temperature
-        )
+        else:
+            return round(self._kf_temp.get_temp, 3)
 
     @property
     def outdoor_temperature(self):
@@ -1588,7 +1580,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._hvac_mode is HVAC_MODE_OFF or self._hvac_mode is None or self._hvac_on is None:
+        if (
+            self._hvac_mode is HVAC_MODE_OFF
+            or self._hvac_mode is None
+            or self._hvac_on is None
+        ):
             return None
         return self._hvac_on.target_temperature
 
@@ -1611,3 +1607,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 modes = modes + [PRESET_AWAY]
 
         return modes
+
+    @property
+    def filter_mode(self):
+        """Return the UKF mode."""
+        return self._filter_mode
+
+    @filter_mode.setter
+    def filter_mode(self, mode):
+        """Set the UKF mode."""
+        self._filter_mode = mode

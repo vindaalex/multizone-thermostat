@@ -28,7 +28,6 @@ from .const import (
     CONF_MAX_DIFFERENCE,
     CONF_MIN_DIFF,
     CONF_WINDOW_OPEN_TEMPDROP,
-    CONF_SENSOR_FILTER,
     # PID controller
     CONF_PID_MODE,
     CONF_KP,
@@ -464,23 +463,6 @@ class HVACSetting:
         else:
             return None
 
-    @property
-    def filter_mode(self):
-        """Return the UKF mode."""
-        if self.is_hvac_proportional_mode:
-            return self._proportional[CONF_SENSOR_FILTER]
-        else:
-            return 0
-
-    @filter_mode.setter
-    def filter_mode(self, mode):
-        """Set the UKF mode."""
-        if self.is_hvac_proportional_mode:
-            self._proportional[CONF_SENSOR_FILTER] = mode
-        else:
-            self._logger.error("not filter supported for on-off control")
-            return
-
     def set_pid_param(
         self, hvac_data, kp=None, ki=None, kd=None, update=False
     ):  # pylint: disable=invalid-name
@@ -556,14 +538,14 @@ class HVACSetting:
     def update_satelite(self, name, mode, setpoint, current, area, valve):
         """set new state of a satelite"""
         self._logger.debug("new data for : %s", name)
-        if None in [setpoint,current,area,valve]:
+        if None in [setpoint, current, area, valve]:
             self._satelites[name] = {
                 "mode": None,
                 "setpoint": 0,
                 "current": 0,
                 "area": 0,
                 "valve_pos": 0,
-            }            
+            }
         else:
             self._satelites[name] = {
                 "mode": mode,
