@@ -23,7 +23,10 @@ class UKFFilter:
         self.interval = timedelta
 
     def kf_predict(self):
-        """run UKF prediction with variable timestep"""
+        """
+        run UKF prediction with variable timestep
+        https://github.com/rlabbe/filterpy/issues/196
+        """
         timedelta = time.time() - self._last_update
         self._last_update = time.time()
         self._kf_temp.predict(dt=timedelta)
