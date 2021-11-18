@@ -1182,8 +1182,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_update_current_temp()
                 await self._async_update_controller_temp()
 
-            if self._hvac_on.current_temperature is None:
+            if self._sensor_entity_id and self._hvac_on.current_temperature is None:
                 self._logger.warning("Current temp is None, cannot compare with target")
+                return
+
+            if self._sensor_out_entity_id and self._hvac_on.outdoor_temperature is None:
+                self._logger.warning(
+                    "Current outdoor temp is None, cannot compare with target"
+                )
                 return
 
             # when mode is on_off
