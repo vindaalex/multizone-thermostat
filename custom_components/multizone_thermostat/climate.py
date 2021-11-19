@@ -56,7 +56,48 @@ def validate_initial_control_mode(*keys: str) -> Callable:
                     raise vol.Invalid(
                         "The on_off and proportional mode have both been set {hvac_mode} mode"
                     )
-            return obj
+        return obj
+
+    return validate
+
+
+def validate_initial_sensors(*keys: str) -> Callable:
+    """If an initial preset mode has been set, check if the values are set in both modes."""
+
+    def validate(obj: Dict) -> Dict:
+        """Check this condition."""
+        for hvac_mode in [HVAC_MODE_HEAT, HVAC_MODE_COOL]:
+            if hvac_mode in obj:
+                if CONF_ON_OFF_MODE in obj[hvac_mode] and not CONF_SENSOR in obj:
+                    raise vol.Invalid(
+                        "on-off control defined but no temperature sensor for {hvac_mode} mode"
+                    )
+                if CONF_PROPORTIONAL_MODE in obj[hvac_mode]:
+                    if (
+                        CONF_PID_MODE in obj[hvac_mode][CONF_PROPORTIONAL_MODE]
+                        and not CONF_SENSOR in obj
+                    ):
+                        raise vol.Invalid(
+                            "PID control defined but no temperature sensor for {hvac_mode} mode"
+                        )
+                    if (
+                        CONF_WC_MODE in obj[hvac_mode][CONF_PROPORTIONAL_MODE]
+                        and not CONF_SENSOR_OUT in obj
+                    ):
+                        raise vol.Invalid(
+                            "Weather control defined but no outdoor temperature sensor for {hvac_mode} mode"
+                        )
+                    if CONF_MASTER_MODE in obj[hvac_mode][CONF_PROPORTIONAL_MODE]:
+                        if (
+                            CONF_SATELITES
+                            not in obj[hvac_mode][CONF_PROPORTIONAL_MODE][
+                                CONF_MASTER_MODE
+                            ]
+                        ):
+                            raise vol.Invalid(
+                                "Master mode defined but no satelite thermostats for {hvac_mode} mode"
+                            )
+        return obj
 
     return validate
 
@@ -242,6 +283,7 @@ PLATFORM_SCHEMA = vol.All(
     check_presets_in_both_modes(),
     validate_initial_preset_mode(),
     validate_initial_control_mode(),
+    validate_initial_sensors(),
     PLATFORM_SCHEMA.extend(
         {
             vol.Required(CONF_NAME): cv.string,
