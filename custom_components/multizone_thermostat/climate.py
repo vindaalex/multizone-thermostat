@@ -500,6 +500,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._old_mode = "off"
         self._hvac_on = None
         self._current_alive_time = None
+        self._current_pwm_alive_time = None
         self._satelites = None
         self._kf_temp = None
         self.time_changed = None
@@ -811,6 +812,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._preset_mode = PRESET_NONE
             # stop keep_live
             await self._async_update_keep_alive()
+            if self._current_pwm_alive_time:
+                await self._async_update_pwm_alive()
+            self.control_output = 0
             # stop tracking satelites
             if self._hvac_on.is_master_mode:
                 await self._async_track_satelites()
@@ -848,7 +852,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # update listener
         await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
-            await self._async_operate()
+        if self._hvac_on.get_pwm_mode:
+            await self._async_update_pwm_alive(self._hvac_on.get_pwm_mode)
         await self._async_operate(force=True)
 
         # Ensure we update the current operation after changing the mode
@@ -863,7 +868,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._current_alive_time = async_track_time_interval(
                 self.hass, self._async_operate, interval
             )
-            # self.async_on_remove(self._current_alive_time)
+
+    async def _async_update_pwm_alive(self, interval=None):
+        """
+        run pwm at specified intervals
+        operate at a 10 stepsize resolution
+        """
+
+        self._logger.debug(
+            "update 'pwm alive' for %s per %s seconds",
+            self._hvac_mode,
+            interval,
+        )
+        if not interval:
+            self._current_pwm_alive_time()
+        else:
+            resolution = timedelta(seconds=interval.seconds / 10)
+            self._current_pwm_alive_time = async_track_time_interval(
+                self.hass, self._async_set_controlvalue, resolution
+            )
 
     async def _async_track_satelites(self, entity_list=None):
         """get changes from satelite thermostats"""
@@ -1284,10 +1307,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_set_controlvalue()
         self.async_write_ha_state()
 
-    async def _async_set_controlvalue(self):
+    async def _async_set_controlvalue(self, *_):
         """convert control output to pwm signal"""
         force_resend = True
-        pwm = self._hvac_on.get_pwm_mode
+        if self.control_output is None or self._hvac_on is None:
+            await self._async_switch_turn_off(force=force_resend)
+            return
+
+        if self._hvac_on.get_pwm_mode:
+            pwm = self._hvac_on.get_pwm_mode.seconds
+        else:
+            pwm = None
+
         difference = self._hvac_on.get_difference
         if pwm:
             if self.control_output == difference:

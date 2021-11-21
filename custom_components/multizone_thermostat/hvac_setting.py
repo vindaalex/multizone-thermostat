@@ -5,6 +5,8 @@ import logging
 import numpy as np
 
 from .const import (
+    HVAC_MODE_COOL,
+    HVAC_MODE_HEAT,
     PRESET_AWAY,
     PRESET_NONE,
     CONF_ENTITY_ID,
@@ -196,10 +198,16 @@ class HVACSetting:
             target_temp,
         )
 
-        if current_temp > target_temp_max:
-            self._on_off["control_output"] = 0
-        else:
-            self._on_off["control_output"] = 100
+        if self._mode == HVAC_MODE_HEAT:
+            if current_temp >= target_temp_max:
+                self._on_off["control_output"] = 0
+            elif current_temp <= target_temp_min:
+                self._on_off["control_output"] = 100
+        elif self._mode == HVAC_MODE_COOL:
+            if current_temp <= target_temp_min:
+                self._on_off["control_output"] = 0
+            elif current_temp >= target_temp_max:
+                self._on_off["control_output"] = 100
 
     def run_wc(self):
         """calcuate weather compension mode"""
@@ -332,7 +340,7 @@ class HVACSetting:
     def get_pwm_mode(self):
         """return pwm interval time"""
         if self.is_hvac_proportional_mode:
-            return self._proportional[CONF_PWM].seconds
+            return self._proportional[CONF_PWM]
         else:
             return None
 
@@ -690,7 +698,7 @@ class HVACSetting:
     @property
     def is_hvac_switch_on_off(self):
         """check if on-off mode is active"""
-        if self.is_hvac_on_off_mode or not self.get_pwm_mode == 0:
+        if self.is_hvac_on_off_mode or not self.get_pwm_mode.seconds == 0:
             return True
         else:
             return False
