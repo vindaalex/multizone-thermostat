@@ -640,7 +640,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self.async_restore_old_state(old_state)
 
         await self.async_set_hvac_mode(self._hvac_mode_init)
-        self.async_write_ha_state()
+        # self.async_write_ha_state()
 
     async def async_restore_old_state(self, old_state):
         """function to restore old state/config"""
@@ -815,44 +815,44 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._hvac_on.is_master_mode:
                 await self._async_track_satelites()
 
+        self._hvac_on = None
         # new hvac mode thus all switches off
         for key, _ in self._hvac_def.items():
             await self._async_switch_turn_off(hvac_mode=key)
 
+        self.async_write_ha_state()
+
         if self._hvac_mode == HVAC_MODE_OFF:
             self._logger.info("HVAC mode is OFF. Turn the devices OFF and exit")
-            self._hvac_on = None
-            self.async_write_ha_state()
             return
-        else:
-            self._hvac_on = self._hvac_def[self._hvac_mode]
 
-            # reset time stamp pid to avoid integral run-off
-            if self._hvac_on.is_hvac_proportional_mode:
-                self.time_changed = time.time()
+        self._hvac_on = self._hvac_def[self._hvac_mode]
 
-                if self._hvac_on.is_hvac_pid_mode or self._hvac_on.is_hvac_valve_mode:
-                    self._hvac_on.pid_reset_time()
+        # reset time stamp pid to avoid integral run-off
+        if self._hvac_on.is_hvac_proportional_mode:
+            self.time_changed = time.time()
 
-                # start listening for outdoor sensors
-                if self._hvac_on.is_hvac_wc_mode and self.outdoor_temperature:
-                    self._hvac_on.outdoor_temperature = self.outdoor_temperature
+            if self._hvac_on.is_hvac_pid_mode or self._hvac_on.is_hvac_valve_mode:
+                self._hvac_on.pid_reset_time()
 
-            # start listener for satelite thermostats
-            if self._hvac_on.is_master_mode:
-                await self._async_track_satelites(
-                    entity_list=self._hvac_on.get_satelites
-                )
-            # else:
-            #     await self._async_update_current_temp()
-            # self._hvac_on.current_temperature = self.current_temperature
+            # start listening for outdoor sensors
+            if self._hvac_on.is_hvac_wc_mode and self.outdoor_temperature:
+                self._hvac_on.outdoor_temperature = self.outdoor_temperature
 
-            # update listener
-            await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
+        # start listener for satelite thermostats
+        if self._hvac_on.is_master_mode:
+            await self._async_track_satelites(entity_list=self._hvac_on.get_satelites)
+        # else:
+        #     await self._async_update_current_temp()
+        # self._hvac_on.current_temperature = self.current_temperature
+
+        # update listener
+        await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
             await self._async_operate()
+        await self._async_operate(force=True)
 
-            # Ensure we update the current operation after changing the mode
-            self.async_write_ha_state()
+        # Ensure we update the current operation after changing the mode
+        self.async_write_ha_state()
 
     async def _async_update_keep_alive(self, interval=None):
         """run main controller at specified interval"""
@@ -941,6 +941,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_on.target_temperature = temperature
         # self._target_temp = temperature
 
+        # operate in all cases except off
         if self._hvac_mode != HVAC_MODE_OFF:
             await self._async_operate(force=True)
 
@@ -983,10 +984,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         self._update_outdoor_temperature(new_state.state)
 
-        # # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        # if not self._hvac_mode == HVAC_MODE_OFF:
-        #     if not self._hvac_on.is_hvac_pwm_mode:
-        #         await self._async_operate(sensor_changed=True)
+        # when weather mode is active: do not call operate but let pwm cycle handle it
         self.async_write_ha_state()
 
     async def _async_satelite_thermostat_changed(self, event):
@@ -1002,9 +1000,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         )
         self._send_satelite(new_state)
 
-        # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if self._hvac_mode != HVAC_MODE_OFF:
-            await self._async_operate(sensor_changed=True)
+        # if master mode is active: do not call operate but let pwm cycle handle it
         self.async_write_ha_state()
 
     async def _async_check_sensor_not_responding(self, now=None):
@@ -1107,7 +1103,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         elif new_state.state > 0:
             switch_on = True
 
-        if not self._hvac_on and switch_on:
+        if self._hvac_on is None and switch_on:
             # thermostat off thus all switches off
 
             for hvac_mode, data in self._hvac_def.items():
@@ -1127,10 +1123,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on:
             if entity_id != self._hvac_on.get_hvac_switch:
                 self._logger.warning(
-                    "Wrong switch of %s changed from %s",
+                    "%s: wrong switch %s changed to %s, keep in of state",
+                    self._hvac_mode,
                     entity_id,
                     new_state.state,
                 )
+                await self._async_switch_turn_off(hvac_mode=self._old_mode, force=True)
 
         if new_state is None:
             return
@@ -1249,21 +1247,29 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not self._hvac_on:
                 return
 
-            # update and check current temperatures
+            # update and check current temperatures for pwm cycle
             if not sensor_changed and not self._hvac_on.is_master_mode:
                 await self._async_update_current_temp()
+            # send temperature to controller
             if not self._hvac_on.is_master_mode:
                 await self._async_update_controller_temp()
 
-            if self._sensor_entity_id and self._hvac_on.current_temperature is None:
-                self._logger.warning("Current temp is None, cannot compare with target")
-                return
+            if self._hvac_on.is_hvac_on_off_mode or self._hvac_on.is_hvac_pid_mode:
+                if self._sensor_entity_id and self._hvac_on.current_temperature is None:
+                    self._logger.warning(
+                        "Current temp is None, cannot compare with target"
+                    )
+                    return
 
-            if self._sensor_out_entity_id and self._hvac_on.outdoor_temperature is None:
-                self._logger.warning(
-                    "Current outdoor temp is None, cannot compare with target"
-                )
-                return
+            if self._hvac_on.is_hvac_wc_mode:
+                if (
+                    self._sensor_out_entity_id
+                    and self._hvac_on.outdoor_temperature is None
+                ):
+                    self._logger.warning(
+                        "Current outdoor temp is None, cannot compare with target"
+                    )
+                    return
 
             # for mode on_off
             if not await self._async_check_duration(sensor_changed):
