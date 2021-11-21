@@ -1343,8 +1343,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             ):
                 await self._async_switch_turn_off(force=force_resend)
                 self.time_changed = time.time()
-            else:
+            elif (
+                self._hvac_on.min_diff <= self.control_output
+                and not self._is_switch_active()
+            ):
                 await self._async_switch_turn_on(force=force_resend)
+                self.time_changed = time.time()
 
     async def _async_pwm_switch(self, time_on, time_off, time_passed):
         """turn off and on the heater proportionally to controlvalue."""
