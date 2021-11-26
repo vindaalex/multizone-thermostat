@@ -1650,6 +1650,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def current_temperature(self):
         """Return the sensor temperature."""
+        if self._hvac_on:
+            if self._hvac_on.is_master_mode:
+                return self._hvac_on.current_temperature
+
         if not self._kf_temp:
             return self._current_temperature
         else:
