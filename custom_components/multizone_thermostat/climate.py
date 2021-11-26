@@ -509,7 +509,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._hvac_def[mode] = hvac_setting.HVACSetting(
                 self._logger.name, mode, mode_config
             )
-        self._hvac_mode = None
+        self._hvac_mode = HVAC_MODE_OFF
         self._hvac_mode_init = initial_hvac_mode
         self._preset_mode = initial_preset_mode
         self._enabled_hvac_mode = enabled_hvac_modes
