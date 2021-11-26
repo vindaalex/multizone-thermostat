@@ -734,6 +734,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             tmp_dict[key] = data.get_variable_attr
         return {
             "current_temp_filt": self.current_temperature,
+            "current_outdoor_temp": self.outdoor_temperature,
             "room_area": self._area,
             "hvac_def": tmp_dict,
         }
