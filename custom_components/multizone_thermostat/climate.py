@@ -197,7 +197,6 @@ PID_control_options_opt = {
     vol.Optional(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
     vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
-    vol.Optional(CONF_WINDOW_OPEN_TEMPDROP): vol.Coerce(float),
 }
 
 PID_control_options_req = {
