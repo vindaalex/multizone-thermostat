@@ -779,7 +779,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
 
             if not self._kf_temp:
-                if self._current_temperature:
+                if self._current_temperature is not None:
                     self._kf_temp = UKF_config.UKFFilter(
                         self._current_temperature,
                         cycle_time,
@@ -866,7 +866,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._hvac_on.pid_reset_time()
 
             # start listening for outdoor sensors
-            if self._hvac_on.is_hvac_wc_mode and self.outdoor_temperature:
+            if self._hvac_on.is_hvac_wc_mode and self.outdoor_temperature is not None:
                 self._hvac_on.outdoor_temperature = self.outdoor_temperature
 
         # start listener for satelite thermostats
@@ -1202,7 +1202,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._kf_temp.kf_predict()
                 if current_temp:
                     tmp_temperature = float(current_temp)
-                elif self._current_temperature:
+                elif self._current_temperature is not None:
                     tmp_temperature = self._current_temperature
                 else:
                     tmp_temperature = None
