@@ -1253,7 +1253,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on.is_hvac_on_off_mode:
             # If the mode is OFF and the device is ON, turn it OFF and exit, else, just exit
             min_cycle_duration = self._hvac_on.get_min_on_off_cycle
-            tolerance_on, tolerance_off = self._hvac_on.get_hysteris
 
             # if the call was made by a sensor change, check the min duration
             # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
