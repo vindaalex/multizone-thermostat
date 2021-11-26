@@ -1565,7 +1565,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not sensor_state:
                 return False
             try:
-                if float(sensor_state.state) > 0:
+                if (
+                    float(sensor_state.state) > 0
+                    and float(sensor_state.state) == self.control_output
+                ):
                     return True
                 else:
                     return False
