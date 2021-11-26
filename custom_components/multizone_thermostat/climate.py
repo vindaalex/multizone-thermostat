@@ -1172,7 +1172,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on:
             if entity_id != self._hvac_on.get_hvac_switch:
                 self._logger.warning(
-                    "%s: wrong switch %s changed to %s, keep in of state",
+                    "%s: wrong switch %s changed to %s, keep in off state",
                     self._hvac_mode,
                     entity_id,
                     new_state.state,
