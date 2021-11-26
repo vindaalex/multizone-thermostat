@@ -164,7 +164,6 @@ class HVACSetting:
         min_diff, max_diff = self.get_difference_limits(hvac_data)
         kp, ki, kd = self.get_pid_param(hvac_data)  # pylint: disable=invalid-name
         min_cycle_duration = self.get_operate_cycle_time
-        window_open = self.get_window_open_tempdrop(hvac_data)
 
         hvac_data.PID["pidController"] = pid_controller.PIDController(
             self._logger.name,
@@ -176,7 +175,6 @@ class HVACSetting:
             time.time,
             min_diff,
             max_diff,
-            window_open,
         )
 
         hvac_data["control_output"] = 0
@@ -237,6 +235,11 @@ class HVACSetting:
             else:
                 if isinstance(self.current_state, (list, tuple, np.ndarray)):
                     current = self.current_state
+
+                    if self.check_window_open(hvac_data, current[1]):
+                        # keep current control_output
+                        break
+
                     current_temp = current[0]
                 else:
                     current = self.current_temperature
@@ -493,12 +496,27 @@ class HVACSetting:
             kd = hvac_data[CONF_KD]  # pylint: disable=invalid-name
         return (kp, ki, kd)
 
-    def get_window_open_tempdrop(self, hvac_data):
+    def check_window_open(self, hvac_data, current):
         """Return the temperature drop threshold value."""
         if CONF_WINDOW_OPEN_TEMPDROP in hvac_data:
-            return hvac_data[CONF_WINDOW_OPEN_TEMPDROP]
+            window_threshold = hvac_data[CONF_WINDOW_OPEN_TEMPDROP] / 3600
         else:
-            return None
+            return False
+
+        if self._mode == HVAC_MODE_HEAT:
+            if current < window_threshold:
+                self._logger.warning(
+                    "temperature drop %s: open window detected, maintain old control value",
+                    round(current, 5),
+                )
+                return True
+        elif self._mode == HVAC_MODE_COOL:
+            if current > window_threshold:
+                self._logger.warning(
+                    "temperature rise %s: open window detected, maintain old control value",
+                    round(current, 5),
+                )
+                return True
 
     def set_pid_param(
         self, hvac_data, kp=None, ki=None, kd=None, update=False
