@@ -1,0 +1,94 @@
+input_boolean:
+  fake_heater_input:
+    name: Fake heater input
+    initial: off
+  fake_ac_input:
+    name: Fake ac input
+    initial: off
+
+input_number:
+  fake_sensor_temperature_1:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+
+sensor:
+  - platform: template
+    sensors:
+      fake_sensor_1:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.fake_sensor_temperature_1') | float }}"
+      temperature_therm:
+        friendly_name: "temperature regelaar"
+        value_template: "{{ state_attr('climate.on_off', 'current_temp_filt') | float}}"
+        unit_of_measurement: "°C"
+
+switch:
+  - platform: template
+    switches:
+      fake_heater_switch:
+        value_template: "{{ is_state('input_boolean.fake_heater_input', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.fake_heater_input
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.fake_heater_input
+      fake_ac_switch:
+        value_template: "{{ is_state('input_boolean.fake_ac_input', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.fake_ac_input
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.fake_ac_input
+
+climate:
+  - platform: multizone_thermostat
+    name: on_off
+    unique_id: mz_on_off
+    sensor: sensor.fake_sensor_1
+    sensor_filter: 0
+    initial_hvac_mode: "off"
+    initial_preset_mode: "none"
+    room_area: 60
+    precision: 0.5
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
+    heat:
+      entity_id: switch.fake_heater_switch
+      passive_switch_duration:
+        hours: 5
+      min_temp: 15
+      max_temp: 24
+      initial_target_temp: 21
+      away_temp: 12
+      on_off_mode:
+        hysteresis_tolerance_on: 0.5
+        hysteresis_tolerance_off: 1
+        min_cycle_duration:
+          seconds: 10
+        keep_alive:
+          minutes: 1
+
+    cool:
+      entity_id: switch.fake_ac_switch
+      passive_switch_duration:
+        hours: 5
+      min_temp: 15
+      max_temp: 24
+      initial_target_temp: 21
+      away_temp: 12
+      on_off_mode:
+        hysteresis_tolerance_on: 0.5
+        hysteresis_tolerance_off: 1
+        min_cycle_duration:
+          seconds: 10
+        keep_alive:
+          minutes: 1
+
+    restore_from_old_state: True
+    restore_parameters: True
+    restore_integral: False
