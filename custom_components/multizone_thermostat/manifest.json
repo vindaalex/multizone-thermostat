@@ -5,6 +5,6 @@
   "requirements": ["numpy"],
   "dependencies": ["sensor", "switch","input_number"],
   "codeowners": ["vindaalex"],
-  "version": "0.2",
+  "version": "0.3",
   "iot_class": "local_polling"
 }

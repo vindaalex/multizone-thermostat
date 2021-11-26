@@ -102,6 +102,7 @@ heat and cool mode: Kp & Ki negative, Kd positive
 ## main:
 * name (Required): Name of thermostat.
 * target_sensor (optional): entity_id for a temperature sensor, target_sensor.state must be temperature. Not required when running in master mode: satelites are used.
+* sensor_filter(Optional): use unscented kalman filter to smoothen the temperature sensor readings. Especially usefull in case of irregular sensor updates such as battery operated devices (for instance zigbee sensor). Default = 0 (off) (see section 'sensor filter' for more details)
 * sensor_out (optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature. Only required when running weather mode.
 * initial_hvac_mode (Optional): Set the initial operation mode. Valid values are off or cool or heat. Default is off
 * initial_preset_mode (Optional): Set the default mode. Default is None
@@ -111,7 +112,7 @@ heat and cool mode: Kp & Ki negative, Kd positive
 
 checks for sensor and switch
 * sensor_stale_duration (Optional): safety to turn switches of when sensor has not updated wthin specified period. Default no check
-* passive_switch_check (Optional): check at midnight if switch hasn't been operated for a secified time (passive_switch_duration) to avoid stuck/jammed valve. Default is False. Per hvac_mode duration (where switch is specified) is specified
+* passive_switch_check (Optional): check at midnight if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Default is False. Per hvac_mode duration (where switch is specified) is specified
 
 recovery of settings
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. (setpoints, KP,KI,PD values, modes). Default is False
@@ -127,7 +128,7 @@ with the data (as sub)::
 * max_temp (Optional): Set maximum set point available (default: 24(heat) or 35 (cool)).
 * initial_target_temp (Optional): Set initial target temperature. Failure to set this variable will result in target temperature being set to null on startup.(default: 19(heat) or 28 (cool)).
 * away_temp (Optional): Set the temperature used by “away_mode”. If this is not specified, away_mode feature will not get activated.
-* passive_swith_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve.
+* passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve.
 further define one of: 'on_off_mode' or 'proportional_mode'
 
 #### on_off mode:
@@ -146,7 +147,7 @@ with the data (as sub):
 * minimal_diff (Optional): Set the minimal difference before activating swtich. To avoid very short off-on-off changes. Default is off
 * difference (Optional): Set analog output offset to 0 (default 100). Example: If it's 500 the output Value can be everything between 0 and 500.
 * pwm (Optional): Set period time for pwm signal in seconds. If it's not set, pwm is sending proportional value to switch. Default = 0
-* sensor_filter(Optional): use unscented kalman filter to smoothen the temperature sensor readings. Especially usefull in case of irregular sensor updates such as battery operated devices (for instance zigbee sensor). Default = 0 (off) (see section 'sensor filter' for more details)
+
 
 controller modes: (PID, Linear, Master)
 
