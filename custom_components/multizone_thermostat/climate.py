@@ -98,6 +98,8 @@ def validate_initial_sensors(*keys: str) -> Callable:
                 if CONF_PROPORTIONAL_MODE in obj[hvac_mode]:
                     if (
                         CONF_PID_MODE in obj[hvac_mode][CONF_PROPORTIONAL_MODE]
+                        and CONF_MASTER_MODE
+                        not in obj[hvac_mode][CONF_PROPORTIONAL_MODE]
                         and not CONF_SENSOR in obj
                     ):
                         raise vol.Invalid(
