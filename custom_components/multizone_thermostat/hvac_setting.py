@@ -213,7 +213,7 @@ class HVACSetting:
         hvac_data = self.get_hvac_data("wc")
         _, max_diff = self.get_difference_limits(hvac_data)
 
-        if self.outdoor_temperature:
+        if self.outdoor_temperature is not None:
             temp_diff = self.target_temperature - self.outdoor_temperature
             self._wc["control_output"] = min(max(0, temp_diff * KA + KB), max_diff)
         else:
