@@ -1177,7 +1177,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     entity_id,
                     new_state.state,
                 )
-                await self._async_switch_turn_off(hvac_mode=self._old_mode, force=True)
+                for mode_def, data in self._hvac_def.items():
+                    if data.get_hvac_switch == entity_id:
+                        await self._async_switch_turn_off(hvac_mode=mode_def, force=True)
+                        break
 
         if new_state is None:
             return

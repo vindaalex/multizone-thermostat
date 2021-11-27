@@ -1,7 +1,21 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 
 # custom_components/multizone_thermostat
+see also https://community.home-assistant.io/t/multizone-thermostat-incl-various-control-options
 
+This is a home assistant custom component. It is a thermostat including various control options, such as: on-off, PID, weather controlled. The thermostat can be used in stand-alone mode or as zoned heating (master- satellites).
+
+Note:
+This is only the required software to create a (zoned) thermostat. Especially zoned heating systems will affect the flow in your heating system vy closing and opening valves. Please check your heating system if modifications are requried to handle the flow variations, such as: pump settings, bypass valves etc.
+## Installation:
+1. Go to <conf-dir> default /homeassistant/.homeassistant/ (it's where your configuration.yaml is)
+2. Create <conf-dir>/custom_components/ directory if it does not already exist
+3. Clone this repository content into <conf-dir>/custom_components/
+4. Reboot HA without any configuration using the code to install requirements
+5. Set up the multizone_thermostat and have fun
+
+
+# thanx to:
 by borrowing and continuouing on code from and thanx to:
 - DB-CL https://github.com/DB-CL/home-assistant/tree/new_generic_thermostat stale pull request with detailed seperation of hvac modes
 - fabian degger (PID thermostat) originator PID control in generic thermostat, https://github.com/aendle/custom_components
@@ -11,12 +25,7 @@ some changes to the PID controller:
 - wout https://github.com/Wout-S/custom_components
 
 
-## Installation:
-1. Go to <conf-dir> default /homeassistant/.homeassistant/ (it's where your configuration.yaml is)
-2. Create <conf-dir>/custom_components/ directory if it does not already exist
-3. Clone this repository content into <conf-dir>/custom_components/
-4. Reboot HA without any configuration using the code to install requirements
-5. Set up the multizone_thermostat and have fun
+
 
 # multi zone on-off and proportional controller thermostat
 
