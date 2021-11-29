@@ -634,9 +634,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNKNOWN,
             ):
                 await self._async_update_current_temp(sensor_state.state)
-                # setup filter after frist temp reading
-                if not self._kf_temp and self.filter_mode > 0:
-                    await self.async_set_filter_mode(self.filter_mode)
 
             if self._sensor_out_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
@@ -649,24 +646,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._update_outdoor_temperature(sensor_state.state)
                 self.async_write_ha_state()
 
+            # Check if we have an old state, if so, restore it
+            old_state = await self.async_get_last_state()
+            if not self._enable_old_state:
+                # init in case no restore is required
+                if not self._hvac_mode_init:
+                    self._logger.warning(
+                        "no initial hvac mode specified: force off mode"
+                    )
+                    self._hvac_mode_init = HVAC_MODE_OFF
+                self._logger.info("init default hvac mode: %s", self._hvac_mode_init)
+            else:
+                await self.async_restore_old_state(old_state)
+
+            await self.async_set_hvac_mode(self._hvac_mode_init)
+            # self.async_write_ha_state()
+
         if self.hass.state == CoreState.running:
             await _async_startup()
         else:
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
-
-        # Check if we have an old state, if so, restore it
-        old_state = await self.async_get_last_state()
-        if not self._enable_old_state:
-            # init in case no restore is required
-            if not self._hvac_mode_init:
-                self._logger.warning("no initial hvac mode specified: force off mode")
-                self._hvac_mode_init = HVAC_MODE_OFF
-            self._logger.info("init default hvac mode: %s", self._hvac_mode_init)
-        else:
-            await self.async_restore_old_state(old_state)
-
-        await self.async_set_hvac_mode(self._hvac_mode_init)
-        # self.async_write_ha_state()
 
     async def async_restore_old_state(self, old_state):
         """function to restore old state/config"""
@@ -902,7 +901,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """
 
         self._logger.debug(
-            "update 'pwm alive' for %s per %s seconds",
+            "update 'pwm alive' for %s per %s (hh:mm:ss)",
             self._hvac_mode,
             interval,
         )
@@ -1179,7 +1178,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
                 for mode_def, data in self._hvac_def.items():
                     if data.get_hvac_switch == entity_id:
-                        await self._async_switch_turn_off(hvac_mode=mode_def, force=True)
+                        await self._async_switch_turn_off(
+                            hvac_mode=mode_def, force=True
+                        )
                         break
 
         if new_state is None:
@@ -1199,6 +1200,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug("Current temperature updated to %s", current_temp)
             # store local in case current hvac mode is off
             self._current_temperature = float(current_temp)
+
+            # setup filter after first temp reading
+            if not self._kf_temp and self.filter_mode > 0:
+                await self.async_set_filter_mode(self.filter_mode)
 
         try:
             if self._kf_temp:
@@ -1313,12 +1318,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     return
 
             if self._hvac_on.is_hvac_wc_mode:
-                if (
-                    self._sensor_out_entity_id
-                    and self._hvac_on.outdoor_temperature is None
+                if self._sensor_out_entity_id and (
+                    self._hvac_on.outdoor_temperature is None
+                    or self._hvac_on.target_temperature is None
                 ):
                     self._logger.warning(
-                        "Current outdoor temp is None, cannot compare with target"
+                        "Current outdoor temp is %s and setpoint is %s cannot run weather mode"
                     )
                     return
 
