@@ -634,9 +634,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNKNOWN,
             ):
                 await self._async_update_current_temp(sensor_state.state)
-                # setup filter after frist temp reading
-                if not self._kf_temp and self.filter_mode > 0:
-                    await self.async_set_filter_mode(self.filter_mode)
 
             if self._sensor_out_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
@@ -1199,6 +1196,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug("Current temperature updated to %s", current_temp)
             # store local in case current hvac mode is off
             self._current_temperature = float(current_temp)
+
+            # setup filter after first temp reading
+            if not self._kf_temp and self.filter_mode > 0:
+                await self.async_set_filter_mode(self.filter_mode)
 
         try:
             if self._kf_temp:
