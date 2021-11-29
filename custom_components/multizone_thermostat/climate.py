@@ -646,24 +646,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._update_outdoor_temperature(sensor_state.state)
                 self.async_write_ha_state()
 
+            # Check if we have an old state, if so, restore it
+            old_state = await self.async_get_last_state()
+            if not self._enable_old_state:
+                # init in case no restore is required
+                if not self._hvac_mode_init:
+                    self._logger.warning(
+                        "no initial hvac mode specified: force off mode"
+                    )
+                    self._hvac_mode_init = HVAC_MODE_OFF
+                self._logger.info("init default hvac mode: %s", self._hvac_mode_init)
+            else:
+                await self.async_restore_old_state(old_state)
+
+            await self.async_set_hvac_mode(self._hvac_mode_init)
+            # self.async_write_ha_state()
+
         if self.hass.state == CoreState.running:
             await _async_startup()
         else:
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
-
-        # Check if we have an old state, if so, restore it
-        old_state = await self.async_get_last_state()
-        if not self._enable_old_state:
-            # init in case no restore is required
-            if not self._hvac_mode_init:
-                self._logger.warning("no initial hvac mode specified: force off mode")
-                self._hvac_mode_init = HVAC_MODE_OFF
-            self._logger.info("init default hvac mode: %s", self._hvac_mode_init)
-        else:
-            await self.async_restore_old_state(old_state)
-
-        await self.async_set_hvac_mode(self._hvac_mode_init)
-        # self.async_write_ha_state()
 
     async def async_restore_old_state(self, old_state):
         """function to restore old state/config"""
