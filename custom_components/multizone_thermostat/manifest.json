@@ -6,6 +6,6 @@
   "requirements": ["numpy"],
   "dependencies": [],
   "codeowners": ["@vindaalex"],
-  "version": "0.4.0",
+  "version": "0.4.1",
   "iot_class": "local_polling"
 }
