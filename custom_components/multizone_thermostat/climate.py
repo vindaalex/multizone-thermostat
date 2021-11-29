@@ -1318,12 +1318,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     return
 
             if self._hvac_on.is_hvac_wc_mode:
-                if (
-                    self._sensor_out_entity_id
-                    and self._hvac_on.outdoor_temperature is None
+                if self._sensor_out_entity_id and (
+                    self._hvac_on.outdoor_temperature is None
+                    or self._hvac_on.target_temperature is None
                 ):
                     self._logger.warning(
-                        "Current outdoor temp is None, cannot compare with target"
+                        "Current outdoor temp is %s and setpoint is %s cannot run weather mode"
                     )
                     return
 
