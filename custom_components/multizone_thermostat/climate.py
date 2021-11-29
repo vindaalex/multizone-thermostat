@@ -901,7 +901,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """
 
         self._logger.debug(
-            "update 'pwm alive' for %s per %s seconds",
+            "update 'pwm alive' for %s per %s (hh:mm:ss)",
             self._hvac_mode,
             interval,
         )
@@ -1178,7 +1178,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
                 for mode_def, data in self._hvac_def.items():
                     if data.get_hvac_switch == entity_id:
-                        await self._async_switch_turn_off(hvac_mode=mode_def, force=True)
+                        await self._async_switch_turn_off(
+                            hvac_mode=mode_def, force=True
+                        )
                         break
 
         if new_state is None:
