@@ -706,7 +706,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """attributes to include in entity"""
         tmp_dict = {}
         for key, data in self._hvac_def.items():
