@@ -537,30 +537,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             sensor_entity = self._sensor_entity_id
         if unique_id is not None:
-            self._unique_id = unique_id
+            self._attr_unique_id = unique_id
         else:
-            if (
-                HVAC_MODE_HEAT in enabled_hvac_modes
-                and HVAC_MODE_COOL not in enabled_hvac_modes
-            ):
-                entity_id = self._hvac_def["heat"].get_hvac_switch
-                self._unique_id = slugify(f"{DOMAIN}_{entity_id}_{sensor_entity}")
-            elif (
-                HVAC_MODE_HEAT not in enabled_hvac_modes
-                and HVAC_MODE_COOL in enabled_hvac_modes
-            ):
-                entity_id = self._hvac_def["cool"].get_hvac_switch
-                self._unique_id = slugify(f"{DOMAIN}_{entity_id}_{sensor_entity}")
-            elif (
-                HVAC_MODE_HEAT in enabled_hvac_modes
-                and HVAC_MODE_COOL in enabled_hvac_modes
-            ):
-                entity_id_heat = self._hvac_def["heat"].get_hvac_switch
-                entity_id_cool = self._hvac_def["cool"].get_hvac_switch
-                self._unique_id = slugify(
-                    f"{DOMAIN}_{entity_id_heat}_{entity_id_cool}_{sensor_entity}"
-                )
-
+            self._attr_unique_id = None
+        
     async def async_added_to_hass(self):
         """Run when entity about to be added.
         Attach the listeners.
@@ -1649,11 +1629,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def name(self):
         """Return the name of the thermostat."""
         return self._name
-
-    @property
-    def unique_id(self):
-        """Return the unique id of this thermostat."""
-        return self._unique_id
 
     @property
     def current_temperature(self):
