@@ -1279,15 +1279,20 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if self._emergency_stop:
                 if keepalive:
-                    self._logger.debug(
-                        "Emergency stop active, exit routine. Re-send emergency stop"
+                    self._logger.warning(
+                        "Control interval routine: Emergency stop active, exit routine. Re-send emergency stop"
                     )
                     await self._async_activate_emergency_stop("operate")
                 else:
-                    self._logger.warning("Cannot operate in emergency stop state")
+                    self._logger.warning(
+                        "Forced control update: Cannot operate in emergency stop state, exit routine"
+                    )
                 return
 
             if not self._hvac_on:
+                self._logger.error(
+                    "Control update should not be activate in preset off-mode, exit routine"
+                )
                 return
 
             # update and check current temperatures for pwm cycle
@@ -1310,7 +1315,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     or self._hvac_on.target_temperature is None
                 ):
                     self._logger.warning(
-                        "Current outdoor temp is %s and setpoint is %s cannot run weather mode"
+                        "Current outdoor temp is %s and setpoint is %s cannot run weather mode",
+                        self._hvac_on.outdoor_temperature, self._hvac_on.target_temperature
                     )
                     return
 
