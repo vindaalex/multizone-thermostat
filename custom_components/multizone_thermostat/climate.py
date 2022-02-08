@@ -1364,10 +1364,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             if (
                 self._hvac_on.min_diff > self.control_output
-                and self._is_switch_active()
+                and self.switch_position > 0
             ):
                 await self._async_switch_turn_off()
                 self.time_changed = time.time()
+            elif self.switch_position != self.control_output:
                 await self._async_switch_turn_on()
                 self.time_changed = time.time()
 
@@ -1562,15 +1563,29 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             try:
                 if (
                     float(sensor_state.state) > 0
-                    and float(sensor_state.state) == self.control_output
+                    # and float(sensor_state.state) == self.control_output
                 ):
                     return True
                 else:
                     return False
             except:  # pylint: disable=bare-except
                 self._logger.error(
-                    "on-off switch defined for proportional control (pwm=0)"
+                    "on-off switch defined for proportional control (pwm=0), current state is {}".format(sensor_state.state)
                 )
+    @property
+    def switch_position(self):
+        entity_id = self._hvac_on.get_hvac_switch
+        sensor_state = self.hass.states.get(entity_id)
+
+        if not sensor_state:
+            return False
+        try:
+            return float(sensor_state.state)
+        except:  # pylint: disable=bare-except
+            self._logger.error(
+                "not able to get position of {}, current state is {}".format(entity_id, sensor_state.state)
+            )
+
 
     @property
     def supported_features(self):
