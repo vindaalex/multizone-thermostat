@@ -876,6 +876,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._current_alive_time = async_track_time_interval(
                 self.hass, self._async_operate, interval
             )
+            self.async_on_remove(self._current_alive_time)
 
     async def _async_update_pwm_alive(self, interval=None):
         """
@@ -895,6 +896,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._current_pwm_alive_time = async_track_time_interval(
                 self.hass, self._async_set_controlvalue, resolution
             )
+            self.async_on_remove(self._current_pwm_alive_time)
 
     async def _async_track_satelites(self, entity_list=None):
         """get changes from satelite thermostats"""
@@ -907,6 +909,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._satelites = async_track_state_change_event(
                 self.hass, satelites, self._async_satelite_thermostat_changed
             )
+            self.async_on_remove(self._satelites)
 
             for satelite in satelites:
                 state = self.hass.states.get(satelite)
