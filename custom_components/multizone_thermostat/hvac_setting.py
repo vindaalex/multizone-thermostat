@@ -26,6 +26,7 @@ from .const import (
     CONF_PWM,
     CONF_CONTROL_REFRESH_INTERVAL,
     CONF_DIFFERENCE,
+    CONF_RESOLUTION,
     CONF_MIN_DIFFERENCE,
     CONF_MAX_DIFFERENCE,
     CONF_MIN_DIFF,
@@ -75,6 +76,7 @@ class HVACSetting:
         self._master = None
         self._satelites = None
         self._master_max_valve_pos = None
+        self._resolution = 0        
 
         self._stuck_loop = False
 
@@ -85,6 +87,7 @@ class HVACSetting:
             self._wc = self._proportional.get(CONF_WC_MODE)
             self._pid = self._proportional.get(CONF_PID_MODE)
             self._master = self._proportional.get(CONF_MASTER_MODE)
+            self._resolution = self._proportional[CONF_RESOLUTION]
 
         self.init_mode()
 
@@ -279,7 +282,8 @@ class HVACSetting:
             elif control_output < 0:
                 control_output = 0
 
-        return round(control_output, 3)
+            control_output = getRoundedThresholdv1(control_output, self._resolution) 
+        return control_output
 
     @property
     def target_temperature(self):
@@ -783,3 +787,8 @@ class HVACSetting:
                     ]
 
         self.pid_reset_time()
+
+def getRoundedThresholdv1(a, MinClip):
+    '''https://stackoverflow.com/questions/7859147/round-in-numpy-to-nearest-step'''
+    scaled = a/MinClip
+    return np.where(scaled % 1 >= 0.5, np.ceil(scaled), np.floor(scaled))*MinClip

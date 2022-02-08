@@ -156,7 +156,7 @@ with the data (as sub):
 * minimal_diff (Optional): Set the minimal difference before activating swtich. To avoid very short off-on-off changes. Default is off
 * difference (Optional): Set analog output offset to 0 (default 100). Example: If it's 500 the output Value can be everything between 0 and 500.
 * pwm (Optional): Set period time for pwm signal in seconds. If it's not set, pwm is sending proportional value to switch. Default = 0
-
+* resolution (optional): Set the stepsize between min and max difference. Default = 0
 
 controller modes: (PID, Linear, Master)
 

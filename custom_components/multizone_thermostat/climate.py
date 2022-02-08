@@ -250,6 +250,9 @@ hvac_control_options = {
             vol.Optional(CONF_DIFFERENCE, default=DEFAULT_DIFFERENCE): vol.Coerce(
                 float
             ),
+            vol.Optional(CONF_RESOLUTION, default=DEFAULT_RESOLUTION): vol.Coerce(
+                float
+            ),
             vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
             vol.Optional(CONF_PWM, default=DEFAULT_PWM): vol.All(
                 cv.time_period, cv.positive_timedelta
