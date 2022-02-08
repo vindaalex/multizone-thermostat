@@ -1000,7 +1000,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
         if self._hvac_mode != HVAC_MODE_OFF and self._hvac_mode is not None:
             if self._hvac_on.is_hvac_on_off_mode:
-                await self._async_operate(sensor_changed=True)
+                await self._async_operate()
 
         self.async_write_ha_state()
 
@@ -1242,7 +1242,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         except ValueError as ex:
             self._logger.error("Unable to update from sensor: %s", ex)
 
-    async def _async_check_duration(self, sensor_changed):
+    async def _async_check_duration(self, keepalive):
         # when mode is on_off
         # on_off is also true when pwm = 0 therefore != _is_pwm_active
         if self._hvac_on.is_hvac_on_off_mode:
@@ -1251,7 +1251,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # if the call was made by a sensor change, check the min duration
             # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
-            if sensor_changed and min_cycle_duration is not None:
+            if not keepalive and min_cycle_duration is not None:
 
                 entity_id = self._hvac_on.get_hvac_switch
                 current_state = STATE_ON if self._is_switch_active() else STATE_OFF
@@ -1271,7 +1271,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         return True
 
-    async def _async_operate(self, now=None, sensor_changed=False, force=False):
+    async def _async_operate(self, now=None, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
             # now is passed by to the callback the async_track_time_interval function , and is set to "now"
@@ -1291,7 +1291,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 return
 
             # update and check current temperatures for pwm cycle
-            if not sensor_changed and not self._hvac_on.is_master_mode:
+            if not keepalive and not self._hvac_on.is_master_mode:
                 await self._async_update_current_temp()
             # send temperature to controller
             if not self._hvac_on.is_master_mode:
@@ -1315,7 +1315,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     return
 
             # for mode on_off
-            if not await self._async_check_duration(sensor_changed):
+            if not await self._async_check_duration(keepalive):
                 return
 
             self._logger.debug("update controller")
