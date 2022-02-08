@@ -1346,12 +1346,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         difference = self._hvac_on.get_difference
         if pwm:
-            if self.control_output == difference:
+            if self.control_output >= difference - self._hvac_on.min_diff:
                 if not self._is_switch_active():
                     await self._async_switch_turn_on()
 
                 self.time_changed = time.time()
-            elif self.control_output > self._hvac_on.min_diff:
+            elif self.control_output >= self._hvac_on.min_diff:
                 await self._async_pwm_switch(
                     pwm * self.control_output / difference,
                     pwm * (difference - self.control_output) / difference,
