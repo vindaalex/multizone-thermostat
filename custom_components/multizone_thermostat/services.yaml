@@ -98,9 +98,6 @@ set_filter_mode:
     entity_id:
       description: Thermostat entity_id.
       example: climate.study
-    hvac_mode:
-      description: hvac mode
-      example: heat or cool
     mode:
       description: mode of filter (integral)
       example: 5
