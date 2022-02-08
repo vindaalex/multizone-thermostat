@@ -741,21 +741,27 @@ class HVACSetting:
         if self.is_hvac_pid_mode:
             tmp_dict["PID_values"] = self.get_pid_param(self._pid)
             if self._pid.PID["pidController"]:
-                tmp_dict["PID_integral"] = round(
-                    self._pid.PID["pidController"].integral, 3
+                tmp_dict["PID_P"] = round(
+                    self._pid.PID["pidController"].p_var, 3
                 )
-                tmp_dict["PID_differential"] = round(
-                    self._pid.PID["pidController"].differential, 5
+                tmp_dict["PID_I"] = round(
+                    self._pid.PID["pidController"].i_var, 3
+                )
+                tmp_dict["PID_D"] = round(
+                    self._pid.PID["pidController"].d_var, 5
                 )
             tmp_dict["PID_valve_pos"] = round(self._pid[key], 3)
         if self.is_hvac_valve_mode:
             tmp_dict["Valve_PID_values"] = self.get_pid_param(self._master)
             if self._master.PID["pidController"]:
-                tmp_dict["Valve_PID_integral"] = round(
-                    self._master.PID["pidController"].integral, 3
+                tmp_dict["Valve_PID_P"] = round(
+                    self._master.PID["pidController"].p_var, 3
                 )
-                tmp_dict["Valve_differential"] = round(
-                    self._master.PID["pidController"].differential, 5
+                tmp_dict["Valve_PID_I"] = round(
+                    self._master.PID["pidController"].i_var, 3
+                )
+                tmp_dict["Valve_PID_D"] = round(
+                    self._master.PID["pidController"].d_var, 5
                 )
             tmp_dict["Valve_PID_valve_pos"] = self._master[key]
         if self.is_hvac_wc_mode:

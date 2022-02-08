@@ -717,6 +717,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         return {
             "current_temp_filt": self.current_temperature,
             "current_outdoor_temp": self.outdoor_temperature,
+            "temp_filter": self.filter_mode,
             "room_area": self._area,
             "hvac_def": tmp_dict,
         }
