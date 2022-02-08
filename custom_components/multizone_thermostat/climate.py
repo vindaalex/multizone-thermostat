@@ -1327,11 +1327,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_set_controlvalue()
         self.async_write_ha_state()
 
-    async def _async_set_controlvalue(self, *_):
+    async def _async_set_controlvalue(self, now=None, force=False):
         """convert control output to pwm signal"""
-        force_resend = True
         if self.control_output is None or self._hvac_on is None:
-            await self._async_switch_turn_off(force=force_resend)
+            await self._async_switch_turn_off(force=True)
             return
 
         if self._hvac_on.get_pwm_mode:
@@ -1343,7 +1342,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if pwm:
             if self.control_output == difference:
                 if not self._is_switch_active():
-                    await self._async_switch_turn_on(force=force_resend)
+                    await self._async_switch_turn_on()
 
                 self.time_changed = time.time()
             elif self.control_output > self._hvac_on.min_diff:
@@ -1354,20 +1353,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
             else:
                 if self._is_switch_active():
-                    await self._async_switch_turn_off(force=force_resend)
+                    await self._async_switch_turn_off()
                     self.time_changed = time.time()
         else:
             if (
                 self._hvac_on.min_diff > self.control_output
                 and self._is_switch_active()
             ):
-                await self._async_switch_turn_off(force=force_resend)
+                await self._async_switch_turn_off()
                 self.time_changed = time.time()
-            elif (
-                self._hvac_on.min_diff <= self.control_output
-                and not self._is_switch_active()
-            ):
-                await self._async_switch_turn_on(force=force_resend)
+                await self._async_switch_turn_on()
                 self.time_changed = time.time()
 
     async def _async_pwm_switch(self, time_on, time_off, time_passed):
