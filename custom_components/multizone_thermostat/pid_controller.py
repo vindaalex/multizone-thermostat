@@ -64,7 +64,7 @@ class PIDController(object):
         self._last_calc_timestamp = 0
         self._time = time
 
-    def calc(self, input_val, setpoint, force=False):
+    def calc(self, input_val, setpoint, force=False, master_mode=False):
         """Adjusts and holds the given setpoint.
 
         Args:
@@ -123,34 +123,45 @@ class PIDController(object):
         # Compute all the working error variables
         error = setpoint - current_temp
 
-        # In order to prevent windup, only integrate if the process is not saturated
-        # if self._last_output < self._out_max and self._last_output > self._out_min:
-        if self._last_calc_timestamp != 0:
-            if self._Ki:
-                self._integral += time_diff * error
-                self._integral = min(
-                    self._integral,
-                    self._out_max / (self._windupguard * abs(self._Ki)),
-                )
-                self._integral = max(
-                    self._integral,
-                    self._out_min / (self._windupguard * abs(self._Ki)),
-                )
+        if (
+            (self._Kp > 0 and error > 0 and error > self._out_max / self._Kp)
+            or 
+            (self._Kp < 0 and error < 0 and error < self._out_max / self._Kp)
+        ) and not master_mode:
+            # when temp is too low when heating or too high when cooling set fully open
+            # similar as honeywell TPI
+            self._logger.debug("setpoint {0}, current temp {1} : too low temp thus fully open: {2}".format(setpoint, current_temp, self._out_max))
+            self._last_output = self._out_max
 
-        self.p_var = self._Kp * error
-        self.i_var = self._Ki * self._integral
-        self.d_var = self._Kd * self._differential
+        else:
+            # In order to prevent windup, only integrate if the process is not saturated
+            # if self._last_output < self._out_max and self._last_output > self._out_min:
+            if self._last_calc_timestamp != 0:
+                if self._Ki:
+                    self._integral += time_diff * error
+                    self._integral = min(
+                        self._integral,
+                        self._out_max / (self._windupguard * abs(self._Ki)),
+                    )
+                    self._integral = max(
+                        self._integral,
+                        self._out_min / (self._windupguard * abs(self._Ki)),
+                    )
 
-        # Compute PID Output
-        self._last_output = self.p_var + self.i_var + self.d_var
-        self._last_output = min(self._last_output, self._out_max)
-        self._last_output = max(self._last_output, self._out_min)
+            self.p_var = self._Kp * error
+            self.i_var = self._Ki * self._integral
+            self.d_var = self._Kd * self._differential
 
-        # Log some debug info
-        self._logger.debug("P: {0}".format(self.p_var))
-        self._logger.debug("I: {0}".format(self.i_var))
-        self._logger.debug("D: {0}".format(self.d_var))
-        self._logger.debug("output: {0}".format(self._last_output))
+            # Compute PID Output
+            self._last_output = self.p_var + self.i_var + self.d_var
+            self._last_output = min(self._last_output, self._out_max)
+            self._last_output = max(self._last_output, self._out_min)
+
+            # Log some debug info
+            self._logger.debug("P: {0}".format(self.p_var))
+            self._logger.debug("I: {0}".format(self.i_var))
+            self._logger.debug("D: {0}".format(self.d_var))
+            self._logger.debug("output: {0}".format(self._last_output))
 
         # Remember some variables for next time
         self._last_input = input_val

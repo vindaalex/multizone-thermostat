@@ -255,7 +255,8 @@ class HVACSetting:
                 hvac_data["control_output"] = hvac_data.PID["pidController"].calc(
                     current,
                     setpoint,
-                    force,
+                    force=force,
+                    master_mode=self.is_master_mode
                 )
 
     @property
