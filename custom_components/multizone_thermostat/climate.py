@@ -557,7 +557,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 async_track_state_change_event(
                     self.hass,
                     [self._sensor_entity_id],
-                    self._async_sensor_temperature_changed,
+                    self._async_track_indoor_temp,
                 )
             )
 
@@ -566,7 +566,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 async_track_state_change_event(
                     self.hass,
                     [self._sensor_out_entity_id],
-                    self._async_sensor_outdoor_temperature_changed,
+                    self._async_track_outdoor_temp,
                 )
             )
 
@@ -576,7 +576,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_on_remove(
                 async_track_time_interval(
                     self.hass,
-                    self._async_check_sensor_not_responding,
+                    self._async_track_stale_sensor,
                     self._sensor_stale_duration,
                 )
             )
@@ -590,7 +590,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             async_track_state_change_event(
                 self.hass,
                 entity_list,
-                self._async_switch_device_changed,
+                self._async_track_switches,
             )
         )
 
@@ -599,7 +599,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             _dt = dt_util.utcnow() + timedelta(hours=24)
             async_track_utc_time_change(
                 self.hass,
-                self.prevent_stuck_switch,
+                self._async_track_stuck_switch,
                 hour=_dt.hour,
                 minute=_dt.minute,
                 second=_dt.second,
@@ -820,9 +820,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # restore preset mode
             self._preset_mode = PRESET_NONE
             # stop keep_live
-            await self._async_update_keep_alive()
+            await self._async_routine_controller()
             if self._current_pwm_alive_time:
-                await self._async_update_pwm_alive()
+                await self._async_routine_pwm()
             self.control_output = 0
             # stop tracking satelites
             if self._hvac_on.is_master_mode:
@@ -860,26 +860,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # self._hvac_on.current_temperature = self.current_temperature
 
         # update listener
-        await self._async_update_keep_alive(self._hvac_on.get_operate_cycle_time)
+        await self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
         if self._hvac_on.get_pwm_mode:
-            await self._async_update_pwm_alive(self._hvac_on.get_pwm_mode)
-        await self._async_operate(force=True)
+            await self._async_routine_pwm(self._hvac_on.get_pwm_mode)
+        await self._async_controller(force=True)
 
         # Ensure we update the current operation after changing the mode
         self.async_write_ha_state()
 
-    async def _async_update_keep_alive(self, interval=None):
+    async def _async_routine_controller(self, interval=None):
         """run main controller at specified interval"""
         self._logger.debug("update 'keep alive' for %s", self._hvac_mode)
         if not interval:
             self._current_alive_time()
         else:
             self._current_alive_time = async_track_time_interval(
-                self.hass, self._async_operate, interval
+                self.hass, self._async_controller, interval
             )
             self.async_on_remove(self._current_alive_time)
 
-    async def _async_update_pwm_alive(self, interval=None):
+    async def _async_routine_pwm(self, interval=None):
         """
         run pwm at specified intervals
         operate at a 10 stepsize resolution
@@ -895,7 +895,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             resolution = timedelta(seconds=interval.seconds / 10)
             self._current_pwm_alive_time = async_track_time_interval(
-                self.hass, self._async_set_controlvalue, resolution
+                self.hass, self._async_controller_pwm, resolution
             )
             self.async_on_remove(self._current_pwm_alive_time)
 
@@ -978,11 +978,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # operate in all cases except off
         if self._hvac_mode != HVAC_MODE_OFF:
-            await self._async_operate(force=True)
+            await self._async_controller(force=True)
 
         self.async_write_ha_state()
 
-    async def _async_sensor_temperature_changed(self, event):
+    async def _async_track_indoor_temp(self, event):
         """Handle temperature changes."""
         new_state = event.data.get("new_state")
         self._logger.debug("Sensor temperature updated to %s", new_state.state)
@@ -1000,11 +1000,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
         if self._hvac_mode != HVAC_MODE_OFF and self._hvac_mode is not None:
             if self._hvac_on.is_hvac_on_off_mode:
-                await self._async_operate()
+                await self._async_controller()
 
         self.async_write_ha_state()
 
-    async def _async_sensor_outdoor_temperature_changed(self, event):
+    async def _async_track_outdoor_temp(self, event):
         """Handle outdoor temperature changes."""
         new_state = event.data.get("new_state")
         self._logger.debug("Sensor outdoor temperature updated to %s", new_state.state)
@@ -1038,7 +1038,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # if master mode is active: do not call operate but let pwm cycle handle it
         self.async_write_ha_state()
 
-    async def _async_check_sensor_not_responding(self, now=None):
+    async def _async_track_stale_sensor(self, now=None):
         """Check if the sensor has emitted a value during the allowed stale period."""
         entity_list = []
         if self._sensor_entity_id:
@@ -1070,7 +1070,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
     @callback
-    def prevent_stuck_switch(self, now):
+    async def _async_track_stuck_switch(self, now):
         """Check if the switch has not changed for a cetrain period andforce operation to avoid stuck or jammed."""
         entity_list = {}
         for hvac_mode, mode_config in self._hvac_def.items():
@@ -1121,7 +1121,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # self._async_toggle_switch(hvac_def, data[0])
 
     @callback
-    async def _async_switch_device_changed(self, event):
+    async def _async_track_switches(self, event):
         """Handle device switch state changes."""
         new_state = event.data.get("new_state")
         entity_id = event.data.get("entity_id")
@@ -1271,7 +1271,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         return True
 
-    async def _async_operate(self, now=None, force=False):
+    async def _async_controller(self, now=None, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
             # now is passed by to the callback the async_track_time_interval function , and is set to "now"
@@ -1330,10 +1330,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug(
                 "Obtained current control output: %s", self.control_output
             )
-            await self._async_set_controlvalue()
+            await self._async_controller_pwm()
         self.async_write_ha_state()
 
-    async def _async_set_controlvalue(self, now=None, force=False):
+    async def _async_controller_pwm(self, now=None, force=False):
         """convert control output to pwm signal"""
         if self.control_output is None or self._hvac_on is None:
             await self._async_switch_turn_off(force=True)
@@ -1535,7 +1535,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_on.preset_mode = preset_mode
         self._logger.debug("Set preset mode to %s", preset_mode)
 
-        await self._async_operate(force=True)
+        await self._async_controller(force=True)
         self.async_write_ha_state()
 
     def _is_switch_active(self, hvac_mode=None):
