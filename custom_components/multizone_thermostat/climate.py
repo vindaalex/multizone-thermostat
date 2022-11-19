@@ -995,6 +995,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_activate_emergency_stop(new_state.name)
             return
 
+        elif not is_float(new_state.state):
+                self._logger.warning(
+                    "Sensor temperature {} unclear: {} type {}".format(
+                        new_state.name, new_state.state, type(new_state.state)
+                    )
+                )
+                await self._async_activate_emergency_stop(new_state.name)
+                return
+
+        elif new_state.state == 0:
+                self._logger.warning(
+                    "Sensor temperature {} unrealistic (exact zero): {}".format(
+                        new_state.name, new_state.state
+                    )
+                )
+                await self._async_activate_emergency_stop(new_state.name)
+                return
+
+
         await self._async_update_current_temp(new_state.state)
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
@@ -1730,3 +1749,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def filter_mode(self, mode):
         """Set the UKF mode."""
         self._filter_mode = mode
+
+def is_float(element):
+    try:
+        float(element)
+        return True
+    except ValueError:
+        return False
