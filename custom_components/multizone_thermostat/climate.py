@@ -1315,7 +1315,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 return
 
             # update and check current temperatures for pwm cycle
-            if not keepalive and not self._hvac_on.is_master_mode:
+            if keepalive and not self._hvac_on.is_master_mode:
                 await self._async_update_current_temp()
             # send temperature to controller
             if not self._hvac_on.is_master_mode:
