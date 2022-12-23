@@ -25,11 +25,11 @@ class PIDController(object):
     def __init__(
         self,
         logger,
-        PID_type,
+        PID_type,  # pylint: disable=invalid-name
         sampletime,
-        kp,
-        ki,
-        kd,
+        kp,  # pylint: disable=invalid-name
+        ki,  # pylint: disable=invalid-name
+        kd,  # pylint: disable=invalid-name
         time,
         out_min=float("-inf"),
         out_max=float("inf"),
@@ -51,8 +51,8 @@ class PIDController(object):
         self._Kd = kd  # pylint: disable=invalid-name
         self.p_var = 0
         self.i_var = 0
-        self.d_var = 0        
-        self._logger.debug("_sampletime: {0}".format(sampletime))
+        self.d_var = 0
+        self._logger.debug("_sampletime: %.2f", sampletime)
         self._sampletime = sampletime
         self._out_min = out_min
         self._out_max = out_max
@@ -86,33 +86,30 @@ class PIDController(object):
         if self._last_calc_timestamp != 0:
             if (now - self._last_calc_timestamp) < self._sampletime and not force:
                 self._logger.debug(
-                    "pid timediff: {0} < sampletime {1}: keep previous value".format(
-                        round((now - self._last_calc_timestamp), 0),
-                        self._sampletime,
-                    )
+                    "pid timediff: %.0f < sampletime %.2f: keep previous value",
+                    (now - self._last_calc_timestamp),
+                    self._sampletime,
                 )
                 return self._last_output
             time_diff = now - self._last_calc_timestamp
 
-        if type(input_val) != type(self._last_input):
+        if type(input_val) is not type(self._last_input):
             # reset previous result in case filter mode changed the output
             self._last_input = input_val
 
         if isinstance(input_val, (list, tuple, np.ndarray)):
             current_temp, self._differential = input_val
             self._logger.debug(
-                "current temp {0} ; current velocity {1}".format(
-                    current_temp,
-                    self._differential,
-                )
+                "current temp '%.2f'; velocity %.4f",
+                current_temp,
+                self._differential,
             )
         else:
             # this is only triggered for master mode, velocity is less stable.
             if not input_val:
                 self._logger.warning(
-                    "no current value specified, return with previous control value {0}".format(
-                        self._last_output
-                    )
+                    "no current value specified, return with previous control value %.2f",
+                    self._last_output,
                 )
                 return self._last_output
             current_temp = input_val
@@ -125,12 +122,16 @@ class PIDController(object):
 
         if (
             (self._Kp > 0 and error > 0 and error > self._out_max / self._Kp)
-            or 
-            (self._Kp < 0 and error < 0 and error < self._out_max / self._Kp)
+            or (self._Kp < 0 and error < 0 and error < self._out_max / self._Kp)
         ) and not master_mode:
             # when temp is too low when heating or too high when cooling set fully open
             # similar as honeywell TPI
-            self._logger.debug("setpoint {0}, current temp {1} : too low temp thus fully open: {2}".format(setpoint, current_temp, self._out_max))
+            self._logger.debug(
+                "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
+                setpoint,
+                current_temp,
+                self._out_max,
+            )
             self._last_output = self._out_max
 
         else:
@@ -158,10 +159,10 @@ class PIDController(object):
             self._last_output = max(self._last_output, self._out_min)
 
             # Log some debug info
-            self._logger.debug("P: {0}".format(self.p_var))
-            self._logger.debug("I: {0}".format(self.i_var))
-            self._logger.debug("D: {0}".format(self.d_var))
-            self._logger.debug("output: {0}".format(self._last_output))
+            self._logger.debug("contribution P: %.4f", self.p_var)
+            self._logger.debug("contribution I: %.4f", self.i_var)
+            self._logger.debug("contribution D: %.4f", self.d_var)
+            self._logger.debug("output: %.2f", self._last_output)
 
         # Remember some variables for next time
         self._last_input = input_val

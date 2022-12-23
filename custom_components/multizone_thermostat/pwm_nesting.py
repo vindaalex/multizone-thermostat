@@ -1,0 +1,420 @@
+"""
+Nesting of rooms by pwm and area size to get equal heat distribution
+and determine when master needs to be operated
+rooms switch delay are determined.
+"""
+
+import copy
+import numpy as np
+from math import ceil
+import itertools
+from .const import MODE_CONTINIOUS
+import time
+
+
+class Nesting:
+    """Nest rooms by area size and pwm in order to get equal heat requirement"""
+
+    def __init__(self, logger, operation_mode, master_pwm_scale, tot_area, min_diff):
+        """
+        pwm max is equal to pwm scale
+        all provided pwm per room are equal in pwm scale
+        """
+        self._logger = logger
+        self.operation_mode = operation_mode
+        self.master_pwm_scale = master_pwm_scale
+        self.total_area = tot_area
+
+        self.packed = []
+        self.scale_factor = {}
+        self.cleaned_rooms = []
+        self.lid = None
+        self.area = None
+        self.rooms = None
+        self.pwm = None
+        self.min_diff = min_diff
+        self.start_time = None
+
+    @property
+    def get_pwm_max(self):
+        """determine size of pwm for nesting"""
+        # NOTE: what would be best method for pwm size for nesting?
+        if self.operation_mode == MODE_CONTINIOUS:
+            # continuous mode is not possible
+            # when sum is less than pwm scale
+            # # use reduced pwm scale instead
+            if sum(self.pwm) < self.master_pwm_scale:
+                return_value = sum([a * b for a, b in zip(self.area, self.pwm)]) / max(
+                    *self.area
+                )
+            else:
+                # full pwm size can be used
+                return_value = self.master_pwm_scale
+        else:
+            # max of pwm signals
+            if max(*self.pwm) < self.min_diff:
+                longest_pwm = sum([a * b for a, b in zip(self.area, self.pwm)]) / max(
+                    *self.area
+                )
+                if longest_pwm < self.min_diff:
+                    return_value = max(*self.pwm)
+                else:
+                    return_value = longest_pwm
+            else:
+                return_value = max(*self.pwm)
+
+        return int(ceil(return_value))
+
+    def satelite_data(self, sat_data):
+        """convert new satelite data to correct format"""
+        # clear previous nesting
+
+        self.area = None
+        self.rooms = None
+        self.pwm = None
+        self.scale_factor = {}
+
+        new_data = {}
+        new_data = {key: [] for key in ["area", "rooms", "pwm"]}
+
+        for room, data in sat_data.items():
+            scale_factor = self.master_pwm_scale / data["pwm_scale"]
+            scaled_pwm = int(data["valve_pos"] * scale_factor)
+            self.scale_factor[room] = scale_factor
+
+            # ignore proportional valves
+            if data["pwm_time"] > 0:
+                new_data["area"].append(int(data["area"]))
+                new_data["rooms"].append(room)
+                new_data["pwm"].append(scaled_pwm)
+
+            if bool([a for a in new_data.values() if a == []]):
+                return
+
+        # area is constant and thereby sort on area gives
+        # more constant routine order, largest room is expected
+        # to require most heat thus dominant and most important
+        self.area, self.rooms, self.pwm = zip(
+            *sorted(
+                zip(new_data["area"], new_data["rooms"], new_data["pwm"]), reverse=True
+            )
+        )
+
+        # prepare pwm size for nesting
+        self.lid = [None] * self.get_pwm_max
+
+    def create_lid(self, room_index):
+        """
+        create a 2d array with length of pwm_max and rows equal to area
+        fill/est array with room id equal to required pwm
+        """
+        new_lid = np.array(
+            copy.deepcopy([self.lid for i in range(int(self.area[room_index]))]),
+            dtype=object,
+        )
+        # fill new lid with current room pwm need
+        new_lid[0 : self.area[room_index], 0 : self.pwm[room_index]] = self.rooms[
+            room_index
+        ]
+        self.packed.append(new_lid)
+
+    def nest_rooms(self, data=None):
+        """Nest the rooms to get balanced heat requirement"""
+        self.start_time = time.time()
+        self._logger.debug("start time")
+
+        if data:
+            self.packed = []
+            self.cleaned_rooms = []
+            self.satelite_data(data)
+
+        self._logger.debug("sorting time %.4f", time.time() - self.start_time)
+        if self.area is None:
+            return
+
+        # storage of all lids
+        self.packed = []
+
+        # loop through rooms
+        # and create 2D arrays nested with room area-pwm
+        # the maximum row size (pwm) is pwm_max
+        # column size is variable and depends on nesting fit
+        for i_r, room in enumerate(self.rooms):
+            # print(room, area[i])
+
+            # first room in loop
+            if not self.packed:
+                self.create_lid(i_r)
+
+            else:
+                # check if current room area-pwm fits in any free space
+                options = []  # temp storage of each free spaces per room-area segment
+                opt_arr = []  # temp storage of available array area-pwm sizes
+
+                # loop over all stored lids and area segments and
+                # store free pwm per area segment
+                for i_l, lid_i in enumerate(self.packed):
+                    # add list for each lid to store free space
+                    opt_arr.append([])
+
+                    # loop over area segments (area size)
+                    for area_segment, _ in enumerate(lid_i):
+                        # loop over pwm (len = pwm max)
+                        for pwm_i, pwm_segments in enumerate(
+                            reversed(lid_i[area_segment])
+                        ):
+                            if pwm_segments is not None:
+                                # store locations with free space
+                                if pwm_i == 0:
+                                    break
+                                options.append([i_l, area_segment, pwm_i])
+                                break
+
+                # determine all possible free area-pwm size combinations
+                if not options:
+                    self.create_lid(i_r)
+                else:
+                    for lid_i, area_segment, pwm_i in options:
+                        if not opt_arr[lid_i]:
+                            # first loop: store first area step
+                            # [2] = 1 as start how many adjacent area segments have
+                            # at least the same free pwm space
+                            opt_arr[lid_i].append([lid_i, pwm_i, 1, area_segment])
+                        else:
+                            # loop over all stored free space
+                            # and check if current area segment has at least the same free pwm space
+                            for arr in opt_arr[lid_i]:
+                                # if area segment is from same lid and pwm_i is equal or larger then 'arr' pwm size
+                                if pwm_i >= arr[1] and lid_i == arr[0]:
+                                    # increase adjacent segment counter
+                                    arr[2] += 1
+                            # when pwm_i is larger than other stored free space options
+                            # create a new options with pwm size equal to pwm_i
+                            if (
+                                max(np.array(opt_arr[lid_i], dtype=object)[:, 1])
+                                < pwm_i
+                            ):
+                                opt_arr[lid_i].append([lid_i, pwm_i, 1, area_segment])
+
+                    # loop over all free area-pwm options and check if room area-pwm fits free spaces
+                    for lid_i in opt_arr:
+                        # loop over all free spaces
+                        for arr in lid_i:
+                            # determine utilisation of free space for current room pwm
+                            if arr[1] >= self.pwm[i_r] and arr[2] >= self.area[i_r]:
+                                arr.append(
+                                    (self.pwm[i_r] / arr[1]) * (self.area[i_r] / arr[2])
+                                )
+                            else:
+                                # current room pwm does not fit this free space
+                                arr.append(-1)
+
+                    # when free space(s) are available
+                    # determine best fitting options
+                    if opt_arr:
+                        final_opt = []
+                        lid_i = None
+                        y_width = None
+                        x_start = None
+
+                        # extract storage options
+                        # remove of options per lid and merge them
+                        for lid_id in opt_arr:
+                            for store_option in lid_id:
+                                final_opt.append(store_option)
+
+                        # when multiple storage options are present select the one with best fit
+                        if len(final_opt) > 1:
+                            fill_list = np.array(final_opt, dtype=object)[:, 4]
+                            best_index = fill_list.tolist().index(max(fill_list))
+                            if final_opt[best_index][-1] != -1:
+                                # best option
+                                lid_i, y_width, _, x_start, _ = final_opt[best_index]
+
+                        # one option thus no choice
+                        else:
+                            # check if it is a proper fit
+                            if len(final_opt[0]) == 5 and final_opt[0][-1] != -1:
+                                lid_i, y_width, _, x_start, _ = final_opt[0]
+
+                        # nest best found free space option with current room area-pwm
+                        if lid_i is not None:
+                            # fill free space with room pwm
+                            # select lid with free space
+                            mod_lid = self.packed[lid_i]
+
+                            # fill area segments and pwm space with room id
+                            for area_i in range(self.area[i_r]):
+                                for pwm_i in range(self.pwm[i_r]):
+                                    mod_lid[
+                                        x_start + area_i,
+                                        self.get_pwm_max - y_width + pwm_i,
+                                    ] = room
+
+                        # no feasible option thus create new lid to store room pwm
+                        else:
+                            self.create_lid(i_r)
+
+                    # no option thus create new lid to store room pwm
+                    else:
+                        self.create_lid(i_r)
+
+        self._logger.debug("nesting time %.4f", time.time() - self.start_time)
+
+    def distribute_nesting(self):
+        """
+        reverse packs to get best distribution
+        """
+        self._logger.debug("start balance time %.4f", time.time() - self.start_time)
+        if self.packed:
+            if len(self.packed) > 1:
+                balance = {"option": [], "result": []}
+                # create list of variations
+                option_list = list(
+                    itertools.product([False, True], repeat=len(self.packed))
+                )
+                # loop through all options
+                for i_o, opt in enumerate(option_list):
+                    test_set = copy.deepcopy(self.packed)
+                    for i_p, lid_i in enumerate(test_set):
+                        if opt[i_p]:
+                            for area_segment, _ in enumerate(lid_i):
+                                lid_i[area_segment] = list(
+                                    reversed(lid_i[area_segment])
+                                )
+                    self._logger.debug(
+                        "balance results time %.4f", time.time() - self.start_time
+                    )
+                    # determine the equality over pwm
+                    balance_result = self.nesting_balance(test_set)
+                    if balance_result is not None:
+                        if abs(balance_result) < 0.15:
+                            self.packed = test_set
+                            self._logger.debug(
+                                "finished time %.4f", time.time() - self.start_time
+                            )
+                            return
+
+    def nesting_balance(self, test_set):
+        """get balance of areas over pwm signal"""
+        cleaned_area = []
+        if test_set:
+            for i, lid in enumerate(test_set):
+                # loop over pwm
+                for i_2, _ in enumerate(lid[0]):
+                    # last lid add space to store ..
+                    if i == 0:
+                        cleaned_area.append(0)
+                    # extract unique rooms by fromkeys method
+                    rooms = list(dict.fromkeys(lid[:, i_2]))
+                    for room in rooms:
+                        if room is not None:
+                            room_area = self.area[self.rooms.index(room)]
+                            cleaned_area[i_2] += room_area
+
+            moment_area = 0
+            for i, area in enumerate(cleaned_area):
+                moment_area += i * area
+            return (moment_area / sum(cleaned_area) - len(cleaned_area) / 2) / len(
+                cleaned_area
+            )
+        else:
+            return None
+
+    def get_nesting(self):
+        """get offset per room"""
+        if self.packed:
+            self.cleaned_rooms = []
+            offset = {}
+            for i, lid in enumerate(self.packed):
+                # loop over pwm
+                for i_2, _ in enumerate(lid[0]):
+                    # last lid add space to store ..
+                    if i == 0:
+                        self.cleaned_rooms.append([])
+
+                    # extract unique rooms by fromkeys method
+                    rooms = list(dict.fromkeys(lid[:, i_2]))
+
+                    for room in rooms:
+                        if room is not None:
+                            self.cleaned_rooms[i_2].append(room)
+                            if room not in offset:
+                                offset[room] = int(i_2 / self.scale_factor[room])
+
+            return offset
+
+        else:
+            return None
+
+    def get_master_output(self):
+        """control ouput (offset and pwm) for master"""
+        if self.cleaned_rooms is not None and len(self.cleaned_rooms) > 0:
+            offset = None
+            pwm_output = 0
+            for pwm_i, rooms in enumerate(self.cleaned_rooms):
+
+                if len(rooms) > 0 and offset is None:
+                    offset = pwm_i
+                if len(rooms) > 0 and offset is not None:
+                    pwm_output += 1
+                # elif rooms:
+                #     self._logger.warning("Nested satelites include multiple on-off loops in single pwm loop : '%s'", self.cleaned_rooms)
+
+            return [offset, pwm_output]
+        else:
+            return [0, 0]
+
+    def remove_room(self, room):
+        """remove room from nesting when room changed hvac mode"""
+        for pack in self.packed:
+            pack = np.where(pack != room, pack, None)
+        self.cleaned_rooms = np.where(
+            self.cleaned_rooms != room, self.cleaned_rooms, None
+        )
+
+    def check_pwm(self, data):
+        """
+        check if nesting length is still right for each room
+        new added rooms are ignored and will be nested in the next control loop
+        """
+        # nested data is present
+        if self.packed:
+            if data:
+                self.satelite_data(data)
+
+            # new satelite states result in no requirement
+            if self.area is None:
+                self.packed = []
+                return
+
+            # check per area the nesting
+            for i, room_i in enumerate(self.rooms):
+                index_start = None
+                index_end = None
+
+                # find current area
+                for lid in self.packed:
+                    # loop over pwm
+                    if any(room_i in lid_i for lid_i in lid):
+                        # found area in current pack
+                        for area_segment in lid:
+                            # find start and end nesting
+                            if room_i in area_segment:
+                                index_start = list(area_segment).index(room_i)
+                                index_end = len(area_segment) - list(
+                                    reversed(area_segment)
+                                ).index(room_i)
+                                break
+
+                        # modify existing nesting
+                        if index_start is not None and index_end is not None:
+                            difference = int((index_end - index_start) - self.pwm[i])
+                            if difference != 0:
+                                for area_segment in lid:
+                                    if room_i in area_segment:
+                                        area_segment[
+                                            index_start : index_end - difference
+                                        ] = room_i
+
+                        break

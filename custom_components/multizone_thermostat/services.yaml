@@ -15,6 +15,19 @@ set_min_diff:
       description: minimum difference value of proportional controller
       example: 2
 
+set_preset_mode:
+  name: Set preset mode
+  description: Set preset mode for climate device.
+  fields:
+    entity:
+      domain: climate
+    preset_mode:
+      name: Preset mode
+      description: New value of preset mode.
+      required: true
+      example: "away"
+      selector:
+        text:
 
 # Describes the format for available PIDThermostat services
 # PID
@@ -27,9 +40,6 @@ set_pid:
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    control_mode:
-      description: control mode
-      example: pid or valve
     kp:
       description: kp value of PID controller
       example: 2
@@ -53,9 +63,6 @@ set_integral:
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    control_mode:
-      description: control mode
-      example: pid or valve
     integral:
       description: integral value of PID controller
       example: 5
@@ -101,4 +108,24 @@ set_filter_mode:
     mode:
       description: mode of filter (integral)
       example: 5
+
+# controlled by master
+satelite_mode:
+  description: Set satelite under control of master
+  fields:
+    entity_id:
+      description: Thermostat entity_id.
+      example: climate.study
+    control_mode:
+      description: True(under control of master), False(not), None (no change)
+      example: True
+    pwm_time:
+      description: interval time for pwm cycle
+      example: 50
+    offset:
+      description: time offset to delay start in seconds
+      example: 18
+    pwm_timer:
+      description: reference start time
+      example: 1161611
 

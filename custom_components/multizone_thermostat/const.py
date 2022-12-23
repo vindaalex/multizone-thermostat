@@ -1,17 +1,22 @@
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
-    CURRENT_HVAC_COOL,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_OFF,
-    HVAC_MODE_COOL,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_OFF,
+    # ClimateEntity,
+    # CURRENT_HVAC_COOL,
+    # CURRENT_HVAC_HEAT,
+    # CURRENT_HVAC_IDLE,
+    # CURRENT_HVAC_OFF,
+    # HVAC_MODE_COOL,
+    # HVAC_MODE_HEAT,
+    # HVAC_MODE_OFF,
+    # PLATFORM_SCHEMA,
     PRESET_AWAY,
     PRESET_NONE,
-    SUPPORT_PRESET_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
+    # SUPPORT_PRESET_MODE,
+    # SUPPORT_TARGET_TEMPERATURE,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -41,33 +46,41 @@ DEFAULT_MIN_TEMP_HEAT = 17
 DEFAULT_MAX_TEMP_COOL = 35
 DEFAULT_MIN_TEMP_COOL = 20
 DEFAULT_AREA = 0
-DEFAULT_INITIAL_HVAC_MODE = HVAC_MODE_OFF
+DEFAULT_INITIAL_HVAC_MODE = HVACMode.OFF
 DEFAULT_INITIAL_PRESET_MODE = PRESET_NONE
+NC_SWITCH_MODE = "NC"
+NO_SWITCH_MODE = "NO"
+
 DEFAULT_PASSIVE_SWITCH = False
 
 DEFAULT_OLD_STATE = False
 DEFAULT_RESTORE_PARAMETERS = False
 DEFAULT_RESTORE_INTEGRAL = False
 
-SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_OFF]
+SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
 
+CONTROL_OUTPUT = "control_output"
 
 # class defaults_controller_input:
 # on_off mode
 DEFAULT_HYSTERESIS_TOLERANCE = 0.5
 
 # PWM/PID controller
-DEFAULT_DIFFERENCE = 100
+DEFAULT_PWM_SCALE = 100
 DEFAULT_MIN_DIFF = 0
 DEFAULT_PWM = 0
-DEFAULT_RESOLUTION = 1
+DEFAULT_PWM_RESOLUTION = 50
+# DEFAULT_VALVE_DELAY = 0
+CONF_HVAC_DEFINITION = "hvac_def"
+# MASTER
+DEFAULT_OPERATION = "on_off"
 
 DEFAULT_SENSOR_FILTER = 0
 
 CONF_SENSOR = "sensor"
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
 CONF_INITIAL_PRESET_MODE = "initial_preset_mode"
-
+CONF_SWITCH_MODE = "switch_mode"
 CONF_PASSIVE_SWITCH_CHECK = "passive_switch_check"
 
 # only requied for hvac_Settings
@@ -102,17 +115,22 @@ CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_tolerance_off"
 CONF_PROPORTIONAL_MODE = "proportional_mode"
 CONF_PWM = "pwm"
 CONF_CONTROL_REFRESH_INTERVAL = "control_interval"
-CONF_DIFFERENCE = "difference"
+CONF_PWM_SCALE = "pwm_scale"
 CONF_MIN_DIFFERENCE = "min_difference"
 CONF_MAX_DIFFERENCE = "max_difference"
 CONF_MIN_DIFF = "minimal_diff"
 CONF_WINDOW_OPEN_TEMPDROP = "window_open_tempdrop"
-CONF_RESOLUTION = "resolution"
+CONF_PWM_RESOLUTION = "pwm_resolution"
+# CONF_VALVE_DELAY = "valve_delay"
 
 CONF_SENSOR_FILTER = "sensor_filter"
 
 # PID controller
 CONF_PID_MODE = "PID_mode"
+PID_CONTROLLER = "PID_controller"
+VALVE_PID_MODE = "pid_valve"
+PROP_PID_MODE = "pid_prop"
+VALVE_POS = "valve_pos"
 CONF_KP = "kp"
 CONF_KI = "ki"
 CONF_KD = "kd"
@@ -124,7 +142,10 @@ CONF_KA = "ka"
 CONF_KB = "kb"
 
 # Master mode
-CONF_MASTER_MODE = "MASTER_mode"
+CONF_MASTER_MODE = "master_mode"
+CONF_OPERATION = "operation_mode"
+MODE_ON_OFF = "on_off"
+MODE_CONTINIOUS = "continious"
 CONF_SATELITES = "satelites"
 # valve_control_mode
 # CONF_VALVE_MODE = "PID_VALVE_mode"
