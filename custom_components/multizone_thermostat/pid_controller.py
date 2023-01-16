@@ -84,13 +84,17 @@ class PIDController(object):
 
         now = self._time()
         if self._last_calc_timestamp != 0:
-            if (now - self._last_calc_timestamp) < self._sampletime and not force:
-                self._logger.debug(
-                    "pid timediff: %.0f < sampletime %.2f: keep previous value",
-                    (now - self._last_calc_timestamp),
-                    self._sampletime,
-                )
-                return self._last_output
+            # *0.95 for minor scheduling differences
+            # if (
+            #     int(now - self._last_calc_timestamp) < int(self._sampletime) * 0.95
+            #     and not force
+            # ):
+            #     self._logger.debug(
+            #         "pid timediff: %.0f < sampletime %.0f: keep previous value",
+            #         (now - self._last_calc_timestamp),
+            #         self._sampletime,
+            #     )
+            #     return self._last_output
             time_diff = now - self._last_calc_timestamp
 
         if type(input_val) is not type(self._last_input):
@@ -159,10 +163,13 @@ class PIDController(object):
             self._last_output = max(self._last_output, self._out_min)
 
             # Log some debug info
-            self._logger.debug("contribution P: %.4f", self.p_var)
-            self._logger.debug("contribution I: %.4f", self.i_var)
-            self._logger.debug("contribution D: %.4f", self.d_var)
-            self._logger.debug("output: %.2f", self._last_output)
+            self._logger.debug(
+                "Contribution P: %.4f; I: %.4f; D: %.4f; Output: %.2f",
+                self.p_var,
+                self.i_var,
+                self.d_var,
+                self._last_output,
+            )
 
         # Remember some variables for next time
         self._last_input = input_val
@@ -171,7 +178,10 @@ class PIDController(object):
 
     def reset_time(self):
         """reset time to void large intergrl buildup"""
-        self._last_calc_timestamp = self._time()
+
+        if self._last_calc_timestamp != 0:
+            self._logger.debug("reset PID integral reference time")
+            self._last_calc_timestamp = self._time()
 
     @property
     def integral(self):
@@ -181,7 +191,7 @@ class PIDController(object):
     @integral.setter
     def integral(self, integral):
         """set integral"""
-        self._logger.info("forcing new integral: {0}".format(integral))
+        self._logger.info("Forcing new integral: {0}".format(integral))
         self._integral = integral
 
     @property

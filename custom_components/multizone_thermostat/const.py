@@ -1,42 +1,9 @@
-from homeassistant.components.climate.const import (
-    ATTR_HVAC_MODE,
-    ATTR_PRESET_MODE,
-    # ClimateEntity,
-    # CURRENT_HVAC_COOL,
-    # CURRENT_HVAC_HEAT,
-    # CURRENT_HVAC_IDLE,
-    # CURRENT_HVAC_OFF,
-    # HVAC_MODE_COOL,
-    # HVAC_MODE_HEAT,
-    # HVAC_MODE_OFF,
-    # PLATFORM_SCHEMA,
-    PRESET_AWAY,
+"""Multizone constants"""
+from homeassistant.components.climate import (
     PRESET_NONE,
-    # SUPPORT_PRESET_MODE,
-    # SUPPORT_TARGET_TEMPERATURE,
-    ClimateEntityFeature,
-    HVACAction,
+    PRESET_AWAY,
     HVACMode,
 )
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    ATTR_TEMPERATURE,
-    CONF_ENTITY_ID,
-    CONF_NAME,
-    CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
-    PRECISION_HALVES,
-    PRECISION_TENTHS,
-    PRECISION_WHOLE,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
-    STATE_OFF,
-    STATE_ON,
-    STATE_UNKNOWN,
-    STATE_UNAVAILABLE,
-)
-
-# class defaults_thermostat:
 
 # DEFAULT_NAME = "MultiZone Thermostat"
 DEFAULT_TARGET_TEMP_HEAT = 19.0
@@ -48,8 +15,12 @@ DEFAULT_MIN_TEMP_COOL = 20
 DEFAULT_AREA = 0
 DEFAULT_INITIAL_HVAC_MODE = HVACMode.OFF
 DEFAULT_INITIAL_PRESET_MODE = PRESET_NONE
+
 NC_SWITCH_MODE = "NC"
 NO_SWITCH_MODE = "NO"
+
+DEFAULT_NEST_MATRIX = 20
+DEFAULT_MIN_LOAD = 0
 
 DEFAULT_PASSIVE_SWITCH = False
 
@@ -98,6 +69,7 @@ CONF_ENABLE_OLD_INTEGRAL = "restore_integral"
 CONF_STALE_DURATION = "sensor_stale_duration"
 
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
+CONF_CONTROL_REFRESH_INTERVAL = "control_interval"
 
 # proportional valve control (pwm)
 SERVICE_SET_VALUE = "set_value"
@@ -107,14 +79,13 @@ PLATFORM_INPUT_NUMBER = "input_number"
 # on_off thermostat
 CONF_ON_OFF_MODE = "on_off_mode"
 CONF_MIN_CYCLE_DURATION = "min_cycle_duration"
-CONF_KEEP_ALIVE = "keep_alive"
 CONF_HYSTERESIS_TOLERANCE_ON = "hysteresis_tolerance_on"
 CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_tolerance_off"
 
 # proportional mode
 CONF_PROPORTIONAL_MODE = "proportional_mode"
 CONF_PWM = "pwm"
-CONF_CONTROL_REFRESH_INTERVAL = "control_interval"
+
 CONF_PWM_SCALE = "pwm_scale"
 CONF_MIN_DIFFERENCE = "min_difference"
 CONF_MAX_DIFFERENCE = "max_difference"
@@ -145,8 +116,17 @@ CONF_KB = "kb"
 CONF_MASTER_MODE = "master_mode"
 CONF_OPERATION = "operation_mode"
 MODE_ON_OFF = "on_off"
-MODE_CONTINIOUS = "continious"
+MODE_CONTINUOUS = "continuous"
+CONF_MIN_LOAD = "min_load"
 CONF_SATELITES = "satelites"
+
+CONTROL_START_DELAY = 0.2  # seconds, calculate pwm and offset before pwm loop
+CONTROL_LEAD = 0.1  # seconds
+SAT_CONTROL_LEAD = 0.15  # seconds
+PWM_LAG = 0.05  # seconds
+
+# MASTER_PWM_DELAY = 0.25  # seconds, calculate pwm and offset before pwm loop
+NESTING_BALANCE = 0.1
 # valve_control_mode
 # CONF_VALVE_MODE = "PID_VALVE_mode"
 CONF_GOAL = "goal"
