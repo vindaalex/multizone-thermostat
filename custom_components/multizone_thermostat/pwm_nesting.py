@@ -8,7 +8,7 @@ import copy
 import numpy as np
 from math import ceil, floor
 import itertools
-from .const import MODE_CONTINUOUS, DEFAULT_NEST_MATRIX, NESTING_BALANCE
+from .const import MASTER_CONTINUOUS, NESTING_MATRIX, NESTING_BALANCE
 import time
 
 
@@ -24,9 +24,9 @@ class Nesting:
         self.operation_mode = operation_mode
         self.min_load = min_load
         self.master_pwm = master_pwm
-        self.master_pwm_scale = DEFAULT_NEST_MATRIX / self.master_pwm
+        self.master_pwm_scale = NESTING_MATRIX / self.master_pwm
         self.master_area = tot_area
-        self.area_scale = DEFAULT_NEST_MATRIX / tot_area
+        self.area_scale = NESTING_MATRIX / tot_area
 
         self.packed = []
         self.scale_factor = {}
@@ -45,32 +45,29 @@ class Nesting:
         """determine size of pwm for nesting"""
         # NOTE: what would be best method for pwm size for nesting?
         load_area = sum([a * b for a, b in zip(self.area, self.pwm)])
-        if self.operation_mode == MODE_CONTINUOUS:
+        if self.operation_mode == MASTER_CONTINUOUS:
             # check if load is above minimum
             if self.min_load > 0:
                 # self.area and pwm are scaled already
-                if (
-                    load_area / DEFAULT_NEST_MATRIX
-                    >= self.min_load * DEFAULT_NEST_MATRIX
-                ):
-                    return_value = DEFAULT_NEST_MATRIX
+                if load_area / NESTING_MATRIX >= self.min_load * NESTING_MATRIX:
+                    return_value = NESTING_MATRIX
                 else:
-                    return_value = load_area / (self.min_load * DEFAULT_NEST_MATRIX)
+                    return_value = load_area / (self.min_load * NESTING_MATRIX)
 
             # no minimum defined thus check if continuous is possible
             # when sum is less than pwm scale
             # # use reduced pwm scale instead
-            elif sum(self.pwm) < DEFAULT_NEST_MATRIX:
+            elif sum(self.pwm) < NESTING_MATRIX:
                 return_value = load_area / max(self.area)
 
             else:
                 # full pwm size can be used
-                return_value = DEFAULT_NEST_MATRIX
+                return_value = NESTING_MATRIX
 
         # max of pwm signals
         else:
             # nested_pwm = load_area / max(self.area)
-            return_value = min(DEFAULT_NEST_MATRIX, max(self.pwm))
+            return_value = min(NESTING_MATRIX, max(self.pwm))
 
         return int(ceil(return_value))
 
@@ -308,7 +305,7 @@ class Nesting:
             if len(self.packed) > 1:
                 # balance = {"option": [], "result": []}
 
-                if self.operation_mode == MODE_CONTINUOUS:
+                if self.operation_mode == MASTER_CONTINUOUS:
                     for i, lid_i in enumerate(self.packed):
                         if i % 2:
                             for area_segment, _ in enumerate(lid_i):
@@ -420,8 +417,8 @@ class Nesting:
                 # first check if some are at end
                 # extract unique rooms by fromkeys method
                 if (
-                    self.operation_mode == MODE_CONTINUOUS
-                    and self.get_pwm_max == DEFAULT_NEST_MATRIX
+                    self.operation_mode == MASTER_CONTINUOUS
+                    and self.get_pwm_max == NESTING_MATRIX
                 ):
                     rooms = list(dict.fromkeys(lid[:, -1]))
                     for room in rooms:
@@ -541,7 +538,7 @@ class Nesting:
                                         # index_start : index_end - difference
                                         index_start : min(
                                             int(ceil(index_start + self.pwm[i])),
-                                            DEFAULT_NEST_MATRIX - 1,
+                                            NESTING_MATRIX - 1,
                                         )
                                     ] = room_i
 

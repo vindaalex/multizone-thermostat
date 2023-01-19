@@ -72,6 +72,7 @@ from homeassistant.helpers.typing import (  # TODO:check disco
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting
 from .const import (
     ATTR_VALUE,
+    ATTR_SELF_CONTROLLED,
     CONF_AREA,
     CONF_AWAY_TEMP,
     CONF_CONTROL_REFRESH_INTERVAL,
@@ -79,7 +80,7 @@ from .const import (
     CONF_ENABLE_OLD_PARAMETERS,
     CONF_ENABLE_OLD_STATE,
     CONF_GOAL,
-    CONF_HVAC_DEFINITION,
+    ATTR_HVAC_DEFINITION,
     CONF_HVAC_MODE_INIT_TEMP,
     CONF_HVAC_MODE_MAX_TEMP,
     CONF_HVAC_MODE_MIN_TEMP,
@@ -103,6 +104,7 @@ from .const import (
     CONF_PASSIVE_SWITCH_CHECK,
     CONF_PASSIVE_SWITCH_DURATION,
     CONF_PID_MODE,
+    CONF_VALVE_MODE,
     CONF_PRECISION,
     CONF_PROPORTIONAL_MODE,
     CONF_PWM,
@@ -116,12 +118,10 @@ from .const import (
     CONF_SWITCH_MODE,
     CONF_WC_MODE,
     CONF_WINDOW_OPEN_TEMPDROP,
-    CONTROL_LEAD,
+    MASTER_CONTROL_LEAD,
     CONTROL_START_DELAY,
     DEFAULT_AREA,
     DEFAULT_HYSTERESIS_TOLERANCE,
-    DEFAULT_INITIAL_HVAC_MODE,
-    DEFAULT_INITIAL_PRESET_MODE,
     DEFAULT_MAX_TEMP_COOL,
     DEFAULT_MAX_TEMP_HEAT,
     DEFAULT_MIN_DIFF,
@@ -139,18 +139,21 @@ from .const import (
     DEFAULT_SENSOR_FILTER,
     DEFAULT_TARGET_TEMP_COOL,
     DEFAULT_TARGET_TEMP_HEAT,
-    MODE_CONTINUOUS,
-    MODE_ON_OFF,
+    MASTER_CONTINUOUS,
+    MASTER_ON_OFF,
     NC_SWITCH_MODE,
     NO_SWITCH_MODE,
     PLATFORM_INPUT_NUMBER,
     PWM_LAG,
     SAT_CONTROL_LEAD,
     SERVICE_SET_VALUE,
-    SUPPORTED_HVAC_MODES,
-    SUPPORTED_PRESET_MODES,
-    VALVE_PID_MODE,
 )
+
+SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+SUPPORTED_PRESET_MODES = [
+    PRESET_NONE,
+    PRESET_AWAY,
+]
 
 # import homeassistant.util.dt as dt_util
 
@@ -223,14 +226,11 @@ def validate_initial_sensors(*keys: str) -> Callable:
                         raise vol.Invalid(
                             "Weather control defined but no outdoor temperature sensor for {hvac_mode} mode"
                         )
-                    if CONF_MASTER_MODE in obj[hvac_mode]:
-                        if (
-                            CONF_SATELITES
-                            not in obj[hvac_mode][CONF_MASTER_MODE][CONF_MASTER_MODE]
-                        ):
-                            raise vol.Invalid(
-                                "Master mode defined but no satelite thermostats for {hvac_mode} mode"
-                            )
+                if CONF_MASTER_MODE in obj[hvac_mode]:
+                    if CONF_SATELITES not in obj[hvac_mode][CONF_MASTER_MODE]:
+                        raise vol.Invalid(
+                            "Master mode defined but no satelite thermostats for {hvac_mode} mode"
+                        )
         return obj
 
     return validate
@@ -311,10 +311,24 @@ hvac_control_options = {
     ),
 }
 
+controller_config = {
+    vol.Required(CONF_CONTROL_REFRESH_INTERVAL): vol.All(
+        cv.time_period, cv.positive_timedelta
+    ),
+    vol.Optional(CONF_PWM, default=DEFAULT_PWM): vol.All(
+        cv.time_period, cv.positive_timedelta
+    ),
+    vol.Optional(CONF_PWM_SCALE, default=DEFAULT_PWM_SCALE): vol.Coerce(float),
+    vol.Optional(CONF_PWM_RESOLUTION, default=DEFAULT_PWM_RESOLUTION): vol.Coerce(
+        float
+    ),
+    vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
+}
+
 PID_control_options_opt = {
-    vol.Optional(CONF_KP): vol.Coerce(float),
-    vol.Optional(CONF_KI): vol.Coerce(float),
-    vol.Optional(CONF_KD): vol.Coerce(float),
+    vol.Required(CONF_KP): vol.Coerce(float),
+    vol.Required(CONF_KI): vol.Coerce(float),
+    vol.Required(CONF_KD): vol.Coerce(float),
     vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
     vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
 }
@@ -328,30 +342,18 @@ PID_control_options_req = {
     vol.Optional(CONF_WINDOW_OPEN_TEMPDROP): vol.Coerce(float),
 }
 
-temp_set_heat = {
-    vol.Optional(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_HEAT): vol.Coerce(
-        float
-    ),
-    vol.Optional(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_HEAT): vol.Coerce(
-        float
-    ),
-    vol.Optional(
-        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_HEAT
-    ): vol.Coerce(float),
-    vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
+WC_control_options = {
+    vol.Required(CONF_KA): vol.Coerce(float),
+    vol.Required(CONF_KB): vol.Coerce(float),
+    # TODO: check max diff usage
+    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
 }
 
-temp_set_cool = {
-    vol.Required(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_COOL): vol.Coerce(
-        float
-    ),
-    vol.Required(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_COOL): vol.Coerce(
-        float
-    ),
-    vol.Required(
-        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_COOL
-    ): vol.Coerce(float),
-    vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
+VALVE_control_options_req = {
+    vol.Required(CONF_GOAL): vol.Coerce(float),
+    vol.Required(CONF_KP): vol.Coerce(float),
+    vol.Required(CONF_KI): vol.Coerce(float),
+    vol.Required(CONF_KD): vol.Coerce(float),
 }
 
 # on_off
@@ -372,32 +374,41 @@ on_off = {
     ),
 }
 
+temp_set_heat = {
+    vol.Optional(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_HEAT): vol.Coerce(
+        float
+    ),
+    vol.Optional(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_HEAT): vol.Coerce(
+        float
+    ),
+    vol.Optional(
+        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_HEAT
+    ): vol.Coerce(float),
+    vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
+}
+
+temp_set_cool = {
+    vol.Optional(CONF_HVAC_MODE_MIN_TEMP, default=DEFAULT_MIN_TEMP_COOL): vol.Coerce(
+        float
+    ),
+    vol.Optional(CONF_HVAC_MODE_MAX_TEMP, default=DEFAULT_MAX_TEMP_COOL): vol.Coerce(
+        float
+    ),
+    vol.Optional(
+        CONF_HVAC_MODE_INIT_TEMP, default=DEFAULT_TARGET_TEMP_COOL
+    ): vol.Coerce(float),
+    vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
+}
+
 on_off_heat = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**temp_set_heat, **on_off})}
 
 on_off_cool = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**temp_set_cool, **on_off})}
 
 # proportional mode"
 prop = {
-    vol.Required(CONF_CONTROL_REFRESH_INTERVAL): vol.All(
-        cv.time_period, cv.positive_timedelta
-    ),
-    vol.Optional(CONF_PWM, default=DEFAULT_PWM): vol.All(
-        cv.time_period, cv.positive_timedelta
-    ),
-    vol.Optional(CONF_PWM_SCALE, default=DEFAULT_PWM_SCALE): vol.Coerce(float),
-    vol.Optional(CONF_PWM_RESOLUTION, default=DEFAULT_PWM_RESOLUTION): vol.Coerce(
-        float
-    ),
-    vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
+    **controller_config,
     vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options_req),
-    vol.Optional(CONF_WC_MODE): vol.Schema(
-        {
-            vol.Required(CONF_KA): vol.Coerce(float),
-            vol.Required(CONF_KB): vol.Coerce(float),
-            # TODO: check max diff usage
-            vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
-        }
-    ),
+    vol.Optional(CONF_WC_MODE): vol.Schema(WC_control_options),
 }
 
 prop_heat = {
@@ -413,29 +424,11 @@ master = {
         {
             vol.Required(CONF_SATELITES): cv.ensure_list,
             vol.Optional(CONF_OPERATION, default=DEFAULT_OPERATION): vol.In(
-                [MODE_ON_OFF, MODE_CONTINUOUS]
+                [MASTER_ON_OFF, MASTER_CONTINUOUS]
             ),
+            **controller_config,
             vol.Optional(CONF_MIN_LOAD, default=DEFAULT_MIN_LOAD): vol.Coerce(float),
-            vol.Required(CONF_CONTROL_REFRESH_INTERVAL): vol.All(
-                cv.time_period, cv.positive_timedelta
-            ),
-            vol.Optional(CONF_PWM, default=DEFAULT_PWM): vol.All(
-                cv.time_period, cv.positive_timedelta
-            ),
-            vol.Optional(CONF_PWM_SCALE, default=DEFAULT_PWM_SCALE): vol.Coerce(float),
-            vol.Optional(
-                CONF_PWM_RESOLUTION, default=DEFAULT_PWM_RESOLUTION
-            ): vol.Coerce(float),
-            vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
-            # For proportional valves
-            vol.Optional(VALVE_PID_MODE): vol.Schema(
-                {
-                    vol.Required(CONF_GOAL): vol.Coerce(float),
-                    vol.Optional(CONF_KP): vol.Coerce(float),
-                    vol.Optional(CONF_KI): vol.Coerce(float),
-                    vol.Optional(CONF_KD): vol.Coerce(float),
-                }
-            ),
+            vol.Optional(CONF_VALVE_MODE): vol.Schema(VALVE_control_options_req),
         }
     )
 }
@@ -460,12 +453,12 @@ PLATFORM_SCHEMA = vol.All(
                 int
             ),
             vol.Optional(CONF_SENSOR_OUT): cv.entity_id,
-            vol.Optional(
-                CONF_INITIAL_HVAC_MODE, default=DEFAULT_INITIAL_HVAC_MODE
-            ): vol.In(SUPPORTED_HVAC_MODES),
-            vol.Optional(
-                CONF_INITIAL_PRESET_MODE, default=DEFAULT_INITIAL_PRESET_MODE
-            ): vol.In(SUPPORTED_PRESET_MODES),
+            vol.Optional(CONF_INITIAL_HVAC_MODE, default=HVACMode.OFF): vol.In(
+                SUPPORTED_HVAC_MODES
+            ),
+            vol.Optional(CONF_INITIAL_PRESET_MODE, default=PRESET_NONE): vol.In(
+                SUPPORTED_PRESET_MODES
+            ),
             vol.Optional(CONF_PRECISION): vol.In(
                 [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
             ),
@@ -506,7 +499,7 @@ async def async_setup_platform(
 
     platform.async_register_entity_service(  # type: ignore
         "set_preset_mode",
-        {vol.Required("preset_mode"): vol.In([PRESET_AWAY, PRESET_NONE])},
+        {vol.Required(ATTR_PRESET_MODE): vol.In([PRESET_AWAY, PRESET_NONE])},
         "async_set_preset_mode",
     )
 
@@ -786,6 +779,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         async def _async_startup(*_):
             """Init on startup."""
+            save_state = False
             if self._sensor_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_entity_id)
             else:
@@ -794,9 +788,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNAVAILABLE,
                 STATE_UNKNOWN,
             ):
-                self.hass.async_create_task(
-                    self._async_update_current_temp(sensor_state.state)
-                )
+                # self.hass.async_create_task(
+                await self._async_update_current_temp(sensor_state.state)
+                # )
+                save_state = True
 
             if self._sensor_out_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
@@ -807,20 +802,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 STATE_UNKNOWN,
             ):
                 self._async_update_outdoor_temperature(sensor_state.state)
+                save_state = True
+
+            if save_state:
                 self.async_write_ha_state()
 
             # Check if we have an old state, if so, restore it
-            old_state = await self.async_get_last_state()
-            if not self._enable_old_state:
-                # init in case no restore is required
-                if not self._hvac_mode_init:
-                    self._logger.warning(
-                        "no initial hvac mode specified: force off mode"
+            if (old_state := await self.async_get_last_state()) is not None:
+                if not self._enable_old_state:
+                    # init in case no restore is required
+                    if not self._hvac_mode_init:
+                        self._logger.warning(
+                            "no initial hvac mode specified: force off mode"
+                        )
+                        self._hvac_mode_init = HVACMode.OFF
+                    self._logger.info(
+                        "init default hvac mode: '%s'", self._hvac_mode_init
                     )
-                    self._hvac_mode_init = HVACMode.OFF
-                self._logger.info("init default hvac mode: '%s'", self._hvac_mode_init)
-            else:
-                self.restore_old_state(old_state)
+                else:
+                    self.restore_old_state(old_state)
 
             await self.async_set_hvac_mode(self._hvac_mode_init)
             # self.async_write_ha_state() # set hvac mode has already write state
@@ -856,16 +856,19 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 old_hvac_mode is None
                 or old_preset_mode not in self.preset_modes
                 or old_hvac_mode not in self.hvac_modes
-                or CONF_HVAC_DEFINITION not in old_state.attributes
+                or ATTR_HVAC_DEFINITION not in old_state.attributes
             ):
                 raise ValueError("Invalid old state, init in default off mode")
 
             self._logger.info("restore old controller settings")
             self._hvac_mode_init = old_hvac_mode
             self._preset_mode = old_preset_mode
+            self._self_controlled = old_state.attributes.get(
+                ATTR_SELF_CONTROLLED, False
+            )
 
             if self._hvac_mode_init != HVACMode.OFF:
-                old_def = old_state.attributes[CONF_HVAC_DEFINITION]
+                old_def = old_state.attributes[ATTR_HVAC_DEFINITION]
                 for key, data in old_def.items():
                     if key in self._hvac_def:
                         self._hvac_def[key].restore_reboot(
@@ -900,7 +903,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "current_outdoor_temp": self.outdoor_temperature,
             "temp_filter": self.filter_mode,
             "room_area": self._area,
-            CONF_HVAC_DEFINITION: tmp_dict,
+            ATTR_HVAC_DEFINITION: tmp_dict,
             "self_controlled": self._self_controlled,
         }
 
@@ -1049,7 +1052,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     #             self._hvac_on.get_operate_cycle_time
                     #         ),
                     #         datetime.datetime.fromtimestamp(
-                    #             self.pwm_start_time - CONTROL_LEAD
+                    #             self.pwm_start_time - MASTER_CONTROL_LEAD
                     #         ),
                     #     )
 
@@ -1100,7 +1103,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                                 datetime.datetime.fromtimestamp(
                                     self.pwm_start_time
                                     - sat_id * SAT_CONTROL_LEAD
-                                    - CONTROL_LEAD
+                                    - MASTER_CONTROL_LEAD
                                 ),
                             )
 
@@ -1273,9 +1276,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # run controller before pwm loop
             if self.is_master:
-                lead_time = CONTROL_LEAD
+                lead_time = MASTER_CONTROL_LEAD
             else:
-                lead_time = self.sat_id * SAT_CONTROL_LEAD - CONTROL_LEAD
+                lead_time = self.sat_id * SAT_CONTROL_LEAD - MASTER_CONTROL_LEAD
             async_track_point_in_utc_time(
                 self.hass,
                 self.async_routine_controller_factory(
@@ -1540,7 +1543,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self.hass.create_task(self._async_update_current_temp(new_state.state))
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if self._hvac_mode != HVACMode.OFF and self._hvac_mode is not None:
+        if (
+            self._hvac_mode != HVACMode.OFF
+            and self._hvac_mode is not None
+            and self._hvac_on is not None
+        ):
             if self._hvac_on.is_hvac_on_off_mode:
                 self.hass.create_task(self._async_controller())
 
@@ -1714,7 +1721,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _async_switches_change(self, event):
         """Handle device switch state changes."""
         new_state = event.data.get("new_state")
-        entity_id = event.data.get("entity_id")
+        entity_id = event.data.get(ATTR_ENTITY_ID)
         self._logger.debug(
             "Switch of '%s' changed to '%s'",
             entity_id,
@@ -1910,7 +1917,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "multizone_thermostat",
             "satelite_mode",
             {
-                "entity_id": "climate." + satelite,
+                ATTR_ENTITY_ID: "climate." + satelite,
                 "control_mode": control_mode,
                 # "control_interval": control_interval,
                 "offset": offset,
@@ -2422,6 +2429,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             data = {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: control_val}
 
             await self.hass.services.async_call(
+                # HA_DOMAIN,
                 PLATFORM_INPUT_NUMBER,
                 SERVICE_SET_VALUE,
                 data,
@@ -2493,8 +2501,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 "multizone_thermostat",
                 "set_preset_mode",
                 {
-                    "entity_id": "climate." + sat,
-                    "preset_mode": preset_mode,
+                    ATTR_ENTITY_ID: "climate." + sat,
+                    ATTR_PRESET_MODE: preset_mode,
                 },
                 context=self._context,
                 # blocking=False,

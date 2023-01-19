@@ -5,6 +5,7 @@
   "issue_tracker": "https://github.com/vindaalex/multizone-thermostat/issues",
   "requirements": ["numpy"],
   "dependencies": [],
+  "after_dependencies": ["input_number", "sensor", "switch"],
   "codeowners": ["@vindaalex"],
   "version": "0.4.1",
   "iot_class": "local_polling"
