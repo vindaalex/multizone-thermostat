@@ -231,6 +231,32 @@ def validate_initial_sensors(*keys: str) -> Callable:
                         raise vol.Invalid(
                             "Master mode defined but no satelite thermostats for {hvac_mode} mode"
                         )
+                    pwm_duration = timedelta(
+                        seconds=obj[hvac_mode][CONF_MASTER_MODE][CONF_PWM].get(
+                            "seconds", 0
+                        ),
+                        hours=obj[hvac_mode][CONF_MASTER_MODE][CONF_PWM].get(
+                            "hours", 0
+                        ),
+                    )
+                    cntrl_duration = timedelta(
+                        seconds=obj[hvac_mode][CONF_MASTER_MODE][
+                            CONF_CONTROL_REFRESH_INTERVAL
+                        ].get("seconds", 0),
+                        hours=obj[hvac_mode][CONF_MASTER_MODE][
+                            CONF_CONTROL_REFRESH_INTERVAL
+                        ].get("hours", 0),
+                    )
+                    if pwm_duration.seconds > 0 and pwm_duration != cntrl_duration:
+                        raise vol.Invalid(
+                            "Master mode {0} ({1} sec) not equal {2} ({3} sec)".format(
+                                str(CONF_PWM),
+                                pwm_duration.seconds,
+                                str(CONF_CONTROL_REFRESH_INTERVAL),
+                                cntrl_duration.seconds,
+                            ),
+                        )
+
         return obj
 
     return validate
