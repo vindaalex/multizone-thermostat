@@ -70,6 +70,7 @@ class HVACSetting:
         self._switch_entity = self._hvac_settings[CONF_ENTITY_ID]
         self.area = area
         self._detailed_output = detailed_output
+        self._store_integral = False
 
         self._target_temp = None
         self._current_state = None
