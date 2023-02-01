@@ -184,7 +184,7 @@ class HVACSetting:
         """Init the master mode"""
         self._satelites = {}
         self.nesting = pwm_nesting.Nesting(
-            self._logger,
+            self._name,
             operation_mode=self._operation_mode,
             master_pwm=self.pwm_scale,
             tot_area=self.area,
