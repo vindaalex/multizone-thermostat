@@ -658,7 +658,6 @@ async def async_setup_platform(
                 initial_hvac_mode,
                 initial_preset_mode,
                 detailed_output,
-                detailed_output,
                 enable_old_state,
                 enable_old_parameters,
                 enable_old_integral,
