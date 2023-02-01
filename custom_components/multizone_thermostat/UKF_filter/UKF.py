@@ -757,7 +757,7 @@ class UnscentedKalmanFilter(object):
 
             # update the smoothed estimates
             xs[k] += dot(K, self.residual_x(xs[k + 1], xb))
-            ps[k] += dot(K, ps[k + 1] - Pb).dot(K.T)
+            ps[k] += dot(K, ps[k + 1] - Pb).dot(K.T)  # pylint: disable=no-member
             Ks[k] = K
 
         return (xs, ps, Ks)
