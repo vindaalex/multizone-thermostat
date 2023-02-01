@@ -57,8 +57,7 @@ from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; propo
 class HVACSetting:
     """definition of hvac mode"""
 
-    def __init__(self, log_id, hvac_mode, conf, area):
-        self._logger = logging.getLogger(log_id).getChild(hvac_mode)
+    def __init__(self, log_id, hvac_mode, conf, area, detailed_output):
         self._logger.info("Config hvac settings for hvac_mode : '%s'", hvac_mode)
 
         self._hvac_mode = hvac_mode
@@ -66,6 +65,7 @@ class HVACSetting:
         self._hvac_settings = conf
         self._switch_entity = self._hvac_settings[CONF_ENTITY_ID]
         self.area = area
+        self._detailed_output = detailed_output
 
         self._target_temp = None
         self._current_state = None
@@ -569,6 +569,10 @@ class HVACSetting:
         if self._current_state:
             self.current_temperature = state[0]
 
+    def set_detailed_output(self, new_mode):
+        """change detailed output from service"""
+        self._detailed_output = new_mode
+
     @property
     def current_temperature(self):
         """set new current temperature"""
@@ -867,25 +871,55 @@ class HVACSetting:
             tmp_dict["satelites"] = self.get_satelites
             if self.is_valve_mode:
                 tmp_dict["Valve_PID_values"] = self.get_pid_param(self._pid)
-                # if self._master.PID[PID_CONTROLLER]:
-                tmp_dict["Valve_PID_P"] = round(self._pid.PID[PID_CONTROLLER].p_var, 3)
-                tmp_dict["Valve_PID_I"] = round(self._pid.PID[PID_CONTROLLER].i_var, 3)
-                tmp_dict["Valve_PID_D"] = round(self._pid.PID[PID_CONTROLLER].d_var, 5)
-                tmp_dict["Valve_PID_valve_pos"] = self._pid[CONTROL_OUTPUT]
+                if self._detailed_output:
+                    tmp_dict["Valve_PID_P"] = round(
+                        self._pid.PID[PID_CONTROLLER].p_var, 3
+                    )
+                    tmp_dict["Valve_PID_I"] = round(
+                        self._pid.PID[PID_CONTROLLER].i_var, 3
+                    )
+                    tmp_dict["Valve_PID_D"] = round(
+                        self._pid.PID[PID_CONTROLLER].d_var, 5
+                    )
+                    tmp_dict["Valve_PID_valve_pos"] = self._pid[CONTROL_OUTPUT]
+                elif self._store_integral:
+                    tmp_dict["Valve_PID_P"] = None
+                    tmp_dict["Valve_PID_I"] = round(
+                        self._pid.PID[PID_CONTROLLER].i_var, 3
+                    )
+                    tmp_dict["Valve_PID_D"] = None
+                    tmp_dict["Valve_PID_valve_pos"] = None
 
         if self.is_hvac_proportional_mode:
             # tmp_dict[VALVE_POS] = self.get_control_output
             if self.is_prop_pid_mode:
                 tmp_dict["PID_values"] = self.get_pid_param(self._pid)
-                if self._pid.PID[PID_CONTROLLER]:
-                    tmp_dict["PID_P"] = round(self._pid.PID[PID_CONTROLLER].p_var, 3)
-                    tmp_dict["PID_I"] = round(self._pid.PID[PID_CONTROLLER].i_var, 3)
-                    tmp_dict["PID_D"] = round(self._pid.PID[PID_CONTROLLER].d_var, 5)
-                tmp_dict["PID_valve_pos"] = round(self._pid[CONTROL_OUTPUT], 3)
+                if self.is_prop_pid_mode:
+                    if self._detailed_output:
+                        tmp_dict["PID_P"] = round(
+                            self._pid.PID[PID_CONTROLLER].p_var, 3
+                        )
+                        tmp_dict["PID_I"] = round(
+                            self._pid.PID[PID_CONTROLLER].i_var, 3
+                        )
+                        tmp_dict["PID_D"] = round(
+                            self._pid.PID[PID_CONTROLLER].d_var, 5
+                        )
+                        tmp_dict["PID_valve_pos"] = round(self._pid[CONTROL_OUTPUT], 3)
+                    elif self._store_integral:
+                        tmp_dict["PID_P"] = None
+                        tmp_dict["PID_I"] = round(
+                            self._pid.PID[PID_CONTROLLER].i_var, 3
+                        )
+                        tmp_dict["PID_D"] = None
+                        tmp_dict["PID_valve_pos"] = None
 
             if self.is_wc_mode:
                 tmp_dict["ab_values"] = self.get_ka_kb_param
-                tmp_dict["wc_valve_pos"] = round(self._wc[CONTROL_OUTPUT], 3)
+                if self._detailed_output:
+                    tmp_dict["wc_valve_pos"] = round(self._wc[CONTROL_OUTPUT], 3)
+                else:
+                    tmp_dict["wc_valve_pos"] = None
         return tmp_dict
 
     def restore_reboot(self, data, restore_parameters, restore_integral):

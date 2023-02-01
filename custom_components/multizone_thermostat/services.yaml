@@ -129,3 +129,16 @@ satelite_mode:
       description: reference start time
       example: 1161611
 
+detailed_output:
+  description: Include detailed output (PID, control output) in attributes
+  fields:
+    entity_id:
+      description: Thermostat entity_id
+      example: climate.study
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
+    new_mode:
+      description: Include detailed output
+      example: True or False
+

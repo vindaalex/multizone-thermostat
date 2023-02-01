@@ -75,6 +75,7 @@ from .const import (
     CONF_AREA,
     CONF_AWAY_TEMP,
     CONF_CONTROL_REFRESH_INTERVAL,
+    CONF_DETAILED_OUTPUT,
     CONF_ENABLE_OLD_INTEGRAL,
     CONF_ENABLE_OLD_PARAMETERS,
     CONF_ENABLE_OLD_STATE,
@@ -120,6 +121,7 @@ from .const import (
     MASTER_CONTROL_LEAD,
     CONTROL_START_DELAY,
     DEFAULT_AREA,
+    DEFAULT_DETAILED_OUTPUT,
     DEFAULT_HYSTERESIS_TOLERANCE,
     DEFAULT_MAX_TEMP_COOL,
     DEFAULT_MAX_TEMP_HEAT,
@@ -488,7 +490,9 @@ PLATFORM_SCHEMA = vol.All(
                 [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
             ),
             vol.Optional(CONF_AREA, default=DEFAULT_AREA): vol.Coerce(float),
-            vol.Optional(CONF_UNIQUE_ID): cv.string,
+            vol.Optional(
+                CONF_DETAILED_OUTPUT, default=DEFAULT_DETAILED_OUTPUT
+            ): cv.boolean,
             vol.Optional(CONF_STALE_DURATION): vol.All(
                 cv.time_period, cv.positive_timedelta
             ),
@@ -526,6 +530,15 @@ async def async_setup_platform(
         "set_preset_mode",
         {vol.Required(ATTR_PRESET_MODE): vol.In([PRESET_AWAY, PRESET_NONE])},
         "async_set_preset_mode",
+    )
+
+    platform.async_register_entity_service(  # type: ignore
+        "detailed_output",
+        {
+            vol.Required("hvac_mode"): cv.string,
+            vol.Required("new_mode"): cv.boolean,
+        },
+        "set_detailed_output",
     )
 
     platform.async_register_entity_service(  # type: ignore
@@ -644,6 +657,8 @@ async def async_setup_platform(
                 enabled_hvac_modes,
                 initial_hvac_mode,
                 initial_preset_mode,
+                detailed_output,
+                detailed_output,
                 enable_old_state,
                 enable_old_parameters,
                 enable_old_integral,
@@ -673,6 +688,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         enabled_hvac_modes,
         initial_hvac_mode,
         initial_preset_mode,
+        detailed_output,
         enable_old_state,
         enable_old_parameters,
         enable_old_integral,
@@ -704,6 +720,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._sensor_stale_duration = sensor_stale_duration
         self._passive_switch = passive_switch
         self._area = area
+        self._detailed_output = detailed_output
         self._emergency_stop = False
         self._current_temperature = None
         self._outdoor_temperature = None
@@ -725,7 +742,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def = {}
         for hvac_mode, mode_config in hvac_def.items():
             self._hvac_def[hvac_mode] = hvac_setting.HVACSetting(
-                self._logger.name, hvac_mode, mode_config, self._area
+                self._logger.name,
+                # self._attr_name,
+                hvac_mode,
+                mode_config,
+                self._area,
+                self._detailed_output,
             )
         # check if it is master for Hvacmode.off
         self.is_master = False
@@ -931,6 +953,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             ATTR_HVAC_DEFINITION: tmp_dict,
             "self_controlled": self._self_controlled,
         }
+
+    def set_detailed_output(self, hvac_mode: HVACMode, new_mode):
+        """configure attribute output level"""
+        self._hvac_def[hvac_mode].set_detailed_output(new_mode)
 
     @callback
     def async_set_min_diff(self, hvac_mode: HVACMode, min_diff):
