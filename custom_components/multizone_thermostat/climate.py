@@ -69,8 +69,9 @@ from homeassistant.helpers.typing import (  # TODO:check disco
 
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting
 from .const import (
-    ATTR_VALUE,
+    ATTR_HVAC_DEFINITION,
     ATTR_SELF_CONTROLLED,
+    ATTR_VALUE,
     CONF_AREA,
     CONF_AWAY_TEMP,
     CONF_CONTROL_REFRESH_INTERVAL,
@@ -79,7 +80,6 @@ from .const import (
     CONF_ENABLE_OLD_PARAMETERS,
     CONF_ENABLE_OLD_STATE,
     CONF_GOAL,
-    ATTR_HVAC_DEFINITION,
     CONF_HVAC_MODE_INIT_TEMP,
     CONF_HVAC_MODE_MAX_TEMP,
     CONF_HVAC_MODE_MIN_TEMP,
@@ -103,7 +103,6 @@ from .const import (
     CONF_PASSIVE_SWITCH_CHECK,
     CONF_PASSIVE_SWITCH_DURATION,
     CONF_PID_MODE,
-    CONF_VALVE_MODE,
     CONF_PRECISION,
     CONF_PROPORTIONAL_MODE,
     CONF_PWM,
@@ -115,9 +114,9 @@ from .const import (
     CONF_SENSOR_OUT,
     CONF_STALE_DURATION,
     CONF_SWITCH_MODE,
+    CONF_VALVE_MODE,
     CONF_WC_MODE,
     CONF_WINDOW_OPEN_TEMPDROP,
-    MASTER_CONTROL_LEAD,
     CONTROL_START_DELAY,
     DEFAULT_AREA,
     DEFAULT_DETAILED_OUTPUT,
@@ -140,6 +139,7 @@ from .const import (
     DEFAULT_TARGET_TEMP_COOL,
     DEFAULT_TARGET_TEMP_HEAT,
     MASTER_CONTINUOUS,
+    MASTER_CONTROL_LEAD,
     MASTER_ON_OFF,
     NC_SWITCH_MODE,
     NO_SWITCH_MODE,
@@ -330,11 +330,11 @@ def check_presets_in_both_modes(*keys: str) -> Callable:
 # Configuration of thermostats
 hvac_control_options = {
     vol.Required(CONF_ENTITY_ID): cv.entity_id,  # switch to control
-    vol.Optional(CONF_PASSIVE_SWITCH_DURATION): vol.All(
-        cv.time_period, cv.positive_timedelta
-    ),
     vol.Optional(CONF_SWITCH_MODE, default=NC_SWITCH_MODE): vol.In(
         [NC_SWITCH_MODE, NO_SWITCH_MODE]
+    ),
+    vol.Optional(CONF_PASSIVE_SWITCH_DURATION): vol.All(
+        cv.time_period, cv.positive_timedelta
     ),
 }
 
@@ -468,6 +468,7 @@ PLATFORM_SCHEMA = vol.All(
     PLATFORM_SCHEMA.extend(
         {
             vol.Optional(CONF_NAME, default=OperationMode.MASTER): cv.string,
+            vol.Optional(CONF_UNIQUE_ID): cv.string,
             vol.Optional(CONF_SENSOR): cv.entity_id,
             vol.Optional(CONF_SENSOR_FILTER, default=DEFAULT_SENSOR_FILTER): vol.Coerce(
                 int
