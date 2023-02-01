@@ -405,7 +405,7 @@ class HVACSetting:
     def get_away_temp(self):
         """return away temp for current hvac mode"""
         if self.is_hvac_on_off_mode or self.is_hvac_proportional_mode:
-            return self.active_control_data[CONF_AWAY_TEMP]
+            return self.active_control_data.get(CONF_AWAY_TEMP)
         else:
             return None
 
