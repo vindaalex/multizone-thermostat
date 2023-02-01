@@ -5,22 +5,23 @@ rooms switch delay are determined.
 """
 
 import copy
-import numpy as np
+import logging
 from math import ceil, floor
 import itertools
 from .const import MASTER_CONTINUOUS, NESTING_MATRIX, NESTING_BALANCE
 import time
 
+from . import DOMAIN
 
 class Nesting:
     """Nest rooms by area size and pwm in order to get equal heat requirement"""
 
-    def __init__(self, logger, operation_mode, master_pwm, tot_area, min_load):
+    def __init__(self, name, operation_mode, master_pwm, tot_area, min_load):
         """
         pwm max is equal to pwm scale
         all provided pwm per room are equal in pwm scale
         """
-        self._logger = logger
+        self._logger = logging.getLogger(DOMAIN).getChild(name + ".nesting")
         self.operation_mode = operation_mode
         self.min_load = min_load
         self.master_pwm = master_pwm

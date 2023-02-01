@@ -3,6 +3,8 @@
 import logging
 import numpy as np
 
+from . import DOMAIN
+
 # from time import time
 # from collections import namedtuple
 
@@ -24,7 +26,7 @@ class PIDController(object):
 
     def __init__(
         self,
-        logger,
+        name,
         PID_type,  # pylint: disable=invalid-name
         sampletime,
         kp,  # pylint: disable=invalid-name
@@ -45,7 +47,9 @@ class PIDController(object):
         if out_min >= out_max:
             raise ValueError("out_min must be less than out_max")
 
-        self._logger = logging.getLogger(logger).getChild(PID_type)
+        self._name = name + "." + PID_type
+        self._logger = logging.getLogger(DOMAIN).getChild(self._name)
+
         self._Kp = kp  # pylint: disable=invalid-name
         self._Ki = ki  # pylint: disable=invalid-name
         self._Kd = kd  # pylint: disable=invalid-name

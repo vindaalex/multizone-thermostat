@@ -12,7 +12,7 @@ from homeassistant.components.climate import (
 )
 from homeassistant.const import CONF_ENTITY_ID
 
-from . import pid_controller, pwm_nesting
+from . import DOMAIN, pid_controller, pwm_nesting
 from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; proportional mode; CONF_VALVE_DELAY,; PID controller; weather compensating mode; Master mode; valve_control_mode
     ATTR_HVAC_DEFINITION,
     CONF_AWAY_TEMP,
@@ -57,7 +57,10 @@ from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; propo
 class HVACSetting:
     """definition of hvac mode"""
 
-    def __init__(self, log_id, hvac_mode, conf, area, detailed_output):
+    def __init__(self, name, hvac_mode, conf, area, detailed_output):
+        # self._logger = logging.getLogger(log_id).getChild(hvac_mode)
+        self._name = name + "." + hvac_mode
+        self._logger = logging.getLogger(DOMAIN).getChild(self._name)
         self._logger.info("Config hvac settings for hvac_mode : '%s'", hvac_mode)
 
         self._hvac_mode = hvac_mode
@@ -202,7 +205,7 @@ class HVACSetting:
         min_cycle_duration = self.get_operate_cycle_time.seconds
 
         self._pid.PID[PID_CONTROLLER] = pid_controller.PIDController(
-            self._logger.name,
+            self._name,
             mode,
             min_cycle_duration,
             kp,

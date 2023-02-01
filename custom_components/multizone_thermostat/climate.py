@@ -697,11 +697,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Initialize the thermostat."""
         self._temp_lock = asyncio.Lock()
 
-        self._attr_name = name
-        self._logger = logging.getLogger().getChild(
-            "multizone_thermostat." + self._attr_name
-        )
-        self._logger.info("initialise: '%s'", self._attr_name)
         self._sensor_entity_id = sensor_entity_id
         self._sensor_out_entity_id = sensor_out_entity_id
         self._filter_mode = filter_mode
@@ -750,18 +745,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def = {}
         for hvac_mode, mode_config in hvac_def.items():
             self._hvac_def[hvac_mode] = hvac_setting.HVACSetting(
-                self._logger.name,
-                # self._attr_name,
+                self._attr_name,
                 hvac_mode,
                 mode_config,
                 self._area,
                 self._detailed_output,
             )
-        # check if it is master for Hvacmode.off
-        self.is_master = False
-        for _, hvac_mode in self._hvac_def.items():
-            if hvac_mode.is_hvac_master_mode:
-                self.is_master = True
+
+        self._logger = logging.getLogger(DOMAIN).getChild(name)
+        self._logger.info("initialise")
 
         if not self._sensor_entity_id:
             sensor_entity = "None"
