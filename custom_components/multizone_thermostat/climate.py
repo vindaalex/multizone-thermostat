@@ -16,8 +16,7 @@ import datetime
 import logging
 import time
 
-# from datetime import timedelta, timezone
-# from functools import partial
+from datetime import timedelta
 from typing import Callable, Dict
 
 import voluptuous as vol
