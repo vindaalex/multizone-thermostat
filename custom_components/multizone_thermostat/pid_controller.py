@@ -80,9 +80,8 @@ class PIDController(object):
         """
         if not setpoint:
             self._logger.warning(
-                "no setpoint specified, return with previous control value {0}".format(
-                    self._last_output
-                )
+                "No setpoint specified, return with previous control value %s",
+                self._last_output,
             )
             return self._last_output
 

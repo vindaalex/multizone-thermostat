@@ -229,11 +229,11 @@ class HVACSetting:
         current_temp = self.current_temperature
 
         self._logger.debug(
-            "Operate - tg_min %s, tg_max %s, current %s, tg '%s'",
+            "on-off - target %s, bandwidth (%s - %s), current %s",
+            target_temp,
             target_temp_min,
             target_temp_max,
             current_temp,
-            target_temp,
         )
 
         if self._hvac_mode == HVACMode.HEAT:

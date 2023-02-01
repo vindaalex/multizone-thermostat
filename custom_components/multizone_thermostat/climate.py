@@ -968,7 +968,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, hvac_mode: HVACMode, kp=None, ki=None, kd=None, update=False
     ):  # pylint: disable=invalid-name
         """Set new PID Controller Kp,Ki,Kd value."""
-        self._logger.info("new PID for '%s' %s to: %s;%s;%s", hvac_mode, kp, ki, kd)
+        self._logger.info("new PID for '%s' to: %s;%s;%s", hvac_mode, kp, ki, kd)
         self._hvac_def[hvac_mode].set_pid_param(kp=kp, ki=ki, kd=kd, update=update)
         # self.async_write_ha_state()
         self.schedule_update_ha_state()
@@ -1020,7 +1020,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @callback
     def async_set_integral(self, hvac_mode: HVACMode, integral):
         """Set new PID Controller integral value."""
-        self._logger.info("new PID integral for '%s' %s to: '%s'", hvac_mode, integral)
+        self._logger.info("new PID integral for '%s' to: '%s'", hvac_mode, integral)
         self._hvac_def[hvac_mode].integral(integral)
         # self.async_write_ha_state()
         self.schedule_update_ha_state()
@@ -2035,10 +2035,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if not long_enough:
                 self._logger.debug(
-                    "Operate - Min duration not expired, exiting (%s, %s, %s)",
-                    min_cycle_duration,
-                    current_state,
+                    "Return from %s temp (%s) update. Min duration (%s sec) not expired",
                     entity_id,
+                    current_state,
+                    min_cycle_duration.seconds / 60,
                 )
                 return False
 
