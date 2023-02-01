@@ -1872,8 +1872,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.debug(
                     "filtered sensor update temp '%.2f'", self._kf_temp.get_temp
                 )
-
-            # self.async_write_ha_state() called from controller thus not needed here
+            if current_temp:
+                self.async_write_ha_state()  # called from controller thus not needed here
         except ValueError as ex:
             self._logger.error("Unable to update from sensor: '%s'", ex)
 
@@ -2182,7 +2182,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             pwm_duration = None
 
-        if pwm_duration:
+        if self._hvac_on.is_hvac_on_off_mode:
+            switch_active = self._is_switch_active()
+            if switch_active and self.control_output["output"] <= 0:
+                await self._async_switch_turn_off()
+            elif not switch_active and self.control_output["output"] > 0:
+                await self._async_switch_turn_on()
+
+        elif pwm_duration:
             now = time.time()
             self.update_pwm_time()
 
@@ -2259,7 +2266,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 await self._async_switch_turn_on()
                 # self.hass.async_create_task(self._async_switch_turn_on())
             # self.time_changed = time.time()
-        # self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def _async_start_pwm(self, start_time=None):
         """

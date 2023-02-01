@@ -1,4 +1,5 @@
 """module where configuration of climate is handeled"""
+from datetime import timedelta
 import logging
 import time
 
@@ -336,10 +337,11 @@ class HVACSetting:
             pwm_on_off = self.valve_pos_pwm_on_off
             control_output = max(prop_control, pwm_on_off)
 
-        if control_output > self.pwm_scale:
-            control_output = self.pwm_scale
-        elif control_output < 0:
-            control_output = 0
+        if self.is_hvac_master_mode or self.is_hvac_proportional_mode:
+            if control_output > self.pwm_scale:
+                control_output = self.pwm_scale
+            elif control_output < 0:
+                control_output = 0
 
             control_output = getRoundedThresholdv1(control_output, self.pwm_resolution)
         if self.time_offset is None:
@@ -467,7 +469,7 @@ class HVACSetting:
     @property
     def get_pwm_time(self):
         """return pwm interval time"""
-        return self.active_control_data.get(CONF_PWM)
+        return self.active_control_data.get(CONF_PWM, timedelta(seconds=0))
 
     @property
     def pwm_resolution(self):
