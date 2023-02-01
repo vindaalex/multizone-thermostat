@@ -1,12 +1,12 @@
 reload:
-  description: Reload all multizone_thermostat entities.
+  description: Reload all multizone_thermostat entities
 
 #proportional
 set_min_diff:
-  description: Set a new minimum difference
+  description: Set a new 'minimal_diff' before change switch
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -17,13 +17,13 @@ set_min_diff:
 
 set_preset_mode:
   name: Set preset mode
-  description: Set preset mode for climate device.
+  description: Set preset mode for climate device
   fields:
     entity:
       domain: climate
     preset_mode:
       name: Preset mode
-      description: New value of preset mode.
+      description: New value of preset mode
       required: true
       example: "away"
       selector:
@@ -35,7 +35,7 @@ set_pid:
   description: Set a new Kp value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -58,7 +58,7 @@ set_integral:
   description: Set a new integral value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -72,7 +72,7 @@ set_goal:
   description: Set a new goal value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -86,7 +86,7 @@ set_ka_kb:
   description: Set a new KA value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -103,7 +103,7 @@ set_filter_mode:
   description: Set a new filter variable
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     mode:
       description: mode of filter (integral)
@@ -114,7 +114,7 @@ satelite_mode:
   description: Set satelite under control of master
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     control_mode:
       description: True(under control of master), False(not), None (no change)
