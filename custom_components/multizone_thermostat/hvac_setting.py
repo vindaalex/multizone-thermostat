@@ -927,6 +927,7 @@ class HVACSetting:
 
     def restore_reboot(self, data, restore_parameters, restore_integral):
         """restore attributes for climate entity"""
+        self._store_integral = restore_integral
         self.target_temperature = data["target_temp"]
 
         if self.is_prop_pid_mode:

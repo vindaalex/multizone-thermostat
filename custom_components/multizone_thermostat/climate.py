@@ -1744,19 +1744,19 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             new_state.name,
         )
         # # check if satelite operating in correct mode
-        # if new_state.state == self.hvac_mode and new_state.attributes.get(
-        #     "self_controlled"
-        # ) in [True, "pending"]:
-        #     self._logger.debug(
-        #         "'%s' not yet in sync with master, force update controller",
-        #         new_state.name,
-        #     )
-        #     self._async_change_satelite_modes(
-        #         {new_state.name: 0},
-        #         control_mode="master",
-        #         # control_interval=self._hvac_on.get_operate_cycle_time.seconds,  # TODO check if master valve in prop
-        #         # start_timer=self.pwm_start_time,
-        #     )
+        if new_state.state == self.hvac_mode and new_state.attributes.get(
+            "self_controlled"
+        ) in [True, OperationMode.PENDING]:
+            #     self._logger.debug(
+            #         "'%s' not yet in sync with master, force update controller",
+            #         new_state.name,
+            #     )
+            self._async_change_satelite_modes(
+                {new_state.name: 0},
+                control_mode=OperationMode.MASTER,
+                # control_interval=self._hvac_on.get_operate_cycle_time.seconds,  # TODO check if master valve in prop
+                # start_timer=self.pwm_start_time,
+            )
 
         # TODO check if calling async_controller is better
         # updating master
@@ -1949,7 +1949,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # factory as in device_sun_light_trigger
                 # +1 to account for master
                 if control_mode == OperationMode.MASTER:
-                    sat_id = i + 1
+                    sat_id = self._hvac_on.get_satelites.index(satelite) + 1
                 else:
                     sat_id = 0
                 # timer_control = self.pwm_start_time - (i + 1) * SAT_CONTROL_LEAD
