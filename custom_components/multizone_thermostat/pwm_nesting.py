@@ -5,13 +5,15 @@ rooms switch delay are determined.
 """
 
 import copy
+import itertools
 import logging
 from math import ceil, floor
-import itertools
-from .const import MASTER_CONTINUOUS, NESTING_MATRIX, NESTING_BALANCE
 import time
 
+import numpy as np
+
 from . import DOMAIN
+from .const import MASTER_CONTINUOUS, NESTING_BALANCE, NESTING_MATRIX
 
 class Nesting:
     """Nest rooms by area size and pwm in order to get equal heat requirement"""
