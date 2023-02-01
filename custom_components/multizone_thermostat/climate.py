@@ -474,7 +474,7 @@ PLATFORM_SCHEMA = vol.All(
     validate_window(),
     PLATFORM_SCHEMA.extend(
         {
-            vol.Required(CONF_NAME): cv.string,
+            vol.Optional(CONF_NAME, default=OperationMode.MASTER): cv.string,
             vol.Optional(CONF_SENSOR): cv.entity_id,
             vol.Optional(CONF_SENSOR_FILTER, default=DEFAULT_SENSOR_FILTER): vol.Coerce(
                 int
@@ -622,7 +622,7 @@ async def async_setup_platform(
     area = config.get(CONF_AREA)
     sensor_stale_duration = config.get(CONF_STALE_DURATION)
     passive_switch = config.get(CONF_PASSIVE_SWITCH_CHECK)
-
+    detailed_output = config.get(CONF_DETAILED_OUTPUT)
     enable_old_state = config.get(CONF_ENABLE_OLD_STATE)
     enable_old_parameters = config.get(CONF_ENABLE_OLD_PARAMETERS)
     enable_old_integral = config.get(CONF_ENABLE_OLD_INTEGRAL)
