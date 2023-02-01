@@ -13,10 +13,9 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+from datetime import timedelta
 import logging
 import time
-
-from datetime import timedelta
 from typing import Callable, Dict
 
 import voluptuous as vol
