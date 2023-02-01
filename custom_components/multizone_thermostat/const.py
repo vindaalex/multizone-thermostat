@@ -1,4 +1,6 @@
 """Multizone constants"""
+from homeassistant.backports.enum import StrEnum
+
 ATTR_HVAC_DEFINITION = "hvac_def"
 ATTR_SELF_CONTROLLED = "self_controlled"
 
@@ -132,3 +134,9 @@ NESTING_MATRIX = 20
 NESTING_BALANCE = 0.1
 # valve_control_mode
 # CONF_VALVE_MODE = "PID_VALVE_mode"
+
+
+class OperationMode(StrEnum):
+    PENDING = "pending"
+    MASTER = "master"
+    SELF = "self_controlled"

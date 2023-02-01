@@ -148,6 +148,7 @@ from .const import (
     PWM_LAG,
     SAT_CONTROL_LEAD,
     SERVICE_SET_VALUE,
+    OperationMode,
 )
 
 SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
@@ -737,8 +738,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self.pwm_start_time = None
         self.sat_id = 0
         self.control_output = {"offset": 0, "output": 0}
-        self._self_controlled = True
+        self._self_controlled = OperationMode.SELF
 
+        # check if it is master for Hvacmode.off
+        self.is_master = False
+        self._attr_name = name
+        for _, hvac_mode in hvac_def.items():
+            if CONF_MASTER_MODE in hvac_mode:
+                self.is_master = True
+                self._attr_name = OperationMode.MASTER
+
+        # setup control modes
         self._hvac_def = {}
         for hvac_mode, mode_config in hvac_def.items():
             self._hvac_def[hvac_mode] = hvac_setting.HVACSetting(
@@ -911,8 +921,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._hvac_mode_init = old_hvac_mode
             self._preset_mode = old_preset_mode
             self._self_controlled = old_state.attributes.get(
-                ATTR_SELF_CONTROLLED, False
+                ATTR_SELF_CONTROLLED, OperationMode.SELF
             )
+            if self._self_controlled == OperationMode.MASTER:
+                self._self_controlled = OperationMode.PENDING
 
             if self._hvac_mode_init != HVACMode.OFF:
                 old_def = old_state.attributes[ATTR_HVAC_DEFINITION]
@@ -1086,8 +1098,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if (
                 hvac_ref.is_hvac_proportional_mode
             ):  # and hvac_ref.is_hvac_switch_on_off:
-                if control_mode == "self" and self._self_controlled is not True:
-                    self._self_controlled = True
+                if (
+                    control_mode == OperationMode.SELF
+                    and self._self_controlled != OperationMode.SELF
+                ):
+                    self._self_controlled = OperationMode.SELF
                     self.sat_id = 0
                     # start pwm routine of itself
                     # hvac_ref.master_control_interval = None
@@ -1114,14 +1129,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     #         datetime.datetime.fromtimestamp(self.pwm_start_time),
                     #     )
                     # TODO: _async_routine_controller as well
-                elif control_mode == "master":
-                    if self._self_controlled in ["pending", True]:
+                elif control_mode == OperationMode.MASTER:
+                    if self._self_controlled in [
+                        OperationMode.PENDING,
+                        OperationMode.SELF,
+                    ]:
                         # but don't use the acutal pwm time of the thermostat itself
                         # if control_interval > 0:
                         # new hvac mode thus all switches off
                         self.pwm_start_time = pwm_timer
                         self.sat_id = sat_id
-                        self._self_controlled = control_mode
+                        self._self_controlled = OperationMode.MASTER
                         # hvac_ref.master_control_interval = timedelta(
                         #     seconds=control_interval
                         # )
@@ -1275,7 +1293,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on.is_wc_mode and self.outdoor_temperature is not None:
             self._hvac_on.outdoor_temperature = self.outdoor_temperature
 
-        if self._self_controlled is True:
+        if (
+            self._self_controlled == OperationMode.SELF
+            or self._self_controlled == OperationMode.PENDING
+        ):
             self.pwm_start_time = time.time() + CONTROL_START_DELAY
 
         if self._hvac_on.is_hvac_on_off_mode:
@@ -1305,7 +1326,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 satelite_reset = {sat: 0 for sat in self._hvac_on.get_satelites}
                 self._async_change_satelite_modes(
                     satelite_reset,
-                    control_mode="master",
+                    control_mode=OperationMode.MASTER,
                 )
 
                 # start tracking changes of satelites
@@ -1322,7 +1343,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._hvac_on.update_satelite(state)
 
             # update pwm cycle
-            if self._self_controlled is not True and self._hvac_on.get_pwm_time:
+            if (
+                self._self_controlled != OperationMode.SELF
+                and self._hvac_on.get_pwm_time
+            ):
                 self.update_pwm_time()
 
             # run controller before pwm loop
@@ -1465,7 +1489,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.hass, self._async_controller_pwm, interval
             )
             self.async_on_remove(self._loop_pwm)
-            if self._self_controlled is True:
+            if self._self_controlled == OperationMode.SELF:
                 self.hass.async_create_task(self._async_controller_pwm(force=True))
 
     # async def async_start_controller(self, *_):
@@ -1661,11 +1685,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _async_stuck_switch_check(self, now):
         """Check if the switch has not changed for a cetrain period and force operation to avoid stuck or jammed."""
 
-        if self._self_controlled == "pending":
+        if self._self_controlled == OperationMode.PENDING:
             # changing opretation mode, wait for the net loop
             return
         # operated by master and check if currently active
-        elif self._self_controlled is not True:
+        elif self._self_controlled != OperationMode.SELF:
             master_mode = state_attr(
                 self.hass, "climate." + self._self_controlled, "hvac_action"
             )
@@ -1934,7 +1958,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             for i, (satelite, offset) in enumerate(data.items()):
                 # factory as in device_sun_light_trigger
                 # +1 to account for master
-                if control_mode == "master":
+                if control_mode == OperationMode.MASTER:
                     sat_id = i + 1
                 else:
                     sat_id = 0
