@@ -352,15 +352,8 @@ controller_config = {
     vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
 }
 
-PID_control_options_opt = {
-    vol.Required(CONF_KP): vol.Coerce(float),
-    vol.Required(CONF_KI): vol.Coerce(float),
-    vol.Required(CONF_KD): vol.Coerce(float),
-    vol.Optional(CONF_MIN_DIFFERENCE): vol.Coerce(float),
-    vol.Optional(CONF_MAX_DIFFERENCE): vol.Coerce(float),
-}
 
-PID_control_options_req = {
+PID_control_options = {
     vol.Required(CONF_KP): vol.Coerce(float),
     vol.Required(CONF_KI): vol.Coerce(float),
     vol.Required(CONF_KD): vol.Coerce(float),
@@ -434,7 +427,7 @@ on_off_cool = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**temp_set_cool, **on
 # proportional mode"
 prop = {
     **controller_config,
-    vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options_req),
+    vol.Optional(CONF_PID_MODE): vol.Schema(PID_control_options),
     vol.Optional(CONF_WC_MODE): vol.Schema(WC_control_options),
 }
 
