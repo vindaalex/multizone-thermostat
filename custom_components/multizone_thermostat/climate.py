@@ -1158,11 +1158,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                                 self._logger.debug("sat update: stopping pwm routine")
                                 self._async_routine_pwm()
 
-                            # cancel switch routines
-                            if self._async_start_pwm is not None:
-                                self.hass.create_task(self._async_start_pwm())
-                            if self._async_stop_pwm is not None:
-                                self.hass.create_task(self._async_stop_pwm())
+                            # cancel scheduled switch routines
+                            self._async_cancel_pwm_routines()
 
                             for key, _ in self._hvac_def.items():
                                 self.hass.create_task(
@@ -1261,11 +1258,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on:
             # restore preset mode
             self._preset_mode = PRESET_NONE
-            # cancel switch routines
-            if self._async_start_pwm is not None:
-                await self._async_start_pwm()
-            if self._async_stop_pwm is not None:
-                await self._async_stop_pwm()
+            # cancel scheduled switch routines
+            self._async_cancel_pwm_routines()
             # stop keep_live
             self._async_routine_controller()
             if self._loop_pwm:  # TODO not needed anymore
@@ -2194,6 +2188,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._start_pwm is not None:
                 await self._async_start_pwm()
 
+        if (
+            self.control_output["output"] in [None, 0]
+            or self._hvac_on is None
+            or self._emergency_stop
+        ):
+            self._async_cancel_pwm_routines()
             await self._async_switch_turn_off()
             # self.hass.async_create_task(self._async_switch_turn_off())
             return
@@ -2289,6 +2289,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # self.hass.async_create_task(self._async_switch_turn_on())
             # self.time_changed = time.time()
         self.async_write_ha_state()
+
+    @callback
+    def _async_cancel_pwm_routines(self):
+        """cancel scheduled switch routines"""
+        if self._async_start_pwm is not None:
+            self.hass.create_task(self._async_start_pwm())
+        if self._async_stop_pwm is not None:
+            self.hass.create_task(self._async_stop_pwm())
 
     async def _async_start_pwm(self, start_time=None):
         """
