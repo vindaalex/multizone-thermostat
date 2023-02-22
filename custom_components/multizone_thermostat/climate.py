@@ -170,7 +170,9 @@ def validate_initial_control_mode(*keys: str) -> Callable:
                     for x in [CONF_ON_OFF_MODE, CONF_PROPORTIONAL_MODE]
                 ):
                     raise vol.Invalid(
-                        "The on_off and proportional mode have both been set {hvac_mode} mode"
+                        "The on_off and proportional mode have both been set {} mode".format(
+                            hvac_mode
+                        )
                     )
         return obj
 
@@ -190,7 +192,9 @@ def validate_window(*keys: str) -> Callable:
                         in obj[hvac_mode][CONF_PROPORTIONAL_MODE][CONF_PID_MODE]
                     ):
                         raise vol.Invalid(
-                            "window open check included for {hvac_mode} mode but required temperature filter not set"
+                            "window open check included for {} mode but required temperature filter not set".format(
+                                hvac_mode
+                            )
                         )
                 except:
                     pass
@@ -209,7 +213,9 @@ def validate_initial_sensors(*keys: str) -> Callable:
             if hvac_mode in obj:
                 if CONF_ON_OFF_MODE in obj[hvac_mode] and not CONF_SENSOR in obj:
                     raise vol.Invalid(
-                        "on-off control defined but no temperature sensor for {hvac_mode} mode"
+                        "on-off control defined but no temperature sensor for {} mode".format(
+                            hvac_mode
+                        )
                     )
                 if CONF_PROPORTIONAL_MODE in obj[hvac_mode]:
                     if (
@@ -217,19 +223,25 @@ def validate_initial_sensors(*keys: str) -> Callable:
                         and not CONF_SENSOR in obj
                     ):
                         raise vol.Invalid(
-                            "PID control defined but no temperature sensor for {hvac_mode} mode"
+                            "PID control defined but no temperature sensor for {} mode".format(
+                                hvac_mode
+                            )
                         )
                     if (
                         CONF_WC_MODE in obj[hvac_mode][CONF_PROPORTIONAL_MODE]
                         and not CONF_SENSOR_OUT in obj
                     ):
                         raise vol.Invalid(
-                            "Weather control defined but no outdoor temperature sensor for {hvac_mode} mode"
+                            "Weather control defined but no outdoor temperature sensor for {} mode".format(
+                                hvac_mode
+                            )
                         )
                 if CONF_MASTER_MODE in obj[hvac_mode]:
                     if CONF_SATELITES not in obj[hvac_mode][CONF_MASTER_MODE]:
                         raise vol.Invalid(
-                            "Master mode defined but no satelite thermostats for {hvac_mode} mode"
+                            "Master mode defined but no satelite thermostats for {} mode".format(
+                                hvac_mode
+                            )
                         )
                     pwm_duration = timedelta(
                         seconds=obj[hvac_mode][CONF_MASTER_MODE][CONF_PWM].get(
@@ -249,7 +261,7 @@ def validate_initial_sensors(*keys: str) -> Callable:
                     )
                     if pwm_duration.seconds > 0 and pwm_duration != cntrl_duration:
                         raise vol.Invalid(
-                            "Master mode {0} ({1} sec) not equal {2} ({3} sec)".format(
+                            "Master mode {} ({} sec) not equal {} ({} sec)".format(
                                 str(CONF_PWM),
                                 pwm_duration.seconds,
                                 str(CONF_CONTROL_REFRESH_INTERVAL),
@@ -269,11 +281,15 @@ def validate_initial_preset_mode(*keys: str) -> Callable:
         """Use a helper to validate mode by mode."""
         if HVACMode.HEAT in obj.keys() and config_preset not in obj[HVACMode.HEAT]:
             raise vol.Invalid(
-                "The preset {preset} has been set as initial preset but the {config_preset} is not present on {HVACMode.HEAT} mode"
+                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
+                    preset, config_preset, HVACMode.HEAT
+                )
             )
         if HVACMode.COOL in obj.keys() and config_preset not in obj[HVACMode.COOL]:
             raise vol.Invalid(
-                "The preset {preset} has been set as initial preset but the {config_preset} is not present on {HVACMode.COOL} mode"
+                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
+                    preset, config_preset, HVACMode.COOL
+                )
             )
 
     def validate(obj: Dict) -> Dict:
@@ -297,7 +313,9 @@ def validate_initial_hvac_mode(*keys: str) -> Callable:
             and obj[CONF_INITIAL_HVAC_MODE] not in obj.keys()
         ):
             raise vol.Invalid(
-                "You cannot set an initial HVAC mode if you did not configure this mode {obj[CONF_INITIAL_HVAC_MODE]}"
+                "You cannot set an initial HVAC mode if you did not configure this mode {}".format(
+                    obj[CONF_INITIAL_HVAC_MODE]
+                )
             )
         return obj
 
@@ -311,11 +329,15 @@ def check_presets_in_both_modes(*keys: str) -> Callable:
         """Check this condition."""
         if conf in obj[HVACMode.HEAT] and conf not in obj[HVACMode.COOL]:
             raise vol.Invalid(
-                "{preset} is set for {HVACMode.HEAT} but not for {HVACMode.COOL}"
+                "{} is set for {} but not for {}".format(
+                    conf, HVACMode.HEAT, HVACMode.COOL
+                )
             )
         if conf in obj[HVACMode.COOL] and conf not in obj[HVACMode.HEAT]:
             raise vol.Invalid(
-                "{preset} is set for {HVACMode.COOL} but not for {HVACMode.HEAT}"
+                "{} is set for {} but not for {}".format(
+                    conf, HVACMode.COOL, HVACMode.HEAT
+                )
             )
 
     def validate(obj: Dict) -> Dict:
