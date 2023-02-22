@@ -951,8 +951,8 @@ class HVACSetting:
             if self.is_valve_mode:
                 if "Valve_PID_integral" in data:
                     self._pid.PID[PID_CONTROLLER].integral = data["Valve_PID_integral"]
-
-        self.pid_reset_time()
+        if self._pid:
+            self.pid_reset_time()
 
 
 def getRoundedThresholdv1(a, MinClip):
