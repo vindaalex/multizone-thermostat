@@ -2035,7 +2035,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # if the call was made by a sensor change, check the min duration
         # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
-        if not force and not routine and min_cycle_duration is not None:
+        if not force and not routine and min_cycle_duration.seconds != 0:
 
             entity_id = self._hvac_on.get_hvac_switch
             if self._hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
