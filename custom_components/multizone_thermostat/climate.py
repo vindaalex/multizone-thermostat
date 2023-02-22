@@ -120,7 +120,6 @@ from .const import (
     CONTROL_START_DELAY,
     DEFAULT_AREA,
     DEFAULT_DETAILED_OUTPUT,
-    DEFAULT_HYSTERESIS_TOLERANCE,
     DEFAULT_MAX_TEMP_COOL,
     DEFAULT_MAX_TEMP_HEAT,
     DEFAULT_MIN_DIFF,
@@ -378,14 +377,8 @@ VALVE_control_options_req = {
 
 # on_off
 on_off = {
-    vol.Optional(
-        CONF_HYSTERESIS_TOLERANCE_ON,
-        default=DEFAULT_HYSTERESIS_TOLERANCE,
-    ): vol.Coerce(float),
-    vol.Optional(
-        CONF_HYSTERESIS_TOLERANCE_OFF,
-        default=DEFAULT_HYSTERESIS_TOLERANCE,
-    ): vol.Coerce(float),
+    vol.Required(CONF_HYSTERESIS_TOLERANCE_ON): vol.Coerce(float),
+    vol.Required(CONF_HYSTERESIS_TOLERANCE_OFF): vol.Coerce(float),
     vol.Optional(CONF_MIN_CYCLE_DURATION): vol.All(
         cv.time_period, cv.positive_timedelta
     ),
