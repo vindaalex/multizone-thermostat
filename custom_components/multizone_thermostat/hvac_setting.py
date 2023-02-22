@@ -370,7 +370,7 @@ class HVACSetting:
         if self.is_hvac_master_mode:
             return None
         else:
-            return self.active_control_data[CONF_HVAC_MODE_MIN_TEMP]
+            return self._hvac_settings[CONF_HVAC_MODE_MIN_TEMP]
 
     @property
     def max_target_temp(self):
@@ -378,7 +378,7 @@ class HVACSetting:
         if self.is_hvac_master_mode:
             return None
         else:
-            return self.active_control_data[CONF_HVAC_MODE_MAX_TEMP]
+            return self._hvac_settings[CONF_HVAC_MODE_MAX_TEMP]
 
     @property
     def get_target_temp_limits(self):
@@ -393,7 +393,7 @@ class HVACSetting:
         """return target temperature"""
         # initial request
         if self._target_temp is None and not self.is_hvac_master_mode:
-            self._target_temp = self.active_control_data[CONF_HVAC_MODE_INIT_TEMP]
+            self._target_temp = self._hvac_settings[CONF_HVAC_MODE_INIT_TEMP]
         return self._target_temp
 
     @target_temperature.setter
@@ -405,7 +405,7 @@ class HVACSetting:
     def get_away_temp(self):
         """return away temp for current hvac mode"""
         if self.is_hvac_on_off_mode or self.is_hvac_proportional_mode:
-            return self.active_control_data.get(CONF_AWAY_TEMP)
+            return self._hvac_settings.get(CONF_AWAY_TEMP)
         else:
             return None
 
@@ -426,7 +426,7 @@ class HVACSetting:
                 if self.restore_temperature is not None:
                     self.target_temperature = self.restore_temperature
                 else:
-                    self.target_temperature = self.active_control_data[
+                    self.target_temperature = self._hvac_settings[
                         CONF_HVAC_MODE_INIT_TEMP
                     ]
 

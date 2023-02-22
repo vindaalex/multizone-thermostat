@@ -435,9 +435,8 @@ temp_set_cool = {
     vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
 }
 
-on_off_heat = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**temp_set_heat, **on_off})}
-
-on_off_cool = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**temp_set_cool, **on_off})}
+on_off_heat = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**on_off})}
+on_off_cool = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**on_off})}
 
 # proportional mode"
 prop = {
@@ -446,13 +445,8 @@ prop = {
     vol.Optional(CONF_WC_MODE): vol.Schema(WC_control_options),
 }
 
-prop_heat = {
-    vol.Optional(CONF_PROPORTIONAL_MODE): vol.Schema({**temp_set_heat, **prop})
-}
-
-prop_cool = {
-    vol.Optional(CONF_PROPORTIONAL_MODE): vol.Schema({**temp_set_cool, **prop})
-}
+prop_heat = {vol.Optional(CONF_PROPORTIONAL_MODE): vol.Schema({**prop})}
+prop_cool = {vol.Optional(CONF_PROPORTIONAL_MODE): vol.Schema({**prop})}
 
 master = {
     vol.Optional(CONF_MASTER_MODE): vol.Schema(
@@ -468,9 +462,21 @@ master = {
     )
 }
 
-hvac_control_heat = {**hvac_control_options, **on_off_heat, **prop_heat, **master}
+hvac_control_heat = {
+    **hvac_control_options,
+    **temp_set_heat,
+    **on_off_heat,
+    **prop_heat,
+    **master,
+}
 
-hvac_control_cool = {**hvac_control_options, **on_off_cool, **prop_cool, **master}
+hvac_control_cool = {
+    **hvac_control_options,
+    **temp_set_cool,
+    **on_off_cool,
+    **prop_cool,
+    **master,
+}
 
 PLATFORM_SCHEMA = vol.All(
     cv.has_at_least_one_key(HVACMode.HEAT, HVACMode.COOL),
