@@ -548,13 +548,15 @@ class HVACSetting:
     @property
     def get_operate_cycle_time(self):
         """return interval for recalculate (control value)"""
-        return self.active_control_data.get(CONF_CONTROL_REFRESH_INTERVAL)
+        return self.active_control_data.get(
+            CONF_CONTROL_REFRESH_INTERVAL, timedelta(seconds=0)
+        )
 
     @property
     def get_min_on_off_cycle(self):
         """minimum duration before recalcute"""
         if self.is_hvac_on_off_mode:
-            return self._on_off[CONF_MIN_CYCLE_DURATION]
+            return self._on_off.get(CONF_MIN_CYCLE_DURATION, timedelta(seconds=0))
 
     @property
     def get_hysteris(self):
