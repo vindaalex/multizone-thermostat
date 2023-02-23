@@ -60,8 +60,8 @@ ATTR_DETAILED_OUTPUT = "detailed_output"
 
 # only required for hvac_Settings
 CONF_TARGET_TEMP_INIT = "initial_target_temp"
-CONF_TARGET_TEMP_MIN = "min_temp"
-CONF_TARGET_TEMP_MAX = "max_temp"
+CONF_TARGET_TEMP_MIN = "min_target_temp"
+CONF_TARGET_TEMP_MAX = "max_target_temp"
 CONF_TARGET_TEMP_AWAY = "away_temp"
 
 CONF_PRECISION = "precision"
@@ -96,8 +96,8 @@ ATTR_PWM_THRESHOLD = "pwm_threshold"
 # on_off thermostat
 CONF_ON_OFF_MODE = "on_off_mode"
 CONF_MIN_CYCLE_DURATION = "min_cycle_duration"
-CONF_HYSTERESIS_TOLERANCE_ON = "hysteresis_tolerance_on"
-CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_tolerance_off"
+CONF_HYSTERESIS_TOLERANCE_ON = "hysteresis_on"
+CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_off"
 
 # proportional mode
 CONF_PROPORTIONAL_MODE = "proportional_mode"
