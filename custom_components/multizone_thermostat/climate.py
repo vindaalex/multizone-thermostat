@@ -71,7 +71,6 @@ from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting
 from .const import (
     ATTR_CONTROL_MODE,
     ATTR_CONTROL_OFFSET,
-    ATTR_CONTROL_OUTPUT,
     ATTR_CONTROL_PWM_OUTPUT,
     ATTR_CURRENT_OUTDOOR_TEMPERATURE,
     ATTR_FILTER_MODE,
@@ -630,7 +629,7 @@ async def async_setup_platform(
     platform.async_register_entity_service(  # type: ignore
         "satelite_mode",
         {
-            vol.Required(ATTR_CONTROL_OUTPUT): vol.Coerce(OperationMode),
+            vol.Required(ATTR_CONTROL_MODE): vol.Coerce(OperationMode),
             vol.Optional(ATTR_CONTROL_OFFSET): vol.Coerce(float),
             vol.Optional("sat_id"): vol.Coerce(int),
             vol.Optional("pwm_start_time"): vol.Coerce(float),
@@ -1256,7 +1255,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._hvac_on.is_hvac_master_mode:
                 await self._async_routine_track_satelites()
                 satelite_reset = {sat: 0 for sat in self._hvac_on.get_satelites}
-                self._async_change_satelite_modes(satelite_reset, control_mode="self")
+                self._async_change_satelite_modes(
+                    satelite_reset, control_mode=OperationMode.SELF
+                )
 
         self._hvac_on = None
         # new hvac mode thus all switches off
