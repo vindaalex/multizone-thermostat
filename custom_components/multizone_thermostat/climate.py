@@ -106,7 +106,7 @@ from .const import (
     CONF_MASTER_MODE,
     CONF_PWM_SCALE_HIGH,
     CONF_MIN_CYCLE_DURATION,
-    CONF_MIN_DIFF,
+    CONF_PWM_THRESHOLD,
     CONF_CONTINUOUS_LOWER_LOAD,
     CONF_PWM_SCALE_LOW,
     CONF_ON_OFF_MODE,
@@ -381,7 +381,7 @@ controller_config = {
     vol.Optional(CONF_PWM_RESOLUTION, default=DEFAULT_PWM_RESOLUTION): vol.Coerce(
         float
     ),
-    vol.Optional(CONF_MIN_DIFF, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
+    vol.Optional(CONF_PWM_THRESHOLD, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
 }
 
 
@@ -568,12 +568,12 @@ async def async_setup_platform(
     )
 
     platform.async_register_entity_service(  # type: ignore
-        "min_diff",
+        "pwm_threshold",
         {
-            vol.Required("hvac_mode"): cv.string,
-            vol.Required("min_diff"): vol.Coerce(float),
+            vol.Required(ATTR_HVAC_MODE): vol.In(SUPPORTED_HVAC_MODES),
+            vol.Required("new_threshold"): vol.Coerce(float),
         },
-        "async_set_min_diff",
+        "async_set_pwm_threshold",
     )
 
     platform.async_register_entity_service(  # type: ignore
@@ -974,12 +974,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_def[hvac_mode].set_detailed_output(new_mode)
 
     @callback
-    def async_set_min_diff(self, hvac_mode: HVACMode, min_diff):
+    def async_set_pwm_threshold(self, hvac_mode: HVACMode, new_threshold):
         """Set new PID Controller min pwm value."""
         self._logger.info(
-            "new minimum for pwm scale for '%s' to: '%s'", hvac_mode, min_diff
+            "new minimum for pwm scale for '%s' to: '%s'", hvac_mode, new_threshold
         )
-        self._hvac_def[hvac_mode].min_diff(min_diff)
+        self._hvac_def[hvac_mode].pwm_threshold(new_threshold)
         self.schedule_update_ha_state()
 
     @callback
@@ -2055,7 +2055,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             # proportional valve
             if (
-                self._hvac_on.min_diff
+                self._hvac_on.pwm_threshold
                 > self.control_output[ATTR_CONTROL_PWM_OUTPUT]
                 and self.switch_position > 0
             ):

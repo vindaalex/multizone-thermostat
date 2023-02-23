@@ -88,6 +88,9 @@ CONF_PWM_SCALE = "pwm_scale"
 CONF_PWM_SCALE_LOW = "pwm_scale_low"
 CONF_PWM_SCALE_HIGH = "pwm_scale_high"
 CONF_PWM_RESOLUTION = "pwm_resolution"
+CONF_PWM_THRESHOLD = "pwm_threshold"
+
+ATTR_PWM_THRESHOLD = "pwm_threshold"
 
 # on_off thermostat
 CONF_ON_OFF_MODE = "on_off_mode"

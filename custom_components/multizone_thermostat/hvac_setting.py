@@ -37,7 +37,7 @@ from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; propo
     CONF_MASTER_MODE,
     CONF_PWM_SCALE_HIGH,
     CONF_MIN_CYCLE_DURATION,
-    CONF_MIN_DIFF,
+    CONF_PWM_THRESHOLD,
     CONF_CONTINUOUS_LOWER_LOAD,
     CONF_PWM_SCALE_LOW,
     CONF_ON_OFF_MODE,
@@ -84,6 +84,7 @@ class HVACSetting:
         self._outdoor_temperature = None
         self.restore_temperature = None
 
+        self._pwm_threshold = None
 
         # satelite mode settings
         # self._master_control_interval = None
@@ -121,9 +122,11 @@ class HVACSetting:
         """init the defined control modes"""
         if self.is_hvac_on_off_mode:
             self._logger.debug("HVAC mode 'on_off' active")
+            self._pwm_threshold = 50
             self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_proportional_mode:
             self._logger.debug("HVAC mode 'proportional' active")
+            self._pwm_threshold = self._proportional[CONF_PWM_THRESHOLD]
             if self.is_prop_pid_mode:
                 self._logger.debug("HVAC mode 'pid' active")
                 self.start_pid()
@@ -133,6 +136,7 @@ class HVACSetting:
                 self._wc[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_master_mode:
             self._logger.debug("HVAC mode 'master' active")
+            self._pwm_threshold = self._master[CONF_PWM_THRESHOLD]
             self.start_master()
             if self.is_valve_mode:
                 self._logger.debug("HVAC mode 'valve control' active")
@@ -520,22 +524,16 @@ class HVACSetting:
         return [lower_pwm_scale, upper_pwm_scale]
 
     @property
-    def min_diff(self):
-        """get minimum pwm range"""
-        if self.is_hvac_on_off_mode:
-            return 50
-        else:
-            return self.active_control_data.get(CONF_MIN_DIFF)
+    def pwm_threshold(self):
+        """get minimumactive_control_data pwm range"""
+        return self._pwm_threshold
 
-    @min_diff.setter
-    def min_diff(self, min_diff):
+    @pwm_threshold.setter
+    def pwm_threshold(self, new_threshold):
         """set minimum pwm"""
         if self.is_hvac_on_off_mode:
             raise ValueError("min diff cannot be set for on-off controller")
-        elif self.is_hvac_proportional_mode:
-            self._proportional[CONF_MIN_DIFF] = min_diff
-        elif self.is_hvac_master_mode:
-            self._master[CONF_MIN_DIFF] = min_diff
+        self._pwm_threshold = new_threshold
 
     @property
     def get_operate_cycle_time(self):

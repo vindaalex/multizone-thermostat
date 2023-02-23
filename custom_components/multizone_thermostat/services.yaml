@@ -2,7 +2,7 @@ reload:
   description: Reload all multizone_thermostat entities
 
 #proportional
-set_min_diff:
+set_pwm_threshold:
   description: Set a new 'minimal_diff' before change switch
   fields:
     entity_id:
@@ -11,7 +11,7 @@ set_min_diff:
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    min_diff:
+    new_threshold:
       description: minimum difference value of proportional controller
       example: 2
 
