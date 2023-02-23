@@ -149,8 +149,9 @@ from .const import (
     DEFAULT_TARGET_TEMP_COOL,
     DEFAULT_TARGET_TEMP_HEAT,
     MASTER_CONTINUOUS,
+    MASTER_BALANCED,
     MASTER_CONTROL_LEAD,
-    MASTER_ON_OFF,
+    MASTER_MIN_ON,
     NC_SWITCH_MODE,
     NO_SWITCH_MODE,
     PLATFORM_INPUT_NUMBER,
@@ -165,6 +166,7 @@ SUPPORTED_PRESET_MODES = [
     PRESET_NONE,
     PRESET_AWAY,
 ]
+SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
 
 
 def validate_initial_control_mode(*keys: str) -> Callable:
@@ -465,7 +467,7 @@ master = {
         {
             vol.Required(CONF_SATELITES): cv.ensure_list,
             vol.Optional(CONF_MASTER_OPERATION_MODE, default=DEFAULT_OPERATION): vol.In(
-                [MASTER_ON_OFF, MASTER_CONTINUOUS]
+                SUPPORTED_MASTER_MODES
             ),
             **controller_config,
             vol.Optional(

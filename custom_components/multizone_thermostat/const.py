@@ -132,7 +132,8 @@ CONF_CONTINUOUS_LOWER_LOAD = "lower_load_scale"
 CONF_GOAL = "goal"  # pid valve mode
 ATTR_GOAL = "goal"  # pid valve mode
 
-MASTER_ON_OFF = "on_off"
+MASTER_MIN_ON = "minimal_on"
+MASTER_BALANCED = "balanced"
 MASTER_CONTINUOUS = "continuous"
 
 # control constants

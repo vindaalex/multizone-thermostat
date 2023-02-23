@@ -8,7 +8,7 @@ import copy
 import itertools
 import logging
 import time
-from math import ceil, floor
+from math import ceil, floor, sqrt
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from .const import (
     CONF_PWM_SCALE,
     ATTR_CONTROL_PWM_OUTPUT,
     MASTER_CONTINUOUS,
+    MASTER_BALANCED,
     NESTING_BALANCE,
     NESTING_MATRIX,
 )
@@ -53,7 +54,6 @@ class Nesting:
         self.rooms = None
         self.pwm = None
         self.real_pwm = None
-
         self.start_time = None
 
     @property
@@ -79,6 +79,13 @@ class Nesting:
             else:
                 # full pwm size can be used
                 return_value = NESTING_MATRIX
+
+        elif self.operation_mode == MASTER_BALANCED:
+            return_value = sqrt(load_area)
+            if self.min_load > 0:
+                return_value = min(
+                    return_value, load_area / (self.min_load * NESTING_MATRIX)
+                )
 
         # max of pwm signals
         else:
