@@ -514,16 +514,9 @@ class HVACSetting:
         return self.active_control_data.get(CONF_PWM_SCALE)
 
     def pwm_scale_limits(self, hvac_data):
-        """Bandwitdh for control value"""
-        if any(x for x in (CONF_MIN_DIFFERENCE, CONF_MAX_DIFFERENCE) if x in hvac_data):
-            if CONF_MIN_DIFFERENCE in hvac_data:
-                lower_pwm_scale = hvac_data[CONF_MIN_DIFFERENCE]
-            else:
-                lower_pwm_scale = 0
-            if CONF_MAX_DIFFERENCE in hvac_data:
-                upper_pwm_scale = hvac_data[CONF_MAX_DIFFERENCE]
-            else:
-                upper_pwm_scale = self.pwm_scale
+        """Bandwidth for control value"""
+        if CONF_PWM_SCALE_LOW in self.active_control_data:
+            lower_pwm_scale = self.active_control_data.get(CONF_PWM_SCALE_LOW, 0)
         else:
             difference = self.pwm_scale
             if self.is_valve_mode or (self.is_prop_pid_mode and self.is_wc_mode):
@@ -535,8 +528,9 @@ class HVACSetting:
                 # pwm on-off thermostat dont allow below zero
                 lower_pwm_scale = 0
 
-            upper_pwm_scale = difference
-
+        upper_pwm_scale = self.active_control_data.get(
+            CONF_PWM_SCALE_HIGH, self.pwm_scale
+        )
         return [lower_pwm_scale, upper_pwm_scale]
 
     @property
