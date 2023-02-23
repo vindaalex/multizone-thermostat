@@ -304,25 +304,41 @@ class HVACSetting:
         """maximum proportional valve opening for valve PID control"""
         max_pwm = 0
         for _, data in self._satelites.items():
-            if data[ATTR_HVAC_MODE] == self._hvac_mode and data[VALVE_POS] is not None:
-                if data["pwm_time"] == 0:
-                    max_pwm = max(max_pwm, data[VALVE_POS])
+            if (
+                data[ATTR_HVAC_MODE] == self._hvac_mode
+                and data[ATTR_CONTROL_PWM_OUTPUT] is not None
+            ):
+                if data[CONF_PWM_DURATION] == 0:
+                    # pwm as percentage to satelite pwm_scale
+                    max_pwm = max(
+                        max_pwm, data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE]
+                    )
 
-        return max_pwm
+        # scale to master pwm_scale
+        return max_pwm * self.pwm_scale
 
     @property
     def valve_pos_pwm_prop(self):
         """sum of proportional valves scaled to total building area"""
         max_pwm = 0
         for _, data in self._satelites.items():
-            if data[ATTR_HVAC_MODE] == self._hvac_mode and data[VALVE_POS] is not None:
-                if data["pwm_time"] == 0:
+            if (
+                data[ATTR_HVAC_MODE] == self._hvac_mode
+                and data[ATTR_CONTROL_PWM_OUTPUT] is not None
+            ):
+                if data[CONF_PWM_DURATION] == 0:
                     # self.area in master mode is total building area
-                    max_pwm += data[VALVE_POS] * data["area"]
+                    # pwm as percentage to satelite pwm_scale
+                    max_pwm += (
+                        data[ATTR_CONTROL_PWM_OUTPUT]
+                        / data[CONF_PWM_SCALE]
+                        * data[CONF_AREA]
+                    )
         if max_pwm > 0:
             max_pwm /= self.area
 
-        return max_pwm
+        # scale to master pwm_scale
+        return max_pwm * self.pwm_scale
 
     @property
     def valve_pos_pwm_on_off(self):
