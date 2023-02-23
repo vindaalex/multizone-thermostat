@@ -7,13 +7,26 @@ rooms switch delay are determined.
 import copy
 import itertools
 import logging
-from math import ceil, floor
 import time
+from math import ceil, floor
 
 import numpy as np
 
 from . import DOMAIN
-from .const import MASTER_CONTINUOUS, NESTING_BALANCE, NESTING_MATRIX
+from .const import (
+    CONF_AREA,
+    CONF_PWM_DURATION,
+    CONF_PWM_SCALE,
+    ATTR_CONTROL_PWM_OUTPUT,
+    MASTER_CONTINUOUS,
+    NESTING_BALANCE,
+    NESTING_MATRIX,
+)
+
+ATTR_ROOMS = "rooms"
+ATTR_SCALED_PWM = "scaled_pwm"
+ATTR_ROUNDED_PWM = "rounded_pwm"
+
 
 class Nesting:
     """Nest rooms by area size and pwm in order to get equal heat requirement"""
@@ -85,19 +98,27 @@ class Nesting:
         self.scale_factor = {}
 
         new_data = {}
-        new_data = {key: [] for key in ["area", "rooms", "pwm", "real_pwm"]}
+        new_data = {
+            key: []
+            for key in [CONF_AREA, ATTR_ROOMS, ATTR_ROUNDED_PWM, ATTR_SCALED_PWM]
+        }
 
         for room, data in sat_data.items():
-            scale_factor = self.master_pwm / data["pwm_scale"] * self.master_pwm_scale
+            scale_factor = (
+                self.master_pwm / data[CONF_PWM_SCALE] * self.master_pwm_scale
+            )
             self.scale_factor[room] = scale_factor
 
             # ignore proportional valves
-            if data["pwm_time"] > 0:
-                new_data["area"].append(int(ceil(data["area"] * self.area_scale)))
-                new_data["pwm"].append(int(ceil(data["valve_pos"] * scale_factor)))
-                # new_data["real_area"].append((data["area"]))
-                new_data["real_pwm"].append((data["valve_pos"] * scale_factor))
-                new_data["rooms"].append(room)
+            if data[CONF_PWM_DURATION] > 0:
+                new_data[CONF_AREA].append(int(ceil(data[CONF_AREA] * self.area_scale)))
+                new_data[ATTR_ROUNDED_PWM].append(
+                    int(ceil(data[ATTR_CONTROL_PWM_OUTPUT] * scale_factor))
+                )
+                new_data[ATTR_SCALED_PWM].append(
+                    (data[ATTR_CONTROL_PWM_OUTPUT] * scale_factor)
+                )
+                new_data[ATTR_ROOMS].append(room)
 
             if bool([a for a in new_data.values() if a == []]):
                 return
@@ -109,11 +130,10 @@ class Nesting:
         self.area, self.rooms, self.pwm, self.real_pwm = zip(
             *sorted(
                 zip(
-                    new_data["area"],
-                    new_data["rooms"],
-                    new_data["pwm"],
-                    # new_data["real_area"],
-                    new_data["real_pwm"],
+                    new_data[CONF_AREA],
+                    new_data[ATTR_ROOMS],
+                    new_data[ATTR_ROUNDED_PWM],
+                    new_data[ATTR_SCALED_PWM],
                 ),
                 reverse=True,
             )
@@ -143,7 +163,6 @@ class Nesting:
     def nest_rooms(self, data=None):
         """Nest the rooms to get balanced heat requirement"""
         self.start_time = time.time()
-        # self._logger.debug("start nesting")
 
         if data:
             self.packed = []
@@ -161,8 +180,6 @@ class Nesting:
         # the maximum row size (pwm) is pwm_max
         # column size is variable and depends on nesting fit
         for i_r, room in enumerate(self.rooms):
-            # print(room, area[i])
-
             # first room in loop
             if not self.packed:
                 self.create_lid(i_r)
@@ -198,16 +215,6 @@ class Nesting:
                                     len(lid_i[area_segment]) - start_empty,
                                 ]
                             )
-
-                        # for pwm_i, pwm_segments in enumerate(
-                        #     reversed(lid_i[area_segment])
-                        # ):
-                        #     if pwm_segments is not None:
-                        #         # store locations with free space
-                        #         if pwm_i == 0:
-                        #             break
-                        #         options.append([i_l, area_segment, pwm_i])
-                        #         break
 
                 # determine all possible free area-pwm size combinations
                 if not options:
@@ -298,16 +305,12 @@ class Nesting:
                     else:
                         self.create_lid(i_r)
 
-        # self._logger.debug("nesting time %.4f", time.time() - self.start_time)
-
     def distribute_nesting(self):
         """
         reverse packs to get best distribution
         """
         if self.packed:
             if len(self.packed) > 1:
-                # balance = {"option": [], "result": []}
-
                 if self.operation_mode == MASTER_CONTINUOUS:
                     for i, lid_i in enumerate(self.packed):
                         if i % 2:
@@ -360,9 +363,6 @@ class Nesting:
                         for area_segment, _ in enumerate(lid_i):
                             lid_i[area_segment] = list(reversed(lid_i[area_segment]))
 
-                        # self._logger.debug(
-                        #     "balance results time %.4f", time.time() - self.start_time
-                        # )
                         # determine the equality over pwm
                         balance_result = self.nesting_balance(self.packed)
                         self._logger.debug(
@@ -372,9 +372,6 @@ class Nesting:
                         if balance_result is not None:
                             if abs(balance_result) <= NESTING_BALANCE:
                                 # self.packed = test_set
-                                # self._logger.debug(
-                                #     "finished time %.4f", time.time() - self.start_time
-                                # )
                                 return
 
     def nesting_balance(self, test_set):
@@ -415,7 +412,7 @@ class Nesting:
             self.offset = {}
             len_pwm = len(self.packed[0][0])
             self.cleaned_rooms = [[] for _ in range(len_pwm)]
-            for i, lid in enumerate(self.packed):
+            for lid in self.packed:
                 # loop over pwm
                 # first check if some are at end
                 # extract unique rooms by fromkeys method
@@ -503,7 +500,6 @@ class Nesting:
         new added rooms are ignored and will be nested in the next control loop
         """
         # nested data is present
-
         if data:
             self.satelite_data(data)
 
