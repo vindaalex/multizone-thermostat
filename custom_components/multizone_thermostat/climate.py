@@ -14,9 +14,11 @@ from __future__ import annotations
 import asyncio
 import datetime
 from datetime import timedelta
+from collections.abc import Callable
 import logging
 import time
-from typing import Callable, Dict
+from typing import Any
+
 
 import voluptuous as vol
 
@@ -62,7 +64,7 @@ from homeassistant.helpers.event import (  # async_track_utc_time_change,
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.template import state_attr
-from homeassistant.helpers.typing import (  # TODO:check disco
+from homeassistant.helpers.typing import (
     ConfigType,
     DiscoveryInfoType,
 )
@@ -171,7 +173,7 @@ SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
 def validate_initial_control_mode(*keys: str) -> Callable:
     """If an initial preset mode has been set, check if the values are set in both modes."""
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
         for hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
             if hvac_mode in obj:
@@ -192,7 +194,7 @@ def validate_initial_control_mode(*keys: str) -> Callable:
 def validate_window(*keys: str) -> Callable:
     """Check if filter is active when setting window open detection."""
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
         for hvac_mode in [HVACMode.COOL, HVACMode.HEAT]:
             if hvac_mode in obj and CONF_FILTER_MODE not in obj:
@@ -206,7 +208,7 @@ def validate_window(*keys: str) -> Callable:
                                 hvac_mode
                             )
                         )
-                except:
+                except Exception:
                     pass
 
         return obj
@@ -217,7 +219,7 @@ def validate_window(*keys: str) -> Callable:
 def validate_initial_sensors(*keys: str) -> Callable:
     """If an initial preset mode has been set, check if the values are set in both modes."""
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
         for hvac_mode in [HVACMode.HEAT, HVACMode.COOL]:
             if hvac_mode in obj:
@@ -287,7 +289,7 @@ def validate_initial_sensors(*keys: str) -> Callable:
 def validate_initial_preset_mode(*keys: str) -> Callable:
     """If an initial preset mode has been set, check if the values are set in both modes."""
 
-    def validate_by_mode(obj: Dict, preset: str, config_preset: str):
+    def validate_by_mode(obj: dict[str, Any], preset: str, config_preset: str):
         """Use a helper to validate mode by mode."""
         if HVACMode.HEAT in obj.keys() and config_preset not in obj[HVACMode.HEAT]:
             raise vol.Invalid(
@@ -302,7 +304,7 @@ def validate_initial_preset_mode(*keys: str) -> Callable:
                 )
             )
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
         if CONF_INITIAL_PRESET_MODE in obj and obj[CONF_INITIAL_PRESET_MODE] != "none":
             if obj[CONF_INITIAL_PRESET_MODE] == PRESET_AWAY:
@@ -315,7 +317,7 @@ def validate_initial_preset_mode(*keys: str) -> Callable:
 def validate_initial_hvac_mode(*keys: str) -> Callable:
     """If an initial hvac mode has been set, check if this mode has been configured."""
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
         if (
             CONF_INITIAL_HVAC_MODE in obj
@@ -335,7 +337,7 @@ def validate_initial_hvac_mode(*keys: str) -> Callable:
 def check_presets_in_both_modes(*keys: str) -> Callable:
     """If one preset is set on one mode, then this preset is enabled and check it on the other modes."""
 
-    def validate_by_preset(obj: Dict, conf: str):
+    def validate_by_preset(obj: dict[str, Any], conf: str):
         """Check this condition."""
         if conf in obj[HVACMode.HEAT] and conf not in obj[HVACMode.COOL]:
             raise vol.Invalid(
@@ -350,7 +352,7 @@ def check_presets_in_both_modes(*keys: str) -> Callable:
                 )
             )
 
-    def validate(obj: Dict) -> Dict:
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
         if HVACMode.HEAT in obj.keys() and HVACMode.COOL in obj.keys():
             validate_by_preset(obj, CONF_TARGET_TEMP_AWAY)
         return obj
@@ -396,7 +398,6 @@ PID_control_options = {
 WC_control_options = {
     vol.Required(CONF_KA): vol.Coerce(float),
     vol.Required(CONF_KB): vol.Coerce(float),
-    # TODO: check max diff usage
     vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
     vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
 }
@@ -1109,31 +1110,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 ):
                     self._self_controlled = OperationMode.SELF
                     self._sat_id = 0
-                    # start pwm routine of itself
-                    # hvac_ref.master_control_interval = None
-                    # self._pwm_start_time = time.time() + CONTROL_START_DELAY
 
-                    # TODO: just keep running as is??
-
-                    # if self._hvac_on is not None:
-                    #     # run controller before pwm loop
-                    #     async_track_point_in_utc_time(
-                    #         self.hass,
-                    #         self.async_routine_controller_factory(
-                    #             self._hvac_on.get_operate_cycle_time
-                    #         ),
-                    #         datetime.datetime.fromtimestamp(
-                    #             self._pwm_start_time - MASTER_CONTROL_LEAD
-                    #         ),
-                    #     )
-
-                    #     # run pwm just after controller
-                    #     async_track_point_in_utc_time(
-                    #         self.hass,
-                    #         self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
-                    #         datetime.datetime.fromtimestamp(self._pwm_start_time),
-                    #     )
-                    # TODO: _async_routine_controller as well
                 elif control_mode == OperationMode.MASTER:
                     if self._self_controlled in [
                         OperationMode.PENDING,
@@ -2004,7 +1981,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             await self._async_switch_turn_off()
             return
 
-        # TODO change pwm_duration to valve on_off or prop
         if self._hvac_on.get_pwm_time:
             pwm_duration = self._hvac_on.get_pwm_time.seconds
         else:
@@ -2388,7 +2364,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def switch_position(self):
         """get state of switch"""
-        # TODO: check NC
         entity_id = self._hvac_on.get_hvac_switch
         sensor_state = self.hass.states.get(entity_id)
 
@@ -2433,7 +2408,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        # TODO: master mode no min
         if self._hvac_on:
             if self._hvac_on.is_hvac_master_mode:
                 return None
@@ -2448,7 +2422,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
-        # TODO: master mode no max
         if self._hvac_on:
             if self._hvac_on.is_hvac_master_mode:
                 return None
