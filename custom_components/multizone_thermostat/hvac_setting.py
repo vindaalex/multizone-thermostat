@@ -378,7 +378,8 @@ class HVACSetting:
             elif control_output < 0:
                 control_output = 0
 
-            control_output = get_rounded(control_output, self.pwm_resolution)
+
+            control_output = get_rounded(control_output, self.pwm_scale / self.pwm_resolution)
         if self.time_offset is None:
             self.time_offset = 0
 
