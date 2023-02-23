@@ -344,7 +344,7 @@ class HVACSetting:
     @property
     def valve_pos_pwm_on_off(self):
         """master pwm based on satelites with pwm controlled on-off valves"""
-        return self.nesting.get_master_output()[1]
+        return self.nesting.get_master_output()[ATTR_CONTROL_PWM_OUTPUT]
 
     @property
     def get_control_output(self):

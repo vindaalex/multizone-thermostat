@@ -18,6 +18,7 @@ from .const import (
     CONF_PWM_DURATION,
     CONF_PWM_SCALE,
     ATTR_CONTROL_PWM_OUTPUT,
+    ATTR_CONTROL_OFFSET,
     MASTER_CONTINUOUS,
     MASTER_BALANCED,
     NESTING_BALANCE,
@@ -482,10 +483,10 @@ class Nesting:
             if master_offset is None:
                 return [0, 0]
             else:
-                return [
-                    master_offset,
-                    end_time - master_offset,
-                ]
+                return {
+                    ATTR_CONTROL_OFFSET: master_offset,
+                    ATTR_CONTROL_PWM_OUTPUT: end_time - master_offset,
+                }
         else:
             return [0, 0]
 
