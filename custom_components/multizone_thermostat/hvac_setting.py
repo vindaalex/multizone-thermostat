@@ -377,7 +377,7 @@ class HVACSetting:
             elif control_output < 0:
                 control_output = 0
 
-            control_output = getRoundedThresholdv1(control_output, self.pwm_resolution)
+            control_output = get_rounded(control_output, self.pwm_resolution)
         if self.time_offset is None:
             self.time_offset = 0
 
@@ -969,7 +969,7 @@ class HVACSetting:
             self.pid_reset_time()
 
 
-def getRoundedThresholdv1(a, MinClip):
+def get_rounded(input_val, min_clip):
     """https://stackoverflow.com/questions/7859147/round-in-numpy-to-nearest-step"""
-    scaled = a / MinClip
-    return np.where(scaled % 1 >= 0.5, np.ceil(scaled), np.floor(scaled)) * MinClip
+    scaled = input_val / min_clip
+    return np.where(scaled % 1 >= 0.5, np.ceil(scaled), np.floor(scaled)) * min_clip
