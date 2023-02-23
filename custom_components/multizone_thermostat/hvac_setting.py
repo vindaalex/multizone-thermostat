@@ -17,6 +17,7 @@ from . import DOMAIN, pid_controller, pwm_nesting
 from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; proportional mode; CONF_VALVE_DELAY,; PID controller; weather compensating mode; Master mode; valve_control_mode
     ATTR_CONTROL_MODE,
     ATTR_CONTROL_OFFSET,
+    ATTR_DETAILED_OUTPUT,
     ATTR_HVAC_DEFINITION,
     ATTR_SAT_ALLOWED,
     ATTR_SELF_CONTROLLED,
@@ -249,7 +250,7 @@ class HVACSetting:
             target_temp,
             target_temp_min,
             target_temp_max,
-            current_temp,
+            round(current_temp, 2),
         )
 
         if self._hvac_mode == HVACMode.HEAT:
@@ -882,9 +883,10 @@ class HVACSetting:
         tmp_dict[CONF_PWM_DURATION] = self.get_pwm_time.seconds
         tmp_dict[CONF_PWM_SCALE] = self.pwm_scale
         tmp_dict[ATTR_CONTROL_OUTPUT] = self.get_control_output
-
+        tmp_dict[ATTR_DETAILED_OUTPUT] = self._detailed_output
         if self.is_hvac_master_mode:
             tmp_dict[CONF_SATELITES] = self.get_satelites
+            tmp_dict[CONF_MASTER_OPERATION_MODE] = self._operation_mode
             if self.is_valve_mode:
                 tmp_dict["Valve_PID_values"] = self.get_pid_param(self._pid)
                 if self._detailed_output:
@@ -897,7 +899,9 @@ class HVACSetting:
                     tmp_dict["Valve_PID_D"] = round(
                         self._pid.PID[PID_CONTROLLER].d_var, 5
                     )
-                    tmp_dict["Valve_PID_valve_pos"] = self._pid[ATTR_CONTROL_PWM_OUTPUT]
+                    tmp_dict["Valve_PID_valve_pos"] = round(
+                        self._pid[ATTR_CONTROL_PWM_OUTPUT], 3
+                    )
                 elif self._store_integral:
                     tmp_dict["Valve_PID_P"] = None
                     tmp_dict["Valve_PID_I"] = round(

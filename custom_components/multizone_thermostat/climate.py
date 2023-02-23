@@ -964,18 +964,24 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         tmp_dict = {}
         for key, data in self._hvac_def.items():
             tmp_dict[key] = data.get_variable_attr
-        return {
-            # "current_temp_filt": self.current_temperature,
-            ATTR_CURRENT_OUTDOOR_TEMPERATURE: self.outdoor_temperature,
-            ATTR_FILTER_MODE: self.filter_mode,
-            CONF_AREA: self._area,
-            ATTR_HVAC_DEFINITION: tmp_dict,
-            ATTR_SELF_CONTROLLED: self._self_controlled,
-        }
+        if self.is_master:
+            return {
+                CONF_AREA: self._area,
+                ATTR_HVAC_DEFINITION: tmp_dict,
+            }
+        else:
+            return {
+                ATTR_SELF_CONTROLLED: self._self_controlled,
+                ATTR_CURRENT_OUTDOOR_TEMPERATURE: self.outdoor_temperature,
+                ATTR_FILTER_MODE: self.filter_mode,
+                CONF_AREA: self._area,
+                ATTR_HVAC_DEFINITION: tmp_dict,
+            }
 
     def set_detailed_output(self, hvac_mode: HVACMode, new_mode):
         """configure attribute output level"""
         self._hvac_def[hvac_mode].set_detailed_output(new_mode)
+        self.schedule_update_ha_state()
 
     @callback
     def async_set_pwm_threshold(self, hvac_mode: HVACMode, new_threshold):
