@@ -376,8 +376,6 @@ controller_config = {
         cv.time_period, cv.positive_timedelta
     ),
     vol.Optional(CONF_PWM_SCALE, default=DEFAULT_PWM_SCALE): vol.Coerce(float),
-    vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
-    vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
     vol.Optional(CONF_PWM_RESOLUTION, default=DEFAULT_PWM_RESOLUTION): vol.Coerce(
         float
     ),
@@ -389,6 +387,8 @@ PID_control_options = {
     vol.Required(CONF_KP): vol.Coerce(float),
     vol.Required(CONF_KI): vol.Coerce(float),
     vol.Required(CONF_KD): vol.Coerce(float),
+    vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
+    vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
     vol.Optional(CONF_WINDOW_OPEN_TEMPDROP): vol.Coerce(float),
 }
 
@@ -396,6 +396,7 @@ WC_control_options = {
     vol.Required(CONF_KA): vol.Coerce(float),
     vol.Required(CONF_KB): vol.Coerce(float),
     # TODO: check max diff usage
+    vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
     vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
 }
 
@@ -404,6 +405,8 @@ VALVE_control_options_req = {
     vol.Required(CONF_KP): vol.Coerce(float),
     vol.Required(CONF_KI): vol.Coerce(float),
     vol.Required(CONF_KD): vol.Coerce(float),
+    vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
+    vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
 }
 
 # on_off

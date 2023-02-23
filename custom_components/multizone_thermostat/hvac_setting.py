@@ -266,12 +266,12 @@ class HVACSetting:
     def run_wc(self):
         """calcuate weather compension mode"""
         KA, KB = self.get_ka_kb_param  # pylint: disable=invalid-name
-        _, upper_pwm_scale = self.pwm_scale_limits(self._wc)
+        lower_pwm_scale, upper_pwm_scale = self.pwm_scale_limits(self._wc)
 
         if self.outdoor_temperature is not None:
             temp_diff = self.target_temperature - self.outdoor_temperature
             self._wc[ATTR_CONTROL_PWM_OUTPUT] = min(
-                max(0, temp_diff * KA + KB), upper_pwm_scale
+                max(lower_pwm_scale, temp_diff * KA + KB), upper_pwm_scale
             )
         else:
             self._logger.warning("no outdoor temperature; continue with previous data")
@@ -515,22 +515,19 @@ class HVACSetting:
 
     def pwm_scale_limits(self, hvac_data):
         """Bandwidth for control value"""
-        if CONF_PWM_SCALE_LOW in self.active_control_data:
-            lower_pwm_scale = self.active_control_data.get(CONF_PWM_SCALE_LOW, 0)
+        upper_pwm_scale = hvac_data.get(CONF_PWM_SCALE_HIGH, self.pwm_scale)
+        if CONF_PWM_SCALE_LOW in hvac_data:
+            lower_pwm_scale = hvac_data.get(CONF_PWM_SCALE_LOW, 0)
         else:
-            difference = self.pwm_scale
             if self.is_valve_mode or (self.is_prop_pid_mode and self.is_wc_mode):
                 # allow to to negative pwm to compensate
                 # - master mode: get valve to goal
                 # - prop mode: compensate wc mode
-                lower_pwm_scale = -1 * difference
+                lower_pwm_scale = -1 * upper_pwm_scale
             else:
                 # pwm on-off thermostat dont allow below zero
                 lower_pwm_scale = 0
 
-        upper_pwm_scale = self.active_control_data.get(
-            CONF_PWM_SCALE_HIGH, self.pwm_scale
-        )
         return [lower_pwm_scale, upper_pwm_scale]
 
     @property
