@@ -69,20 +69,22 @@ class Nesting:
                 if load_area / NESTING_MATRIX >= self.min_load * NESTING_MATRIX:
                     return_value = NESTING_MATRIX
                 else:
-                    return_value = load_area / (self.min_load * NESTING_MATRIX)
+                    return_value = max(
+                        load_area / (self.min_load * NESTING_MATRIX), max(self.pwm)
+                    )
 
             # no minimum defined thus check if continuous is possible
             # when sum is less than pwm scale
             # # use reduced pwm scale instead
             elif sum(self.pwm) < NESTING_MATRIX:
-                return_value = load_area / max(self.area)
+                return_value = max(load_area / max(self.area), max(self.pwm))
 
             else:
                 # full pwm size can be used
                 return_value = NESTING_MATRIX
 
         elif self.operation_mode == MASTER_BALANCED:
-            return_value = sqrt(load_area)
+            return_value = max(sqrt(load_area), max(self.pwm))
             if self.min_load > 0:
                 return_value = min(
                     return_value, load_area / (self.min_load * NESTING_MATRIX)
@@ -98,14 +100,17 @@ class Nesting:
     def satelite_data(self, sat_data):
         """convert new satelite data to correct format"""
         # clear previous nesting
-
         self.area = None
         self.rooms = None
         self.pwm = None
         self.real_pwm = None
         self.scale_factor = {}
-
         new_data = {}
+        self.lid_segment = None
+
+        if not sat_data:
+            return
+
         new_data = {
             key: []
             for key in [CONF_AREA, ATTR_ROOMS, ATTR_ROUNDED_PWM, ATTR_SCALED_PWM]
@@ -128,24 +133,27 @@ class Nesting:
                 )
                 new_data[ATTR_ROOMS].append(room)
 
-            if bool([a for a in new_data.values() if a == []]):
-                return
+        if bool([a for a in new_data.values() if a == []]):
+            return
 
         # area is constant and thereby sort on area gives
         # more constant routine order, largest room is expected
         # to require most heat thus dominant and most important
         # self.area, self.rooms, self.pwm, self.real_area, self.real_pwm = zip(
-        self.area, self.rooms, self.pwm, self.real_pwm = zip(
-            *sorted(
-                zip(
-                    new_data[CONF_AREA],
-                    new_data[ATTR_ROOMS],
-                    new_data[ATTR_ROUNDED_PWM],
-                    new_data[ATTR_SCALED_PWM],
-                ),
-                reverse=True,
+        self.area, self.rooms, self.pwm, self.real_pwm = [
+            list(x)
+            for x in zip(
+                *sorted(
+                    zip(
+                        new_data[CONF_AREA],
+                        new_data[ATTR_ROOMS],
+                        new_data[ATTR_ROUNDED_PWM],
+                        new_data[ATTR_SCALED_PWM],
+                    ),
+                    reverse=True,
+                )
             )
-        )
+        ]
 
         # prepare pwm size for nesting
         self.lid_segment = [None] * self.get_pwm_max
@@ -155,6 +163,9 @@ class Nesting:
         create a 2d array with length of pwm_max and rows equal to area
         fill/est array with room id equal to required pwm
         """
+        if self.get_pwm_max == 0:
+            return
+
         new_lid = np.array(
             copy.deepcopy(
                 [self.lid_segment for i in range(int(self.area[room_index]))]
@@ -171,17 +182,14 @@ class Nesting:
     def nest_rooms(self, data=None):
         """Nest the rooms to get balanced heat requirement"""
         self.start_time = time.time()
+        self.packed = []
+        self.cleaned_rooms = []
+        self.offset = {}
 
-        if data:
-            self.packed = []
-            self.cleaned_rooms = []
-            self.satelite_data(data)
+        self.satelite_data(data)
 
         if self.area is None or all(pwm == 0 for pwm in self.pwm):
             return
-
-        # storage of all lids
-        self.packed = []
 
         # loop through rooms
         # and create 2D arrays nested with room area-pwm
@@ -478,28 +486,59 @@ class Nesting:
 
                         end_time = max(end_time, room_end_time)
 
-                end_time = min(end_time, self.get_pwm_max / self.master_pwm_scale)
+                # end_time = min(end_time, self.get_pwm_max / self.master_pwm_scale)
+                end_time = min(
+                    end_time, len(self.cleaned_rooms) / self.master_pwm_scale
+                )
 
             if master_offset is None:
-                return [0, 0]
+                return {
+                    ATTR_CONTROL_OFFSET: 0,
+                    ATTR_CONTROL_PWM_OUTPUT: 0,
+                }
             else:
                 return {
                     ATTR_CONTROL_OFFSET: master_offset,
                     ATTR_CONTROL_PWM_OUTPUT: end_time - master_offset,
                 }
         else:
-            return [0, 0]
+            return {
+                ATTR_CONTROL_OFFSET: 0,
+                ATTR_CONTROL_PWM_OUTPUT: 0,
+            }
 
     def remove_room(self, room):
         """remove room from nesting when room changed hvac mode"""
         self._logger.debug("'%s' removed from nesting", room)
         for i, pack in enumerate(self.packed):
-            self.packed[i] = np.where(pack != room, pack, None)
-            if self.packed[i].all() is None:
-                self.packed.pop(i)
-        self.cleaned_rooms = np.where(
-            self.cleaned_rooms != room, self.cleaned_rooms, None
-        )
+            pack = np.where(pack != room, pack, None)
+
+            len_pack = len(pack) - 1
+            for j, sub_area in enumerate(reversed(pack)):
+                if (sub_area == None).all():
+                    # new_pack = np.append(new_pack, [sub_area])
+                    pack = np.delete(pack, len_pack - j, 0)
+
+            self.packed[i] = copy.copy(pack)
+
+        len_pack = len(self.packed) - 1
+        for i, pack in enumerate(reversed(self.packed)):
+            if not pack.any():
+                self.packed.pop(len_pack - i)
+
+        # self.cleaned_rooms = np.where(
+        #     self.cleaned_rooms != room, self.cleaned_rooms, None
+        # )
+        for i, lid in enumerate(self.cleaned_rooms):
+            for ii, room_i in enumerate(lid):
+                if room_i == room:
+                    self.cleaned_rooms[i][ii] = ""
+        self.cleaned_rooms = list(filter(None, self.cleaned_rooms))
+
+        if self.rooms:
+            if room in self.rooms:
+                self.rooms.remove(room)
+
         self.offset = np.where(self.offset != room, self.offset, None)
 
     def check_pwm(self, data, current_offset=0):
@@ -507,13 +546,17 @@ class Nesting:
         check if nesting length is still right for each room
         new added rooms are ignored and will be nested in the next control loop
         """
-        # nested data is present
-        if data:
+        if not self.packed:
+            self.nest_rooms(data)
+            self.distribute_nesting()
+        else:
             self.satelite_data(data)
 
         # new satelite states result in no requirement
         if self.area is None:
             self.packed = []
+            self.cleaned_rooms = []
+            self.offset = {}
             return
 
         # check per area the nesting
@@ -550,10 +593,6 @@ class Nesting:
                                     ] = room_i
 
                 if index_start is None or index_end is None:
-                    self.create_lid(
-                        i, current_offset / self.master_pwm * self.master_pwm_scale
-                    )
+                    self.create_lid(i, current_offset * NESTING_MATRIX)
             else:
-                self.create_lid(
-                    i, current_offset / self.master_pwm * self.master_pwm_scale
-                )
+                self.create_lid(i, current_offset * NESTING_MATRIX)
