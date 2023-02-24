@@ -2011,7 +2011,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 * scale_factor
             )
             switch_active = self._is_switch_active()
-            if switch_active and start_time > now:
+            if switch_active and (start_time > now or end_time < now):
                 if self._stop_pwm is not None:
                     await self._async_stop_pwm()
                 await self._async_switch_turn_off()
