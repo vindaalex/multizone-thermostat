@@ -1204,7 +1204,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
             return
 
-        self._hvac_on.target_temperature = temperature
+        self._hvac_on.target_temperature = round(temperature, 3)
 
         # operate in all cases except off
         if self._hvac_mode != HVACMode.OFF:
@@ -1585,7 +1585,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     @callback
     def _async_satelite_change(self, event):
-        """Handle satelite thermostat changes changes."""
+        """Handle satelite thermostat changes."""
         new_state = event.data.get("new_state")
         if not new_state:
             self._logger.error("Error receiving thermostat update. 'None' received")
@@ -1594,7 +1594,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "Receiving update from '%s'",
             new_state.name,
         )
-        # # check if satelite operating in correct mode
+        if self._hvac_mode != new_state.state and self._hvac_mode is not None:
+            self._logger.debug(
+                "Update from satelite: '%s' state '%s' not matching to master state '%s', satelite removed",
+                new_state.name,
+                new_state.state,
+                self._hvac_mode,
+            )
+
+        # check if satelite operating in correct mode
         if new_state.state == self.hvac_mode and new_state.attributes.get(
             ATTR_SELF_CONTROLLED
         ) in [True, OperationMode.PENDING]:
@@ -1604,17 +1612,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 control_mode=OperationMode.MASTER,
             )
 
-        # updating master
+        # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
         if update_required:
             self.hass.create_task(self._async_controller(force=True))
-        # if mode does not match anymore force udpate of controller
-        if self._hvac_mode != new_state.state and self._hvac_mode is not None:
-            self._logger.debug(
-                "update from satelite: '%s' not matching to current state '%s', force pwm update",
-                new_state.name,
-                self._hvac_mode,
-            )
 
         # if master mode is active: do not call operate but let pwm cycle handle it
         self.schedule_update_ha_state(force_refresh=False)
@@ -1795,7 +1796,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     ):
         """actual sending of control update to a satelite"""
         self._logger.debug(
-            "actual send call of sat data %s %s %s", satelite, offset, control_mode
+            "send data to satelite %s %s %s", satelite, offset, control_mode
         )
         await self.hass.services.async_call(
             "multizone_thermostat",
