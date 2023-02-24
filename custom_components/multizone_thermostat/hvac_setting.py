@@ -383,6 +383,10 @@ class HVACSetting:
         if self.time_offset is None:
             self.time_offset = 0
 
+        if self.is_hvac_master_mode:
+            if self.time_offset + control_output > self.pwm_scale:
+                self.time_offset = max(0, self.pwm_scale - (self.time_offset + control_output))
+
         return {
             ATTR_CONTROL_OFFSET: round(self.time_offset, 3),
             ATTR_CONTROL_PWM_OUTPUT: round(control_output, 3),
