@@ -1959,7 +1959,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.debug(
                     "Running pwm controller from control loop with 'force=%s'", force
                 )
-                self.hass.async_create_task(self._async_controller_pwm(force=force))
+                # self.hass.async_create_task(self._async_controller_pwm(force=force))
+                await self._async_controller_pwm(force=force)
             else:
                 self.async_write_ha_state()
 
