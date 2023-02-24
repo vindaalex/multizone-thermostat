@@ -16,157 +16,175 @@ This is only the required software to create a (zoned) thermostat. Especially zo
 
 
 # thanx to:
-by borrowing and continuouing on code from and thanx to:
+by borrowing and continuouing on code from:
 - DB-CL https://github.com/DB-CL/home-assistant/tree/new_generic_thermostat stale pull request with detailed seperation of hvac modes
 - fabian degger (PID thermostat) originator PID control in generic thermostat, https://github.com/aendle/custom_components
 
 # Operation modes
-The multizone thermostat custom component can operate in two modes:
-- thermostats can operate on its own thus without interaction with others
-- thermostats can operate under the control of a master controller
+The multizone thermostat can operate in two modes:
+- thermostats can operate stand-alone, thus without interaction with others
+- thermostats can operate under the control of a master controller scheduling and balancing the heat request
 
-Each configured thermostat can operate as an individual thermostat and should be configured for that specific room. A thermostat can operate by either hyesteric (on-off mode), weather compensation or PID mode (proportional mode). The PID and weather compensation can be combined. 
+Each configured thermostat has to be configured for that specific room. A thermostat can operate by either hyesteric (on-off mode) or proportional mode (weather compensation and PID mode). The PID and weather compensation can be combined or one of both can be used. Only a satelite operating in proportional mode can be used as satelite as hysteric operation (on-off by a dT) cannot run in synchronised mode with other satelites and the master.
 
-When a master controller is included it will coordinate all enlisted satelites. When the master is activated to heat or cool it will trigger the satelite to update its controller and from then on it reacts to updates from the master. The master itself gets the satelite state.
-Only a satelite operating in proportional mode can be used as satelite as hysteric operation (on-off by a dT) cannot run in synchronised mode with other satelites and the master.
+When a master controller is included it will coordinate all enlisted satelites valve opening and closures. When the master is activated to heat or cool it will trigger the satelites to update their controller and from that moment it interacts with the master. A satelite interaction with the master will be updated when the master is activated or switched off. When the master is activated to heat or cool the controller routine is synced to the master controller interval time. When the master is switched off the satelite will return to its stand-alone mode with its own settings. The master itself gets the satelite state (pwm signal) and return the moment the satelite has to open or close valves. The master determines the moment when the satelite valves is opened, the satelite itself still determines the valve opening time.
 
-A satelite will be updated when the master is activated or switched off. When the master is activated to heat or cool the satelite pwm + controller interval time is overruled by the master pwm interval time. When the master is switched off the sateleite will return to its own operational mode with pwm and control interval settings. The satelite control loop is synced with the master. The master determines the moment when the satelite valves is opened, the satelite itself still determines the valve opening time.
-
-# Thermostat configuration (not for master config)
+# Room thermostat configuration (not for master config)
+This thermostat is used for satelite or stand-alone operation mode. 
 The thermostat can be configured for a wide variation of hardware specifications and options:
 - The switch can be a on-off switch or proportional (0-100) valve
 - The switch can be of the type normally closed (NC) or normally opened (NO)
-- Operation for heating and cool can be specified indiviually
-- For sensors with irregular update intervals such as battery operated sensors a uncented kalman filter is build-in
+- Operation for heating and cool are specified indiviually
+- For sensors with irregular update intervals such as battery operated sensors an optional uncented kalman filter is included
 - Window open detection can be included
 - Valve stuck prevention 
 - Restore operational configuration after HA reboot
 
-## Basic configuration
+## Thermostat configuration
+* platform (Required): 'multizone_thermostat'
 * name (Required): Name of thermostat.
 * unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
-* room_area (Optional): ratio (room area) for averiging thermostat when required when operating as satelite. Default is 0
+* room_area (Optional): Required when operating in satelite mode. The room area is needed to determine the scale effect of the room to the total heat requirement. Default = 0 (only stand alone mode possible, not allowed for satelite mode)
 
-sensors:
-* sensor (optional): entity_id for a temperature sensor, sensor.state must be temperature. Not required when running in weather compensation only.
-* sensor_filter(Optional): use unscented kalman filter to smoothen the temperature sensor readings. Especially usefull in case of irregular sensor updates such as battery operated devices (for instance zigbee sensor). Default = 0 (off) (see section 'sensor filter' for more details)
-* sensor_out (optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature. Only required when running weather mode.
+sensors (at least one sensor needs to be specified):
+* sensor (Optional): entity_id of the temperature sensor, sensor.state must be temperature (float). Not required when running in weather compensation only.
+* filter_mode (Optional): unscented kalman filter can be used to smoothen the temperature sensor readings. Especially usefull in case of irregular sensor updates such as battery operated devices (for instance battery operated zigbee sensor). Default = 0 (off) (see section 'sensor filter' for more details)
+* sensor_out (Optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature (float). Only required when running weather mode. No filtering possible.
 
-* initial_hvac_mode (Optional): Set the initial operation mode. Valid values are off or cool or heat. Default is off
-* initial_preset_mode (Optional): Set the default mode. Default is None
+* initial_hvac_mode (Optional): Set the initial operation mode. Valid values are 'off', 'cool' or 'heat'. Default = off
+* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is 'away'
 
-* precision (Optional): specifiy precision of system: 0.1, 0.5 or 1
+* precision (Optional): specifiy setpoint precision: 0.1, 0.5 or 1
+* detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
 
 checks for sensor and switch:
-* sensor_stale_duration (Optional): safety routine to turn switches off when sensor has not updated wthin specified period. Default no check.
-* passive_switch_check (Optional): check at midnight (02:00) if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Default is False. Per hvac_mode duration (where switch is specified) is specified
+* sensor_stale_duration (Optional): safety routine to turn switches off when sensor has not updated for a specified time period. Specify time period. Default is not activated.
+* passive_switch_check (Optional): check at midnight (02:00) if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Per hvac_mode the duration (where switch is specified) is specified. During satelite mode only activated when master is idle or off. Specify 'True' to activate. Default = False.
 
 recovery of settings
-* restore_from_old_state (Optional): restore certain old configuration and modes after restart. (setpoints, KP,KI,PD values, modes). Default is False
-* restore_parameters (Optional): specify if previous controller parameters need to be restored. Default is false
-* restore_integral (Optional): If PID integral needs to be restored. Avoid long restoration times. Default is false
-## Control modes:
-The control is specified per hvac mode (heat, cool)
-hvac mode by:
-* heat: | cool: (at least 1 to be included)
-### Generic settings:
-* entity_id (Required): This can be an on-off switch or a proportional valve
-* switch_mode (Optional): Specify if switch (valve) is normally closed "NC" or normally open "NO". Default "NC"
+* restore_from_old_state (Optional): restore certain old configuration and modes after restart. Specify 'True' to activate. (setpoints, KP,KI,PD values, modes). Default = False
+* restore_parameters (Optional): specify if previous controller parameters need to be restored. Specify 'True' to activate. Default = False
+* restore_integral (Optional): If PID integral needs to be restored. Avoid long restoration times. Specify 'True' to activate. Default = False
+### HVAC modes: heat or cool (sub entity config)
+The control is specified per hvac mode (heat, cool). At least 1 to be included.
+EAch HVAC mode should include one of the control modes: on-off, proportional or master.
 
-* min_temp (Optional): Lower bandwidth temperature setpoint limit. default heat=17, cool=20
-* max_temp (Optional): Upper bandwidth temperature setpoint limit. default for heat=24, cool=35
-* initial_target_temp (Optional): Initial setpoint at start. default for heat=19, cool=28
-* away_temp (Optional): Setpoint when away preset is activated. Defining a away setpoint will make away preset available. default no away preset. 
+Generic HVAC mode setting:
+* entity_id (Required): This can be an on-off switch or a proportional valve(input_number, etc)
+* switch_mode (Optional): Specify if switch (valve) is normally closed 'NC' or normally open 'NO'. Default = 'NC'
 
-* passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve.
+* min_target_temp (Optional): Lower limit temperature setpoint. Default heat=17, cool=20
+* max_target_temp (Optional): Upper limit temperature setpoint. Default for heat=24, cool=35
+* initial_target_temp (Optional): Initial setpoint at start. Default for heat=19, cool=28
+* away_temp (Optional): Setpoint when away preset is activated. Defining an away setpoint will make away preset available. default no away preset mode available. 
 
-### on-off mode:
-The thermostat will switch on or off depending the setpoint and specified hysteris.
-* on_off_mode: (Optional) (sub of hvac mode)
-with the data (as sub):
-* hysteresis_tolerance_on (Optional): temperature offset to switch on. default is 0.5
-* hysteresis_tolerance_off (Optional): temperature offset to switch off. default is 0.5
-* min_cycle_duration (Optional): Min duration to change switch status. If this is not specified, min_cycle_duration feature will not get activated.
-* keep_alive (Optional): Min duration to re-run an update cycle. If this is not specified, feature will not get activated.
+* passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve. Specify a time period. Default is not activated.
 
-### proportional mode:
-Two control modes are included to control the thermostat:
+#### on-off mode (Optional) (sub of hvac mode)
+The thermostat will switch on or off depending the setpoint and specified hysteris. Configured under 'on_off_mode:' 
+with the data (as sub of 'on_off_mode:'):
+* hysteresis_on (Required): Lower bound: temperature offset to switch on. default is 0.5
+* hysteresis_off (Required): Upper bound: temperature offset to switch off. default is 0.5
+* min_cycle_duration (Optional): Min duration to change switch status. If this is not specified, min_cycle_duration feature will not get activated. Specify a time period.
+* control_interval (Optional): Min duration to re-run an update cycle. If this is not specified, feature will not get activated. Specify a time period.
+
+#### proportional mode (Optional) (sub of hvac mode)
+Configured under 'proportional_mode:' 
+Two control modes are included to control the proportional thermostat. A single one can be specfied or combined. The control output of both are summed.
 - PID controller: control by setpoint and room temperature
-- Weather compensating: control by room and outdoor temperature
+- Weather compensating: control by room- and outdoor temperature
 
-The proportional controller is called periodically.
-If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally.
+The proportional controller is called periodically and specified by control_interval.
+If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
 
-* proportional_mode: (Optional) (sub of hvac mode)
-with the data (as sub):
-* control_interval (Required): interval that controller is updated.
-* minimal_diff (Optional): Set the minimal difference before activating swtich. To avoid very short off-on-off or on-off-on changes. Default is off
-* pwm (Optional): Set period time for pwm signal in seconds. If it's not set, pwm is sending proportional value to switch. Default = 0
-* pwm_scale (Optional): Set analog output offset to 0 (default 100). Example: If it's 500 the output Value can be everything between 0 and 500.
-* pwm_resolution (optional): Set the stepsize between min and max difference. Default = 0
+* control_interval (Required): interval that controller is updated. The satelites should have a control_interval equal to the master or the master control_interval should be dividable by the satelite control_interval. Specify a time period.
+* pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
+* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
+* pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
+* pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
 
-#### PID controller:
-PID controller.
+##### PID controller (Optional) (sub of proportional mode)
+PID controller. Configured under 'PID_mode:'
 error = setpoint - room temp 
 output = error * Kp + sum(error * dT) * Ki + error / dT * Kd
 
 heat mode: Kp & Ki positive, Kd negative
 cool mode: Kp & Ki negative, Kd positive
 
-* PID_mode: (Optional)(as sub of proportional mode)
 with the data (as sub):
 * kp (Required): Set PID parameter, p control value.
 * ki (Required): Set PID parameter, i control value.
 * kd (Required): Set PID parameter, d control value.
-* min_difference (Optional): Overide global minimum output. Default varies with chosen settings.
-* max_difference (Optional): Overide global maximum output. Default = 'difference'
-* window_open_tempdrop (Optional): Notice temporarily open window. Define temperature drop velocity below which PID is frozen to avoid integral and derative build-up. drop in Celcius per hour. Should  be negative. Default = off.
+* pwm_scale_low (Optional): Overide lower bound pwm scale for this mode. Default = 0
+* pwm_scale_high (Optional): Overide upper bound pwm scale for this mode. Default = 'pwm_scale'
+* window_open_tempdrop (Optional): notice temporarily opened window. Define minimum temperature drop speed below which PID is frozen to avoid integral and derative build-up. drop in Celcius per hour. Should be negative value. Default = off.
 
-#### Weather compensating controller:
-Weather compensation controller 
+##### Weather compensating controller (Optional) (sub of proportional mode)
+Weather compensation controller. Configured under 'weather_mode:'
 error = setpoint - outdoor_temp
 output = error * ka + kb
 
 heat mode: ka positive, kb negative
 cool mode: ka negitive, kb positive
 
-* weather_mode: (Optional)(sub of proportional mode)
 with the data (as sub):
 * ka (Required): Set PID parameter, ka control value.
 * kb (Required): Set PID parameter, kb control value.
-* max_diff (Optional): Overide global maximum output. Default = 'difference'
+* pwm_scale_low (Optional): Overide lower bound pwm scale for this mode. Default = pwm_scale * -1
+* pwm_scale_high (Optional): Overide upper bound pwm scale for this mode. Default = 'pwm_scale'
 
 # Master configuration
-With this mode a multizone heating system can be created. Referenced thermostats (satelites) will be linked to this controller. The heat or cool requirement will be read from the satelites and are processed to detemrine master valve opening. 
+The configuration scheme is similar as for a satelite only with the following differences.
+
+* name: For master mode no name possible, it will be 'master'
+* room_area (Required): For master it should be equal to the total heated area. 
+* sensor (optional): For master mode not applicable
+* filter_mode (Optional): For master mode not applicable
+* sensor_out (optional): For master mode not applicable
+* precision (Optional): For master mode not applicable
+
+### HVAC modes: heat or cool (sub entity config)
+The control is specified per hvac mode (heat, cool). At least 1 to be included.
+EAch HVAC mode should include one of the control modes: on-off, proportional or master.
+
+Generic HVAC mode setting:
+* min_target_temp (Optional): For master mode not applicable
+* max_target_temp (Optional): For master mode not applicable
+* initial_target_temp (Optional): For master mode not applicable
+* away_temp (Optional): For master mode not applicable
+#### on-off mode (Optional) (sub of hvac mode)
+For master mode not applicable
+
+#### proportional mode (Optional) (sub of hvac mode)
+For master mode not applicable
+
+#### Master configuration (Required) (sub of hvac mode)
+Specify the control of the satelites. Configured under 'master_mode:'
+
+Referenced thermostats (satelites) will be linked to this controller. The heat or cool requirement will be read from the satelites and are processed to determine master valve opening and adjust timing of satelite openings. 
 
 The master will check satelite states and group them in on-off and proportional valves. The govering group will define the opening time of the master valve.  
 
-The master can operate in 'on-off' or 'continious' mode. In on-off mode the master valve opening is This will determine the tie scheduling. IF sufficient heat is needed and continuous mode is selected all on-off satelite valves are scheduled in time to get an even heat requirement.
+The master can operate in 'minimal_on', 'balanced' or 'continuous' mode. This will determine the satelite timing scheduling. For the minimal_on mode the master valve is opened as short as possible, for balanced mode the opening time is balanced between heating power and duration and for continuous mode the valve opening time is extended as long as possible. All satelite valves operating as on-off switch are used for the nesting are scheduled in time to get a balanced heat requirement. In 'continuous' mode the satelite timing is scheduled aimed such that a continuous heat requirement is created. The master valve will be opened continuous when sufficient heat is needed. In low demand conditions an on-off mode is maintained. 
 
-The preset mode selection on the master will be send to the satelites.
-## Generic settings:
-* name (Required): Name of thermostat.
-* unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
-* room_area (Required): ratio (room area) for averiging thermostat when required when operating as satelite. Default is 0
-## Control modes:
-The control is specified per hvac mode (heat, cool)
-hvac mode by:
-* heat: | cool: (at least 1 to be included)
-### Master mode controller:
-* satelites (Required): list of thermostats by name
-* operation_mode (Optional): satelite nesting method: "on_off" or "continious". Default = "on_off"
-* pwm (Optional): Set period time for pwm signal in seconds. Should be a positve value
-* pwm_scale (Optional): Set analog output offset to 0 (default 100). Example: If it's 500 the output Value can be everything between 0 and 500.
-* pwm_resolution (optional): Set the stepsize between min and max difference. Default = 0
-* minimal_diff (Optional): Set the minimal difference before activating swtich. To avoid very short off-on-off or on-off-on changes. Default is off
+The preset mode changes on the master will be synced to the satelites.
 
-#### Valve controller (Optional):
+with the data (as sub):
+* satelites (Required): between square brackets defined list of thermostats by their name 
+* operation_mode (Optional): satelite nesting method: "minimal_on", "balanced" or "continuous". Default = "balanced"
+* lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.2. (a minimum heating capacity of 20%  assumed based on 100% when all rooms required heat)
+
+##### Valve controller (Optional) (sub of master mode)
+Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
+
+Configured under 'PID_valve_mode:'
 * goal (Optional): Setpoint of target valve position
 * kp (Required): Set PID parameter, p control value.
 * ki (Required): Set PID parameter, i control value.
 * kd (Required): Set PID parameter, d control value.
-
-# Sensor filter:
+* pwm_scale_low (Optional): Overide lower bound pwm scale for this mode. Default = pwm_scale * -1
+* pwm_scale_high (Optional): Overide upper bound pwm scale for this mode. Default = 'pwm_scale'
+# Sensor filter (filter_mode):
 An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
 The filter intesity is defined by a factor between 0 to 5 (integer).
 0 = no filter
@@ -188,277 +206,375 @@ high temperature radiator:
     ki: 0.09
     kd: -5000
 
-Initial parameter and backgroud info:
-* Cohen-Coon Tuning Rules P/PI/PID https://blog.opticontrols.com/archives/383
-
-* AMIGO PI settings https://jckantor.github.io/CBE30338/04.06-PID-Controller-Tuning.html
-
-* AMIGO PID settings http://www.cpdee.ufmg.br/~palhares/Revisiting_Ziegler_Nichols_step_response_method_for_PID.pdf
-
 * underfloor heating parameter optimisation: https://www.google.nl/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwi5htyg5_buAhXeQxUIHaZHB5QQFjAAegQIBBAD&url=https%3A%2F%2Fwww.mdpi.com%2F1996-1073%2F13%2F8%2F2068%2Fhtml&usg=AOvVaw3CukGrgPjpIO2eKM619BIn
 
 PID controller explained. Would recommoned to read some of it:
 [https://controlguru.com/table-of-contents/](https://controlguru.com/table-of-contents/)
 
 
-
-## configuration.yaml
-on-off mode - heat only
+# DEBUGGING:
+debugging is possible by enabling logger in configuration with following configuration
+```
+logger:
+  default: info
+  logs:
+    multizone_thermostat: debug
+```    
+# Services callable from HA:
+Several services are included to change the active configuration of a satelite or master. 
+## set_mid_diff:
+Change the 'minimal_diff'
+## set_preset_mode:
+Change the 'preset'
+## set_pid:
+Change the current kp, ki, kd values of the PID or Valve PID controller
+## set_integral:
+Change the PID integral value contribution
+## set_goal:
+Change the target valve opening for proportional valves
+## set_ka_kb:
+Change the ka and kb for the weather controller
+## set_filter_mode:
+change the UKF filter level for the temperature sensor
+## detailed_output:
+Control the attribute output for PID-, WC-contributions and control output
+# configuration examples
+## on-off mode stand-alone - heat only - minimum definition
 ```
 climate:
   - platform: multizone_thermostat
-    name: satelite1
+    name: simple_hysteric_heat_only
+    unique_id: hysteric_heat_only
     sensor: sensor.fake_sensor_1
-    initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    room_area: 100
-    precision: 0.5
+    heat:
+      entity_id: switch.fake_heater_switch1
+      on_off_mode:
+        hysteresis_on: 0.5
+        hysteresis_off: 1
+
+```
+## on-off mode stand-alone - heat only - detailed example
+```
+climate:
+  - platform: multizone_thermostat
+    name: detailed_hysteric_heat_only
+    unique_id: hysteric_heat_only
+    sensor: sensor.fake_sensor_1
+    filter_mode: 1
     sensor_stale_duration:
-      minutes: 20
+      hours: 4
+    initial_hvac_mode: heat
+    initial_preset_mode: away
+    precision: 1
+    heat:
+      entity_id: switch.fake_heater_switch1
+      min_target_temp: 15
+      max_target_temp: 25
+      initial_target_temp: 22
+      away_temp: 15
+      on_off_mode:
+        hysteresis_on: 0.5
+        hysteresis_off: 1
+        min_cycle_duration:
+          minutes: 5
+        control_interval:
+          minutes: 3
+
     restore_from_old_state: True
 
-    heat:
-      entity_id: switch.fake_heater_switch
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 19
-      away_temp: 12
-        on_off_mode:
-          hysteresis_tolerance_on: 0.5
-          hysteresis_tolerance_off: 1
-          min_cycle_duration:
-            minutes: 5
-          keep_alive:
-            minutes: 3
 ```
-
-on-off mode - heat on and cool
-
+## PID mode stand-alone - heat only - detailed example
 ```
-climate:
   - platform: multizone_thermostat
-    name: satelite1
+    name: pid1
+    unique_id: mz_pid1
     sensor: sensor.fake_sensor_1
+    filter_mode: 3
+    sensor_out: sensor.fake_sensor_out_1
     initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    room_area: 100
-    precision: 0.5
-    sensor_stale_duration:
-      minutes: 20
-
-    heat:
-      entity_id: switch.fake_heater_switch
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 19
-      away_temp: 12
-        on_off_mode:
-          hysteresis_tolerance_on: 0.5
-          hysteresis_tolerance_off: 1
-          min_cycle_duration:
-            minutes: 5
-          keep_alive:
-            minutes: 3
-    cool:
-      entity_id: switch.fake_cool_switch
-      min_temp: 24
-      max_temp: 32
-      initial_target_temp: 25
-      away_temp: 28
-        on_off_mode:
-          hysteresis_tolerance_on: 0.5
-          hysteresis_tolerance_off: 1
-          min_cycle_duration:
-            minutes: 5
-          keep_alive:
-            minutes: 3
-```
-
-proportional mode
-
-```
-  - platform: multizone_thermostat
-    name: PID_example
-    sensor: sensor.temp_sl1
-    initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    room_area: 20
     precision: 0.1
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
     heat:
-      entity_id: switch.valve1
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 18
-      away_temp: 16
+      entity_id: switch.fake_heater_switch1
+      passive_switch_duration:
+        days: 15
+      min_target_temp: 15
+      max_target_temp: 24
+      initial_target_temp: 21
+      away_temp: 12        
       proportional_mode:
         control_interval:
-          seconds: 60
-        difference: 100
-        minimal_diff: 5
-        pwm:
-          seconds: 180
+          minutes: 5
+        pwm_duration:
+          minutes: 15
+        pwm_scale: 100
+        pwm_resolution: 20
+        pwm_threshold: 5
         PID_mode:
           kp: 30
           ki: 0.003
           kd: -24000
-    sensor_stale_duration:
-      hours: 12
-    restore_from_old_state: True
-    restore_parameters: False
-    restore_integral: True
-
-```
-
-Linear mode (weather compensating)
-
-```
-  - platform: multizone_thermostat
-    name: weather_example
-    sensor_out: sensor.br_temperature
-    initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    precision: 0.1
-    heat:
-      entity_id: switch.switch1
-      initial_target_temp: 20
-      away_temp: 16
-      proportional_mode:
-        control_interval:
-          seconds: 60
-        difference: 100
-        minimal_diff: 5
-        pwm:
-          seconds: 600
+          window_open_tempdrop: -3.6
         weather_mode:
           ka: 2
-          kb: -6
+          kb: -10
+          pwm_scale_low: -10
+          pwm_scale_high: 50
 
-    sensor_stale_duration:
-      hours: 12
     restore_from_old_state: True
-    restore_parameters: False
+    restore_parameters: True
     restore_integral: True
 ```
-
-master - satelite mode
-
+## master - heat only
 ```
-
   - platform: multizone_thermostat
-    name: master_example
-    sensor_out: sensor.br_temperature
+    name: master
+    unique_id: mz_master
     initial_hvac_mode: "off"
     initial_preset_mode: "none"
-    precision: 0.1
+    room_area: 170
+    passive_switch_check: True
     heat:
-      entity_id: switch.mainvalve
-      initial_target_temp: 20
-      away_temp: 16
-      proportional_mode:
+      entity_id: switch.fake_heater_master
+      passive_switch_duration:
+        hours: 5
+      master_mode:
+        satelites: [pid1, pid2]
+        # operation_mode: "continuous"
+        operation_mode: "minimal_on"
         control_interval:
-          seconds: 60
-        difference: 100
-        minimal_diff: 5
-        pwm:
-          seconds: 600
-        PID_mode:
-          kp: 3
-          ki: 0
-          kd: 0
-        weather_mode:
-          ka: 2
-          kb: -6
-        MASTER_mode:
-          satelites: [living, sleep1]
+          minutes: 30
+        pwm_duration:
+          minutes: 30
+        pwm_scale: 100
+        pwm_resolution: 20
+        PID_valve_mode:
           goal: 80
-          kp: -0.15
-          ki: 0
+          kp: -0.5
+          ki: -0.001
           kd: 0
-    sensor_stale_duration:
-      hours: 12
+
     restore_from_old_state: True
-    restore_parameters: False
+    restore_parameters: True
+    restore_integral: True
+```
+## multizone example
+```
+  - platform: multizone_thermostat
+    name: master
+    unique_id: mz_master
+    initial_hvac_mode: "off"
+    initial_preset_mode: "none"
+    room_area: 170 # 100+30+40=170
+    passive_switch_check: True
+    heat:
+      entity_id: switch.fake_heater_master
+      passive_switch_duration:
+        hours: 5
+      master_mode:
+        satelites: [pid1, pid2, pid3]
+        # operation_mode: "continuous"
+        operation_mode: "balanced"
+        control_interval:
+          minutes: 30
+        pwm_duration:
+          minutes: 30
+        pwm_scale: 100
+        pwm_resolution: 20
+        PID_valve_mode:
+          goal: 80
+          kp: -0.5
+          ki: -0.001
+          kd: 0
+
+    restore_from_old_state: True
+    restore_parameters: True
     restore_integral: True
 
   - platform: multizone_thermostat
-    name: living
-    sensor: sensor.temp_living
+    name: pid1
+    unique_id: mz_pid1
+    sensor: sensor.fake_sensor_1
+    filter_mode: 3
+    sensor_out: sensor.fake_sensor_out_1
+    room_area: 100
     initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    room_area: 60
     precision: 0.1
-    heat:
-      entity_id: switch.valve_living
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 20
-      away_temp: 16
-      proportional_mode:
-        control_interval:
-          seconds: 60
-        difference: 100
-        minimal_diff: 5
-        pwm:
-          seconds: 180
-        PID_mode:
-          kp: 30
-          ki: 0.005
-          kd: -24000
     sensor_stale_duration:
-      hours: 12
-    restore_from_old_state: True
-    restore_parameters: False
-    restore_integral: True
-
-
-  - platform: multizone_thermostat
-    name: sleep1
-    sensor: sensor.temp_sl1
-    initial_hvac_mode: "off"
-    initial_preset_mode: "none"
-    room_area: 20
-    precision: 0.1
+      hours: 3
+    passive_switch_check: True
     heat:
-      entity_id: switch.valve_sleep1
-      min_temp: 15
-      max_temp: 24
-      initial_target_temp: 18
-      away_temp: 16
+      entity_id: switch.fake_heater_switch1
+      passive_switch_duration:
+        days: 15
+      away_temp: 12        
       proportional_mode:
         control_interval:
-          seconds: 60
-        difference: 100
-        minimal_diff: 5
-        pwm:
-          seconds: 180
+          minutes: 10 # 3*10=30 (30min=master)
+        pwm_duration:
+          minutes: 30 # equal to master
+        pwm_scale: 100
+        pwm_resolution: 20
+        pwm_threshold: 5
         PID_mode:
           kp: 30
           ki: 0.003
           kd: -24000
-    sensor_stale_duration:
-      hours: 12
+          window_open_tempdrop: -3.6
+        weather_mode:
+          ka: 2
+          kb: -10
+
     restore_from_old_state: True
-    restore_parameters: False
+    restore_parameters: True
     restore_integral: True
-```
+
+  - platform: multizone_thermostat
+    name: pid2
+    unique_id: mz_pid2
+    sensor: sensor.fake_sensor_2
+    filter_mode: 3
+    room_area: 30
+    initial_hvac_mode: "off"
+    precision: 0.1
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
+    heat:
+      entity_id: switch.fake_heater_switch2
+      passive_switch_duration:
+        days: 15
+      away_temp: 12        
+      proportional_mode:
+        control_interval:
+          minutes: 15 # 2*15=30 (30min=master)
+        pwm_duration:
+          minutes: 30 # equal to master
+        pwm_scale: 100
+        pwm_resolution: 20
+        pwm_threshold: 5
+        PID_mode:
+          kp: 30
+          ki: 0.003
+          kd: -24000
+          window_open_tempdrop: -3.6
+
+    restore_from_old_state: True
+    restore_parameters: True
+    restore_integral: True  
+
+  - platform: multizone_thermostat
+    name: pid3
+    unique_id: mz_pid3
+    sensor: sensor.fake_sensor_3
+    filter_mode: 3
+    sensor_out: sensor.fake_sensor_out_1
+    room_area: 40
+    initial_hvac_mode: "off"
+    precision: 0.1
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
+    heat:
+      entity_id: input_number.fake_heater_switch4 # proportional valve
+      passive_switch_duration:
+        days: 15
+      away_temp: 12        
+      proportional_mode:
+        control_interval:
+          minutes: 10 # 3*10=30 (30min=master)
+        # no pwm thus pwm=0 for proportional valve 0-100
+        # pwm_duration:
+        #   minutes: 30 # equal to master
+        pwm_scale: 100
+        pwm_resolution: 20
+        pwm_threshold: 5
+        PID_mode:
+          kp: 15
+          ki: 0.003
+          kd: -15000
+          window_open_tempdrop: -3.6
+        weather_mode:
+          ka: 2
+          kb: -8
+
+    restore_from_old_state: True
+    restore_parameters: True
+    restore_integral: True 
+
+  - platform: multizone_thermostat
+    name: pid4
+    unique_id: mz_pid4
+    sensor: sensor.fake_sensor_4
+    filter_mode: 3
+    sensor_out: sensor.fake_sensor_out_1
+    room_area: 40
+    initial_hvac_mode: "off"
+    precision: 0.1
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
+    heat:
+      entity_id: input_number.fake_heater_switch4 # proportional valve
+      passive_switch_duration:
+        days: 15
+      away_temp: 12        
+      proportional_mode:
+        control_interval:
+          minutes: 15 # 2*15=30 (30min=master)
+        # no pwm thus pwm=0 for proportional valve 0-100
+        # pwm_duration:
+        #   minutes: 30 # equal to master
+        pwm_scale: 100
+        pwm_resolution: 20
+        pwm_threshold: 5
+        PID_mode:
+          kp: 20
+          ki: 0.003
+          kd: -15000
+          window_open_tempdrop: -3.6
+        weather_mode:
+          ka: 2
+          kb: -8
+
+    restore_from_old_state: True
+    restore_parameters: True
+    restore_integral: True   
 
 
-examples to use attribute data
+  - platform: multizone_thermostat
+    name: pid5
+    unique_id: mz_pid5
+    sensor: sensor.fake_sensor_5
+    filter_mode: 3
+    room_area: 40
+    initial_hvac_mode: "off"
+    precision: 0.1
+    sensor_stale_duration:
+      hours: 3
+    passive_switch_check: True
+    heat:
+      entity_id: switch.fake_heater_switch5 # proportional valve
+      passive_switch_duration:
+        days: 15
+      away_temp: 12        
+      proportional_mode:
+        control_interval:
+          minutes: 30 # (30min=master)
+        pwm_duration:
+          minutes: 30 # equal to master
+        pwm_scale: 100
+        pwm_resolution: 50
+        pwm_threshold: 5
+        PID_mode:
+          kp: 20
+          ki: 0.003
+          kd: -15000
+          window_open_tempdrop: -3.6
 
-get valve position
-```
-  - platform: template
-    sensors:
-      valve_position:
-        friendly_name: 'main valveposition'
-        value_template: "{{ state_attr('climate.mainswitch', 'hvac_def')['heat']['valve_pos'] | float}}"
-        unit_of_measurement: "%"
-
-get (filtered) room temperature
-
-  - platform: template
-    sensors:
-      temperature_room1:
-        friendly_name: 'temperature room1'
-        value_template: "{{ state_attr('climate.room1', 'current_temp_filt') | float}}"
-        unit_of_measurement: "°C"
+    restore_from_old_state: True
+    restore_parameters: True
+    restore_integral: True            
+```    
