@@ -1126,7 +1126,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                             self._logger.debug(
                                 "sat update: stopping controller routine"
                             )
-                            self._async_routine_controller()
+                            if self._loop_controller:
+                                self._async_routine_controller()
                             if self._loop_pwm:
                                 self._logger.debug("sat update: stopping pwm routine")
                                 self._async_routine_pwm()
