@@ -2005,38 +2005,34 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 + min(sum(self.control_output.values()), self._hvac_on.pwm_scale)
                 * scale_factor
             )
+
+            # stop current schedules
+            if self._start_pwm is not None:
+                await self._async_start_pwm()
+            if self._stop_pwm is not None:
+                await self._async_stop_pwm()
+
             switch_active = self._is_switch_active()
-            if switch_active and (start_time > now or end_time < now):
-                if self._stop_pwm is not None:
-                    await self._async_stop_pwm()
+            # check if current switch state is matching
+            if (start_time >= now or end_time <= now) and switch_active:
                 await self._async_switch_turn_off()
-            if not switch_active:
-                if (
-                    self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale
-                    or start_time < now
-                ):
-                    if self._start_pwm is not None:
-                        await self._async_start_pwm()
-                    await self._async_switch_turn_on()
-                elif start_time <= now < end_time:
-                    # stop possible active scheduled switch on
-                    if self._async_start_pwm is not None:
-                        await self._async_start_pwm()
-
-                    await self._async_switch_turn_on()
-                elif start_time > now:
-                    # pwm (on-off) operated valve
-                    if self._start_pwm is not None:
-                        await self._async_start_pwm()
-                    await self._async_start_pwm(start_time)
-
+            elif (start_time <= now < end_time) and not switch_active:
+                await self._async_switch_turn_on()
             if (
-                now < end_time
-                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] < pwm_scale
+                self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale
+                and not switch_active
             ):
-                if self._stop_pwm is not None:
-                    await self._async_stop_pwm()
+                await self._async_switch_turn_on()
+
+            # schedule new switch changes
+            if start_time > now:
+                await self._async_start_pwm(start_time)
+            if (
+                end_time > now
+                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] != pwm_scale
+            ):
                 await self._async_stop_pwm(end_time)
+
         else:
             # proportional valve
             if (
