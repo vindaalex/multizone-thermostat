@@ -1018,7 +1018,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._hvac_on.current_state = None
                 self._hvac_on.current_temperature = self.current_temperature
         else:
-
             cycle_time = 60  # dt is updated when calling predict
 
             if not self._kf_temp:
@@ -1358,7 +1357,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._loop_controller()
             self._loop_controller = None
         elif interval is not None and self._loop_controller is not None:
-            self._logger.warning("New loop, cancel current control loop")
+            self._logger.debug("New loop, cancel current control loop")
             self._loop_controller()
             self._loop_controller = None
         elif interval is None:
@@ -1390,7 +1389,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._loop_pwm()
             self._loop_pwm = None
         elif interval is not None and self._loop_pwm is not None:
-            self._logger.warning("New loop, cancel current pwm loop")
+            self._logger.debug("New loop, cancel current pwm loop")
             self._loop_pwm()
             self._loop_pwm = None
         elif interval is None:
@@ -1606,7 +1605,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if new_state.state == self.hvac_mode and new_state.attributes.get(
             ATTR_SELF_CONTROLLED
         ) in [True, OperationMode.PENDING]:
-
             self._async_change_satelite_modes(
                 {new_state.name: 0},
                 control_mode=OperationMode.MASTER,
@@ -1642,7 +1640,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on is None and switch_on:
             # thermostat off thus switches should not be active
             for hvac_mode, data in self._hvac_def.items():
-
                 if (
                     not data.stuck_loop
                     and data.get_hvac_switch == entity_id
@@ -1822,7 +1819,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # if the call was made by a sensor change, check the min duration
         # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
         if not force and not routine and min_cycle_duration.seconds != 0:
-
             entity_id = self._hvac_on.get_hvac_switch
             if self._hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
                 current_state = STATE_ON if self._is_switch_active() else STATE_OFF
@@ -2347,7 +2343,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not sensor_state:
                 return False
             try:
-
                 if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
                     valve_position = float(sensor_state.state)
                 else:

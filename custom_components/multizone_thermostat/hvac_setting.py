@@ -246,11 +246,11 @@ class HVACSetting:
         current_temp = self.current_temperature
 
         self._logger.debug(
-            "on-off - target %s, bandwidth (%s - %s), current %s",
+            "on-off - target %s, bandwidth (%s - %s), current %.2f",
             target_temp,
             target_temp_min,
             target_temp_max,
-            round(current_temp, 2),
+            current_temp,
         )
 
         if self._hvac_mode == HVACMode.HEAT:
@@ -614,15 +614,15 @@ class HVACSetting:
         if self._hvac_mode == HVACMode.HEAT:
             if current < window_threshold:
                 self._logger.warning(
-                    "temperature drop %s: open window detected, maintain old control value",
-                    round(current, 5),
+                    "temperature drop %.5f: open window detected, maintain old control value",
+                    current,
                 )
                 return True
         elif self._hvac_mode == HVACMode.COOL:
             if current > window_threshold:
                 self._logger.warning(
-                    "temperature rise %s: open window detected, maintain old control value",
-                    round(current, 5),
+                    "temperature rise %.5f: open window detected, maintain old control value",
+                    current,
                 )
                 return True
 
@@ -902,7 +902,7 @@ class HVACSetting:
                         self._pid.PID[PID_CONTROLLER].i_var, 3
                     )
                     tmp_dict["Valve_PID_D"] = round(
-                        self._pid.PID[PID_CONTROLLER].d_var, 5
+                        self._pid.PID[PID_CONTROLLER].d_var, 3
                     )
                     tmp_dict["Valve_PID_valve_pos"] = round(
                         self._pid[ATTR_CONTROL_PWM_OUTPUT], 3
@@ -927,7 +927,7 @@ class HVACSetting:
                             self._pid.PID[PID_CONTROLLER].i_var, 3
                         )
                         tmp_dict["PID_D"] = round(
-                            self._pid.PID[PID_CONTROLLER].d_var, 5
+                            self._pid.PID[PID_CONTROLLER].d_var, 3
                         )
                         tmp_dict["PID_valve_pos"] = round(
                             self._pid[ATTR_CONTROL_PWM_OUTPUT], 3
