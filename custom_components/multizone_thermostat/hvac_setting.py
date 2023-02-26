@@ -166,7 +166,7 @@ class HVACSetting:
                 self.run_pid(force)
                 if self._wc and self._pid:
                     if (
-                        self._wc[ATTR_CONTROL_PWM_OUTPUT] == 0
+                        self._wc[ATTR_CONTROL_PWM_OUTPUT] <= 0
                         and self._pid[ATTR_CONTROL_PWM_OUTPUT] < 0
                     ):
                         # reset integral as wc is also off
@@ -215,10 +215,12 @@ class HVACSetting:
 
         if self.is_hvac_proportional_mode:
             mode = CONF_PID_MODE
+            lower_pwm_scale, upper_pwm_scale = self.pwm_scale_limits(self._pid)
         else:
             mode = CONF_VALVE_MODE
+            lower_pwm_scale = 0
+            upper_pwm_scale = 1
 
-        lower_pwm_scale, upper_pwm_scale = self.pwm_scale_limits(self._pid)
         kp, ki, kd = self.get_pid_param(self._pid)  # pylint: disable=invalid-name
         min_cycle_duration = self.get_operate_cycle_time.seconds
 
@@ -302,7 +304,7 @@ class HVACSetting:
 
     @property
     def master_max_valve_pos(self):
-        """maximum proportional valve opening for valve PID control"""
+        """percentage maximum proportional valve opening for valve PID control"""
         max_pwm = 0
         for _, data in self._satelites.items():
             if (
@@ -316,12 +318,14 @@ class HVACSetting:
                     )
 
         # scale to master pwm_scale
-        return max_pwm * self.pwm_scale
+        return max_pwm
 
     @property
     def valve_pos_pwm_prop(self):
         """sum of proportional valves scaled to total building area"""
+        sum_pwm = 0
         max_pwm = 0
+        max_area = 0
         for _, data in self._satelites.items():
             if (
                 data[ATTR_HVAC_MODE] == self._hvac_mode
@@ -330,16 +334,25 @@ class HVACSetting:
                 if data[CONF_PWM_DURATION] == 0:
                     # self.area in master mode is total building area
                     # pwm as percentage to satelite pwm_scale
-                    max_pwm += (
+                    sum_pwm += (
                         data[ATTR_CONTROL_PWM_OUTPUT]
                         / data[CONF_PWM_SCALE]
                         * data[CONF_AREA]
                     )
-        if max_pwm > 0:
-            max_pwm /= self.area
+
+                    if data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE] > max_pwm:
+                        max_pwm = data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE]
+                        max_area = data[CONF_AREA]
+
+        if self._pid:
+            # adjust pwm from prop valves to target valve position
+            sum_pwm += self._pid[ATTR_CONTROL_PWM_OUTPUT] * max_area
+
+        if sum_pwm > 0:
+            sum_pwm /= self.area
 
         # scale to master pwm_scale
-        return max_pwm * self.pwm_scale
+        return sum_pwm * self.pwm_scale
 
     @property
     def valve_pos_pwm_on_off(self):
@@ -366,9 +379,6 @@ class HVACSetting:
             # - get max opening time from pwm (on/off) valves
             # - take maximum from both
             prop_control = self.valve_pos_pwm_prop
-            if self._pid:
-                # adjust pwm from prop valves to target valve position
-                prop_control += self._pid[ATTR_CONTROL_PWM_OUTPUT]
             pwm_on_off = self.valve_pos_pwm_on_off
             control_output = max(prop_control, pwm_on_off)
 
@@ -378,14 +388,17 @@ class HVACSetting:
             elif control_output < 0:
                 control_output = 0
 
-
-            control_output = get_rounded(control_output, self.pwm_scale / self.pwm_resolution)
+            control_output = get_rounded(
+                control_output, self.pwm_scale / self.pwm_resolution
+            )
         if self.time_offset is None:
             self.time_offset = 0
 
         if self.is_hvac_master_mode:
             if self.time_offset + control_output > self.pwm_scale:
-                self.time_offset = max(0, self.pwm_scale - (self.time_offset + control_output))
+                self.time_offset = max(
+                    0, self.pwm_scale - (self.time_offset + control_output)
+                )
 
         return {
             ATTR_CONTROL_OFFSET: round(self.time_offset, 3),

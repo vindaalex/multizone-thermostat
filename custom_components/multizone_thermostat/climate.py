@@ -407,8 +407,6 @@ VALVE_control_options_req = {
     vol.Required(CONF_KP): vol.Coerce(float),
     vol.Required(CONF_KI): vol.Coerce(float),
     vol.Required(CONF_KD): vol.Coerce(float),
-    vol.Optional(CONF_PWM_SCALE_LOW): vol.Coerce(float),
-    vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
 }
 
 # on_off
