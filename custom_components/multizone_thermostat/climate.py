@@ -1634,44 +1634,65 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             new_state.state,
         )
         # catch multipe options
-        if new_state.state.lower() in ["on", "open", "active"]:
-            switch_on = True
-        elif isinstance(new_state.state, str):
-            switch_on = False
-        elif new_state.state > 0:
-            switch_on = True
+        switch_operated = False
+        if new_state.state in ERROR_STATE:
+            # self.hass.create_task(
+            self._async_activate_emergency_stop("switch state change", sensor=entity_id)
+            # )
+        else:
+            if entity_id in self._emergency_stop:
+                self._emergency_stop.remove(entity_id)
 
-        if self._hvac_on is None and switch_on:
-            # thermostat off thus switches should not be active
-            for hvac_mode, data in self._hvac_def.items():
-                if (
-                    not data.stuck_loop
-                    and data.get_hvac_switch == entity_id
-                    and self._is_switch_active(hvac_mode=hvac_mode)
-                ):
-                    self._logger.warning(
-                        "No switches should be 'on' in 'off' mode: switch of '%s' changed has to %s. Force off",
-                        entity_id,
-                        new_state.state,
-                    )
-                    self.hass.create_task(
-                        self._async_switch_turn_off(hvac_mode=hvac_mode)
-                    )
+            if self._hvac_on is None:
+                _hvac_on = self._hvac_def[self._old_mode]
+            else:
+                _hvac_on = self._hvac_on
 
-        if self._hvac_on:
-            if entity_id != self._hvac_on.get_hvac_switch:
-                self._logger.warning(
-                    "%s: wrong switch '%s' changed to %s, keep in off state",
-                    self._hvac_mode,
-                    entity_id,
-                    new_state.state,
-                )
+            if (
+                _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE
+                and new_state.state in SWITCH_NC_ACTIVE_STATE
+            ):
+                switch_operated = True
+            elif (
+                _hvac_on.get_hvac_switch_mode == NO_SWITCH_MODE
+                and new_state.state in SWITCH_NO_ACTIVE_STATE
+            ):
+                switch_operated = True
+            elif is_float(new_state.state):
+                if float(new_state.state) != 0:
+                    switch_operated = True
+
+            if self._hvac_on is None and switch_operated:
+                # thermostat off thus switches should not be active
                 for hvac_mode, data in self._hvac_def.items():
-                    if data.get_hvac_switch == entity_id:
+                    if (
+                        not data.stuck_loop
+                        and data.get_hvac_switch == entity_id
+                        and self._is_valve_open(hvac_mode=hvac_mode)
+                    ):
+                        self._logger.warning(
+                            "No switches should be active in 'off' mode: restore switch '%s' from  %s to 'normal' state",
+                            entity_id,
+                            new_state.state,
+                        )
                         self.hass.create_task(
                             self._async_switch_turn_off(hvac_mode=hvac_mode)
                         )
-                        break
+
+            elif self._hvac_on:
+                if entity_id != self._hvac_on.get_hvac_switch:
+                    self._logger.warning(
+                        "%s: wrong switch '%s' changed to %s, keep in off state",
+                        self._hvac_mode,
+                        entity_id,
+                        new_state.state,
+                    )
+                    for hvac_mode, data in self._hvac_def.items():
+                        if data.get_hvac_switch == entity_id:
+                            self.hass.create_task(
+                                self._async_switch_turn_off(hvac_mode=hvac_mode)
+                            )
+                            break
 
         if new_state is None:
             return
