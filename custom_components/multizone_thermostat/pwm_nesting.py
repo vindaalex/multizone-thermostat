@@ -33,7 +33,7 @@ ATTR_ROUNDED_PWM = "rounded_pwm"
 class Nesting:
     """Nest rooms by area size and pwm in order to get equal heat requirement"""
 
-    def __init__(self, name, operation_mode, master_pwm, tot_area, min_load):
+    def __init__(self, name, operation_mode, master_pwm, tot_area, min_load) -> None:
         """
         pwm max is equal to pwm scale
         all provided pwm per room are equal in pwm scale
@@ -365,7 +365,6 @@ class Nesting:
                                 )
                                 return
                 else:
-
                     balance_result = self.nesting_balance(self.packed)
                     if balance_result is not None:
                         if abs(balance_result) <= NESTING_BALANCE:

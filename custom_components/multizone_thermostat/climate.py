@@ -717,7 +717,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         enable_old_integral,
         sensor_stale_duration,
         passive_switch,
-    ):
+    ) -> None:
         """Initialize the thermostat."""
         self._temp_lock = asyncio.Lock()
 
