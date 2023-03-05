@@ -2008,10 +2008,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             pwm_duration = None
 
         if self._hvac_on.is_hvac_on_off_mode:
-            switch_active = self._is_switch_active()
-            if switch_active and self.control_output[ATTR_CONTROL_PWM_OUTPUT] <= 0:
+            if (
+                self._is_valve_open()
+                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] <= 0
+            ):
                 await self._async_switch_turn_off()
-            elif not switch_active and self.control_output[ATTR_CONTROL_PWM_OUTPUT] > 0:
+            elif (
+                not self._is_valve_open()
+                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] > 0
+            ):
                 await self._async_switch_turn_on()
 
         elif pwm_duration:
@@ -2150,7 +2155,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
         if _hvac_on.is_hvac_switch_on_off:
-            if self._is_switch_active(hvac_mode=hvac_mode):
+            if self._is_valve_open(hvac_mode=hvac_mode):
                 self._logger.debug("Switch already ON")
                 return
             data = {ATTR_ENTITY_ID: entity_id}
@@ -2219,7 +2224,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
         if _hvac_on.is_hvac_switch_on_off:
-            if not self._is_switch_active(hvac_mode=hvac_mode):
+            if not self._is_valve_open(hvac_mode=hvac_mode):
                 self._logger.debug("Switch already OFF")
                 return
             data = {ATTR_ENTITY_ID: entity_id}
@@ -2260,7 +2265,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """toggle the state of a switch temporarily and hereafter set it to 0 or 1"""
         self._hvac_def[hvac_mode].stuck_loop = True
 
-        if self._is_switch_active(hvac_mode=hvac_mode):
+        if self._is_valve_open(hvac_mode=hvac_mode):
             self._logger.info(
                 "switch '%s' toggle state temporarily to OFF for 3min" % (entity_id)
             )
@@ -2338,7 +2343,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
 
     def _is_switch_active(self, hvac_mode=None):
-        """If the toggleable switch device is currently active."""
+        """
+        If the toggleable switch device is not in normal state.
+        """
         if hvac_mode:
             _hvac_on = self._hvac_def[hvac_mode]
         else:
@@ -2351,35 +2358,90 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if not entity_id:
             self._logger.debug(" for {}".format(hvac_mode))
-            return False
+            return None
 
-        if _hvac_on.is_hvac_switch_on_off:
-            if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
-                operation = STATE_ON
-            else:
-                operation = STATE_OFF
-
-            return self.hass.states.is_state(entity_id, operation)
+        switch_state = self.hass.states.get(entity_id).state
+        # check if error state or to restore from error state
+        if switch_state in ERROR_STATE or (
+            not _hvac_on.is_hvac_switch_on_off and not is_float(switch_state)
+        ):
+            self._async_activate_emergency_stop(
+                "active switch state check", sensor=entity_id
+            )
+            return None
         else:
-            sensor_state = self.hass.states.get(entity_id)
-            if not sensor_state:
-                return False
-            try:
-                if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
-                    valve_position = float(sensor_state.state)
-                else:
-                    valve_position = _hvac_on.pwm_scale - float(sensor_state.state)
+            if entity_id in self._emergency_stop:
+                self._emergency_stop.remove(entity_id)
 
-                if float(valve_position) > 0:
+            if _hvac_on.is_hvac_switch_on_off:
+                if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
+                    if switch_state in SWITCH_NC_ACTIVE_STATE:
+                        return True
+                    else:
+                        return False
+                else:
+                    if switch_state in SWITCH_NO_ACTIVE_STATE:
+                        return True
+                    else:
+                        return False
+            else:
+                if float(switch_state) > 0:
                     return True
                 else:
                     return False
-            except:  # pylint: disable=bare-except
-                self._logger.error(
-                    "on-off switch defined for proportional control (pwm=0), current state is {}".format(
-                        sensor_state.state
-                    )
-                )
+
+    def _is_valve_open(self, hvac_mode=None):
+        """
+        If the valve is open.
+        """
+        if hvac_mode:
+            _hvac_on = self._hvac_def[hvac_mode]
+        else:
+            _hvac_on = self._hvac_on
+            hvac_mode = self._hvac_mode
+        if _hvac_on:
+            entity_id = _hvac_on.get_hvac_switch
+        else:
+            entity_id = None
+
+        if not entity_id:
+            self._logger.debug("no found entity for {}".format(hvac_mode))
+            return None
+
+        switch_state = self.hass.states.get(entity_id).state
+        # check if error state or to restore from error state
+        if switch_state in ERROR_STATE or (
+            not _hvac_on.is_hvac_switch_on_off and not is_float(switch_state)
+        ):
+            self._async_activate_emergency_stop(
+                "active switch state check", sensor=entity_id
+            )
+            return None
+        else:
+            if entity_id in self._emergency_stop:
+                self._emergency_stop.remove(entity_id)
+
+            if _hvac_on.is_hvac_switch_on_off:
+                if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
+                    if switch_state in SWITCH_NC_ACTIVE_STATE:
+                        return True
+                    else:
+                        return False
+                else:
+                    if switch_state in SWITCH_NO_ACTIVE_STATE:
+                        return True
+                    else:
+                        return False
+            else:
+                if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
+                    valve_position = float(switch_state)
+                else:
+                    valve_position = _hvac_on.pwm_scale - float(switch_state)
+
+                if valve_position > 0:
+                    return True
+                else:
+                    return False
 
     @property
     def switch_position(self):
@@ -2484,12 +2546,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVACMode.OFF:
             return HVACAction.OFF
         elif self._hvac_mode == HVACMode.COOL:
-            if self._is_switch_active():
+            if self._is_valve_open():
                 return HVACAction.COOLING
             else:
                 return HVACAction.IDLE
         elif self._hvac_mode == HVACMode.HEAT:
-            if self._is_switch_active():
+            if self._is_valve_open():
                 return HVACAction.HEATING
             else:
                 return HVACAction.IDLE
