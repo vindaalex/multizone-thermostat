@@ -626,14 +626,14 @@ class HVACSetting:
 
         if self._hvac_mode == HVACMode.HEAT:
             if current < window_threshold:
-                self._logger.warning(
+                self._logger.debug(
                     "temperature drop %.5f: open window detected, maintain old control value",
                     current,
                 )
                 return True
         elif self._hvac_mode == HVACMode.COOL:
             if current > window_threshold:
-                self._logger.warning(
+                self._logger.debug(
                     "temperature rise %.5f: open window detected, maintain old control value",
                     current,
                 )
@@ -893,6 +893,10 @@ class HVACSetting:
     @property
     def get_variable_attr(self):
         """return attributes for climate entity"""
+        open_window = None
+        if isinstance(self.current_state, (list, tuple, np.ndarray)):
+            current = self.current_state
+            open_window = self.check_window_open(current[1])
         tmp_dict = {}
         tmp_dict[ATTR_TEMPERATURE] = self.target_temperature
         tmp_dict[ATTR_SAT_ALLOWED] = self.is_satelite_allowed
@@ -902,6 +906,7 @@ class HVACSetting:
         tmp_dict[CONF_PWM_SCALE] = self.pwm_scale
         tmp_dict[ATTR_CONTROL_OUTPUT] = self.get_control_output
         tmp_dict[ATTR_DETAILED_OUTPUT] = self._detailed_output
+        tmp_dict["Open_window"] = open_window
         if self.is_hvac_master_mode:
             tmp_dict[CONF_SATELITES] = self.get_satelites
             tmp_dict[CONF_MASTER_OPERATION_MODE] = self._operation_mode
