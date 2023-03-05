@@ -178,12 +178,12 @@ with the data (as sub):
 Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
 
 Configured under 'PID_valve_mode:'
-* goal (Optional): Setpoint of target valve position
+* goal (Optional): Wanted precentage opening of valve
 * kp (Required): Set PID parameter, p control value.
 * ki (Required): Set PID parameter, i control value.
 * kd (Required): Set PID parameter, d control value.
-* pwm_scale_low (Optional): Overide lower bound pwm scale for this mode. Default = pwm_scale * -1
-* pwm_scale_high (Optional): Overide upper bound pwm scale for this mode. Default = 'pwm_scale'
+* pwm_scale_low (Optional): For master mode not applicable
+* pwm_scale_high (Optional): For master mode not applicable
 # Sensor filter (filter_mode):
 An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
 The filter intesity is defined by a factor between 0 to 5 (integer).
