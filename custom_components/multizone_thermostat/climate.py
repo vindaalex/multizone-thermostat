@@ -1845,13 +1845,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # in case of keep-alive (time not none) this test is ignored due to sensor_change = false
         if not force and not routine and min_cycle_duration.seconds != 0:
             entity_id = self._hvac_on.get_hvac_switch
-            if self._hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
-                current_state = STATE_ON if self._is_switch_active() else STATE_OFF
-            else:
-                current_state = STATE_OFF if self._is_switch_active() else STATE_ON
+            state = self.hass.states.get(entity_id).state
             try:
                 long_enough = condition.state(
-                    self.hass, entity_id, current_state, min_cycle_duration
+                    self.hass, entity_id, state, min_cycle_duration
                 )
             except ConditionError:
                 long_enough = False
@@ -1861,7 +1858,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     "Return from %s temp  update. Min duration (%s min) for state '%s' not expired",
                     entity_id,
                     min_cycle_duration.seconds / 60,
-                    current_state,
+                    state,
                 )
                 return False
 
