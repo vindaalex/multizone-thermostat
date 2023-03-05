@@ -161,7 +161,6 @@ from .const import (
     MASTER_MIN_ON,
     NC_SWITCH_MODE,
     NO_SWITCH_MODE,
-    PLATFORM_INPUT_NUMBER,
     PWM_LAG,
     SAT_CONTROL_LEAD,
     SERVICE_SET_VALUE,
@@ -2162,8 +2161,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 ATTR_ENTITY_ID: entity_id,
                 ATTR_VALUE: control_val,
             }
+
+            method = entity_id.split(".")[0]
+
             await self.hass.services.async_call(
-                PLATFORM_INPUT_NUMBER,
+                method,
                 SERVICE_SET_VALUE,
                 data,
                 context=self._context,
@@ -2225,8 +2227,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             data = {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: control_val}
 
+            method = entity_id.split(".")[0]
+
             await self.hass.services.async_call(
-                PLATFORM_INPUT_NUMBER,
+                method,
                 SERVICE_SET_VALUE,
                 data,
                 context=self._context,
