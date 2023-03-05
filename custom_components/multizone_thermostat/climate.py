@@ -45,11 +45,17 @@ from homeassistant.const import (
     PRECISION_WHOLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
-    STATE_OFF,
     STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    STATE_OPEN,
+    STATE_OPENING,
+    STATE_CLOSED,
+    STATE_CLOSING,
+    STATE_JAMMED,
+    STATE_PROBLEM,
 )
+
 from homeassistant.core import DOMAIN as HA_DOMAIN, CoreState, HomeAssistant, callback
 from homeassistant.exceptions import ConditionError
 from homeassistant.helpers import condition, entity_platform
@@ -168,6 +174,11 @@ SUPPORTED_PRESET_MODES = [
     PRESET_AWAY,
 ]
 SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
+ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_JAMMED, STATE_PROBLEM]
+SWITCH_NC_ACTIVE_STATE = [STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING]
+SWITCH_NO_ACTIVE_STATE = [STATE_ON, STATE_CLOSED, STATE_OPENING, STATE_CLOSING]
+SWITCH_NC_ON = [STATE_ON, STATE_OPEN, STATE_OPENING]
+SWITCH_NO_ON = [STATE_ON, STATE_CLOSED, STATE_CLOSING]
 
 
 def validate_initial_control_mode(*keys: str) -> Callable:
@@ -850,10 +861,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 sensor_state = self.hass.states.get(self._sensor_entity_id)
             else:
                 sensor_state = None
-            if sensor_state and sensor_state.state not in (
-                STATE_UNAVAILABLE,
-                STATE_UNKNOWN,
-            ):
+            if sensor_state and sensor_state.state not in ERROR_STATE:
                 await self._async_update_current_temp(sensor_state.state)
                 save_state = True
 
@@ -861,10 +869,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
             else:
                 sensor_state = None
-            if sensor_state and sensor_state.state not in (
-                STATE_UNAVAILABLE,
-                STATE_UNKNOWN,
-            ):
+            if sensor_state and sensor_state.state not in ERROR_STATE:
                 self._async_update_outdoor_temperature(sensor_state.state)
                 save_state = True
 
@@ -1426,9 +1431,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         self._logger.debug("Sensor temperature updated to '%s'", new_state.state)
         wrong_state = False
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if new_state is None or new_state.state in ERROR_STATE:
             self._logger.warning(
-                "Sensor temperature {} invalid: {}".format(
+                "Sensor temperature {} invalid: {}, skip current state".format(
                     new_state.name, new_state.state
                 )
             )
@@ -1436,22 +1441,22 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         elif not is_float(new_state.state):
             self._logger.warning(
-                "Sensor temperature {} unclear: {} type {}".format(
+                "Sensor temperature {} unclear: {} type {}, skip current state".format(
                     new_state.name, new_state.state, type(new_state.state)
                 )
             )
             wrong_state = True
 
-        elif new_state.state == -100:
+        elif float(new_state.state) < -50 or float(new_state.state) > 50:
             self._logger.warning(
-                "Sensor temperature {} unrealistic (exact zero): {}".format(
+                "Sensor temperature {} unrealistic: {}, skip current state".format(
                     new_state.name, new_state.state
                 )
             )
             wrong_state = True
 
         if wrong_state:
-            self._async_activate_emergency_stop("indoor temp update", new_state.name)
+            # self._async_activate_emergency_stop("indoor temp update", sensor=self._sensor_entity_id)
             return
 
         self.hass.create_task(self._async_update_current_temp(new_state.state))
@@ -1474,13 +1479,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.debug(
             "Sensor outdoor temperature updated to '%s'", new_state.state
         )
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if new_state is None or new_state.state in ERROR_STATE:
             self._logger.warning(
-                "Sensor temperature {} invalid {}".format(
+                "Sensor temperature {} invalid {}, skip current state".format(
                     new_state.name, new_state.state
                 )
             )
-            self._async_activate_emergency_stop("outdoor temp update", new_state.name)
+            # self._async_activate_emergency_stop("outdoor temp update", sensor=self._sensor_out_entity_id)
             return
 
         self._async_update_outdoor_temperature(new_state.state)
@@ -1521,7 +1526,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     @callback
     def _async_stuck_switch_check(self, now):
-        """Check if the switch has not changed for a cetrain period and force operation to avoid stuck or jammed."""
+        """Check if the switch has not changed for a certain period and force operation to avoid stuck or jammed."""
 
         if self._self_controlled == OperationMode.PENDING:
             # changing opretation mode, wait for the net loop
