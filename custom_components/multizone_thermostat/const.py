@@ -1,80 +1,68 @@
-from homeassistant.components.climate.const import (
-    ATTR_HVAC_MODE,
-    ATTR_PRESET_MODE,
-    CURRENT_HVAC_COOL,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_OFF,
-    HVAC_MODE_COOL,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_OFF,
-    PRESET_AWAY,
-    PRESET_NONE,
-    SUPPORT_PRESET_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
-)
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    ATTR_TEMPERATURE,
-    CONF_ENTITY_ID,
-    CONF_NAME,
-    CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
-    PRECISION_HALVES,
-    PRECISION_TENTHS,
-    PRECISION_WHOLE,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
-    STATE_OFF,
-    STATE_ON,
-    STATE_UNKNOWN,
-    STATE_UNAVAILABLE,
-)
+"""Multizone constants"""
+from homeassistant.backports.enum import StrEnum
 
-# class defaults_thermostat:
-
-# DEFAULT_NAME = "MultiZone Thermostat"
+# general
 DEFAULT_TARGET_TEMP_HEAT = 19.0
 DEFAULT_TARGET_TEMP_COOL = 28.0
 DEFAULT_MAX_TEMP_HEAT = 24
 DEFAULT_MIN_TEMP_HEAT = 17
 DEFAULT_MAX_TEMP_COOL = 35
 DEFAULT_MIN_TEMP_COOL = 20
+DEFAULT_DETAILED_OUTPUT = False
+DEFAULT_SENSOR_FILTER = 0
 DEFAULT_AREA = 0
-DEFAULT_INITIAL_HVAC_MODE = HVAC_MODE_OFF
-DEFAULT_INITIAL_PRESET_MODE = PRESET_NONE
+
+# on_off switch type
+NC_SWITCH_MODE = "NC"
+NO_SWITCH_MODE = "NO"
+
+# MASTER
+DEFAULT_MIN_LOAD = 0
+
+# safety routines
 DEFAULT_PASSIVE_SWITCH = False
 
+# restore old states
 DEFAULT_OLD_STATE = False
 DEFAULT_RESTORE_PARAMETERS = False
 DEFAULT_RESTORE_INTEGRAL = False
 
-SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_OFF]
-
-
-# class defaults_controller_input:
 # on_off mode
 DEFAULT_HYSTERESIS_TOLERANCE = 0.5
 
 # PWM/PID controller
-DEFAULT_DIFFERENCE = 100
+DEFAULT_PWM_SCALE = 100
 DEFAULT_MIN_DIFF = 0
 DEFAULT_PWM = 0
+DEFAULT_PWM_RESOLUTION = 50
+# DEFAULT_VALVE_DELAY = 0
 
-DEFAULT_SENSOR_FILTER = 0
+# MASTER
+DEFAULT_OPERATION = "on_off"
 
-CONF_SENSOR = "sensor"
+# configuration variables
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
 CONF_INITIAL_PRESET_MODE = "initial_preset_mode"
-
+CONF_SWITCH_MODE = "switch_mode"
 CONF_PASSIVE_SWITCH_CHECK = "passive_switch_check"
+CONF_DETAILED_OUTPUT = "detailed_output"
 
-# only requied for hvac_Settings
-# class defaults_controller:
-CONF_HVAC_MODE_INIT_TEMP = "initial_target_temp"
-CONF_HVAC_MODE_MIN_TEMP = "min_temp"
-CONF_HVAC_MODE_MAX_TEMP = "max_temp"
-CONF_AWAY_TEMP = "away_temp"
+CONF_SENSOR = "sensor"
+CONF_FILTER_MODE = "filter_mode"
+
+ATTR_HVAC_DEFINITION = "hvac_def"
+ATTR_SELF_CONTROLLED = "self_controlled"
+ATTR_SAT_ALLOWED = "satelite_allowed"
+ATTR_CONTROL_MODE = "control_mode"
+ATTR_CURRENT_OUTDOOR_TEMPERATURE = "current_outdoor_temp"
+ATTR_FILTER_MODE = "filter_mode"
+ATTR_DETAILED_OUTPUT = "detailed_output"
+
+# only required for hvac_Settings
+CONF_TARGET_TEMP_INIT = "initial_target_temp"
+CONF_TARGET_TEMP_MIN = "min_target_temp"
+CONF_TARGET_TEMP_MAX = "max_target_temp"
+CONF_TARGET_TEMP_AWAY = "away_temp"
 
 CONF_PRECISION = "precision"
 CONF_AREA = "room_area"
@@ -85,50 +73,85 @@ CONF_STALE_DURATION = "sensor_stale_duration"
 
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
 
+ATTR_CONTROL_OUTPUT = "control_output"  # offset and pwm_output
+ATTR_CONTROL_PWM_OUTPUT = "pwm_out"
+ATTR_CONTROL_OFFSET = "offset"
+
 # proportional valve control (pwm)
 SERVICE_SET_VALUE = "set_value"
 ATTR_VALUE = "value"
 PLATFORM_INPUT_NUMBER = "input_number"
 
+# controller config
+CONF_CONTROL_REFRESH_INTERVAL = "control_interval"
+CONF_PWM_DURATION = "pwm_duration"
+CONF_PWM_SCALE = "pwm_scale"
+CONF_PWM_SCALE_LOW = "pwm_scale_low"
+CONF_PWM_SCALE_HIGH = "pwm_scale_high"
+CONF_PWM_RESOLUTION = "pwm_resolution"
+CONF_PWM_THRESHOLD = "pwm_threshold"
+
+ATTR_PWM_THRESHOLD = "pwm_threshold"
+
 # on_off thermostat
 CONF_ON_OFF_MODE = "on_off_mode"
 CONF_MIN_CYCLE_DURATION = "min_cycle_duration"
-CONF_KEEP_ALIVE = "keep_alive"
-CONF_HYSTERESIS_TOLERANCE_ON = "hysteresis_tolerance_on"
-CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_tolerance_off"
+CONF_HYSTERESIS_TOLERANCE_ON = "hysteresis_on"
+CONF_HYSTERESIS_TOLERANCE_OFF = "hysteresis_off"
 
 # proportional mode
 CONF_PROPORTIONAL_MODE = "proportional_mode"
-CONF_PWM = "pwm"
-CONF_CONTROL_REFRESH_INTERVAL = "control_interval"
-CONF_DIFFERENCE = "difference"
-CONF_MIN_DIFFERENCE = "min_difference"
-CONF_MAX_DIFFERENCE = "max_difference"
-CONF_MIN_DIFF = "minimal_diff"
-CONF_WINDOW_OPEN_TEMPDROP = "window_open_tempdrop"
-
-CONF_SENSOR_FILTER = "sensor_filter"
 
 # PID controller
 CONF_PID_MODE = "PID_mode"
+CONF_VALVE_MODE = "PID_valve_mode"
+
+PID_CONTROLLER = "PID_controller"
 CONF_KP = "kp"
 CONF_KI = "ki"
 CONF_KD = "kd"
+CONF_WINDOW_OPEN_TEMPDROP = "window_open_tempdrop"
+
+ATTR_KP = "kp"
+ATTR_KI = "ki"
+ATTR_KD = "kd"
 
 # weather compensating mode
 CONF_WC_MODE = "weather_mode"
 CONF_SENSOR_OUT = "sensor_out"
 CONF_KA = "ka"
 CONF_KB = "kb"
+ATTR_KA = "ka"
+ATTR_KB = "kb"
 
 # Master mode
-CONF_MASTER_MODE = "MASTER_mode"
+CONF_MASTER_MODE = "master_mode"
+CONF_MASTER_OPERATION_MODE = "operation_mode"
 CONF_SATELITES = "satelites"
-# valve_control_mode
-# CONF_VALVE_MODE = "PID_VALVE_mode"
-CONF_GOAL = "goal"
+CONF_CONTINUOUS_LOWER_LOAD = "lower_load_scale"
 
-SUPPORTED_PRESET_MODES = [
-    PRESET_NONE,
-    PRESET_AWAY,
-]
+CONF_GOAL = "goal"  # pid valve mode
+ATTR_GOAL = "goal"  # pid valve mode
+
+MASTER_MIN_ON = "minimal_on"
+MASTER_BALANCED = "balanced"
+MASTER_CONTINUOUS = "continuous"
+
+# control constants
+CONTROL_START_DELAY = 0.2  # seconds, calculate pwm and offset before pwm loop
+MASTER_CONTROL_LEAD = 0.1  # seconds
+SAT_CONTROL_LEAD = 0.15  # seconds
+PWM_LAG = 0.05  # seconds
+PWM_UPDATE_CHANGE = 0.05
+
+NESTING_MATRIX = 20
+NESTING_BALANCE = 0.1
+
+
+class OperationMode(StrEnum):
+    """Operation modes for satelite thermostats"""
+
+    PENDING = "pending"
+    MASTER = "master"
+    SELF = "self_controlled"
+    NO_CHANGE = "no change"

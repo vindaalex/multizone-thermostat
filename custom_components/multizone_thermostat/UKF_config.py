@@ -1,9 +1,11 @@
 """module to initiate UKF filter for temperature readings"""
-import numpy as np
 import time
-from .UKF_filter.UKF import UnscentedKalmanFilter
+
+import numpy as np
+
 from .UKF_filter.discretization import Q_discrete_white_noise
 from .UKF_filter.sigma_points import MerweScaledSigmaPoints
+from .UKF_filter.UKF import UnscentedKalmanFilter
 
 
 class UKFFilter:
@@ -55,7 +57,7 @@ class UKFFilter:
         self._kf_temp.Q = Q_discrete_white_noise(
             dim=2,
             dt=tmp_interval,
-            var=((0.01 / self.filter_mode) / (tmp_interval ** 1.2)) ** 2,
+            var=((0.01 / self.filter_mode) / (tmp_interval**1.2)) ** 2,
         )
 
         # measurement noise std**2

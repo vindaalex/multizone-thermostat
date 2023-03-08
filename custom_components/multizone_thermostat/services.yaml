@@ -1,20 +1,33 @@
 reload:
-  description: Reload all multizone_thermostat entities.
+  description: Reload all multizone_thermostat entities
 
 #proportional
-set_min_diff:
-  description: Set a new minimum difference
+set_pwm_threshold:
+  description: Set a new 'minimal_diff' before change switch
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    min_diff:
+    new_threshold:
       description: minimum difference value of proportional controller
       example: 2
 
+set_preset_mode:
+  name: Set preset mode
+  description: Set preset mode for climate device
+  fields:
+    entity:
+      domain: climate
+    preset_mode:
+      name: Preset mode
+      description: New value of preset mode
+      required: true
+      example: "away"
+      selector:
+        text:
 
 # Describes the format for available PIDThermostat services
 # PID
@@ -22,14 +35,11 @@ set_pid:
   description: Set a new Kp value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    control_mode:
-      description: control mode
-      example: pid or valve
     kp:
       description: kp value of PID controller
       example: 2
@@ -48,14 +58,11 @@ set_integral:
   description: Set a new integral value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    control_mode:
-      description: control mode
-      example: pid or valve
     integral:
       description: integral value of PID controller
       example: 5
@@ -65,7 +72,7 @@ set_goal:
   description: Set a new goal value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -79,7 +86,7 @@ set_ka_kb:
   description: Set a new KA value
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
@@ -96,12 +103,42 @@ set_filter_mode:
   description: Set a new filter variable
   fields:
     entity_id:
-      description: Thermostat entity_id.
+      description: Thermostat entity_id
+      example: climate.study
+    mode:
+      description: mode of filter (integral)
+      example: 5
+
+# controlled by master
+satelite_mode:
+  description: Set satelite under control of master
+  fields:
+    entity_id:
+      description: Thermostat entity_id
+      example: climate.study
+    control_mode:
+      description: True(under control of master), False(not), None (no change)
+      example: True
+    pwm_time:
+      description: interval time for pwm cycle
+      example: 50
+    offset:
+      description: time offset to delay start in seconds
+      example: 18
+    pwm_timer:
+      description: reference start time
+      example: 1161611
+
+detailed_output:
+  description: Include detailed output (PID, control output) in attributes
+  fields:
+    entity_id:
+      description: Thermostat entity_id
       example: climate.study
     hvac_mode:
       description: hvac mode
       example: heat or cool
-    mode:
-      description: mode of filter (integral)
-      example: 5
+    new_mode:
+      description: Include detailed output
+      example: True or False
 
