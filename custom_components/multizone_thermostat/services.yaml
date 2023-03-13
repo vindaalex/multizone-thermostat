@@ -19,15 +19,13 @@ set_preset_mode:
   name: Set preset mode
   description: Set preset mode for climate device
   fields:
-    entity:
-      domain: climate
+    entity_id:
+      description: Thermostat entity_id
+      example: climate.study
     preset_mode:
-      name: Preset mode
       description: New value of preset mode
-      required: true
       example: "away"
-      selector:
-        text:
+
 
 # Describes the format for available PIDThermostat services
 # PID

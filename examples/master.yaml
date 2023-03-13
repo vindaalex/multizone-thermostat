@@ -25,14 +25,10 @@ climate:
     initial_hvac_mode: "off"
     initial_preset_mode: "none"
     room_area: 170
-    passive_switch_check: True
     heat:
       entity_id: switch.fake_heater_switch
-      passive_switch_duration:
-        hours: 5
       master_mode:
         satelites: [pid1, pid2]
-        # operation_mode: "continuous"
         operation_mode: "minimal_on"
         control_interval:
           minutes: 30
@@ -41,7 +37,7 @@ climate:
         pwm_scale: 100
         pwm_resolution: 20
         PID_valve_mode:
-          goal: 80
+          goal: .8
           kp: -0.5
           ki: -0.001
           kd: 0
