@@ -619,6 +619,9 @@ class HVACSetting:
 
     def check_window_open(self, current):
         """Return the temperature drop threshold value."""
+        if not is_float(current):
+            return False
+            
         if CONF_WINDOW_OPEN_TEMPDROP in self._pid:
             window_threshold = self._pid[CONF_WINDOW_OPEN_TEMPDROP] / 3600
         else:
@@ -997,3 +1000,12 @@ def get_rounded(input_val, min_clip):
     """https://stackoverflow.com/questions/7859147/round-in-numpy-to-nearest-step"""
     scaled = input_val / min_clip
     return np.where(scaled % 1 >= 0.5, np.ceil(scaled), np.floor(scaled)) * min_clip
+
+
+def is_float(element):
+    """check if input is float"""
+    try:
+        float(element)
+        return True
+    except ValueError:
+        return False
