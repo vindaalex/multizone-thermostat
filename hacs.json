@@ -1,7 +1,5 @@
 {
-    "name": "Multizone thermostat",
-    "content_in_root": false,
-    "domains": "climate",
-    "render_readme": true
- 
-  }
+  "name": "Multizone thermostat",
+  "content_in_root": false,
+  "render_readme": true
+}
