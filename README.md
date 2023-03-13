@@ -178,7 +178,7 @@ with the data (as sub):
 Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
 
 Configured under 'PID_valve_mode:'
-* goal (Optional): Wanted precentage opening of valve
+* goal (Optional): Wanted precentage opening of valve (between 0 and 1)
 * kp (Required): Set PID parameter, p control value.
 * ki (Required): Set PID parameter, i control value.
 * kd (Required): Set PID parameter, d control value.
