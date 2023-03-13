@@ -1,11 +1,12 @@
 {
   "domain": "multizone_thermostat",
   "name": "MultiZone thermostat",
+  "codeowners": ["@vindaalex"],
+  "dependencies": ["input_number", "sensor", "switch", "number"],
   "documentation": "https://github.com/vindaalex/multizone_thermostat",
+  "iot_class": "local_polling",
   "issue_tracker": "https://github.com/vindaalex/multizone-thermostat/issues",
   "requirements": ["numpy"],
-  "dependencies": ["input_number", "sensor", "switch", "number"],
-  "codeowners": ["@vindaalex"],
   "version": "0.5.1",
-  "iot_class": "local_polling"
+  
 }
