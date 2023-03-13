@@ -621,7 +621,7 @@ class HVACSetting:
         """Return the temperature drop threshold value."""
         if not is_float(current):
             return False
-            
+
         if CONF_WINDOW_OPEN_TEMPDROP in self._pid:
             window_threshold = self._pid[CONF_WINDOW_OPEN_TEMPDROP] / 3600
         else:
@@ -897,7 +897,7 @@ class HVACSetting:
     def get_variable_attr(self):
         """return attributes for climate entity"""
         open_window = None
-        if isinstance(self.current_state, (list, tuple, np.ndarray)):
+        if isinstance(self.current_state, (list, tuple, np.ndarray)) and self._pid:
             current = self.current_state
             open_window = self.check_window_open(current[1])
         tmp_dict = {}
