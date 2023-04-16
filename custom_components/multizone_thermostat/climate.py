@@ -1048,7 +1048,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def async_set_integral(self, hvac_mode: HVACMode, integral):
         """Set new PID Controller integral value."""
         self._logger.info("new PID integral for '%s' to: '%s'", hvac_mode, integral)
-        self._hvac_def[hvac_mode].integral(integral)
+        self._hvac_def[hvac_mode].set_integral(integral)
         self.schedule_update_ha_state()
 
     @callback
