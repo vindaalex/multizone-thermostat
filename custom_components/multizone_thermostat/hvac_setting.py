@@ -75,6 +75,7 @@ class HVACSetting:
 
         self._hvac_mode = hvac_mode
         self._preset_mode = PRESET_NONE
+        self._old_preset = None
         self._hvac_settings = conf
         self._switch_entity = self._hvac_settings[CONF_ENTITY_ID]
         self.area = area
