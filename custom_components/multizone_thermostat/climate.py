@@ -1006,7 +1006,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_filter_mode(self, mode):
         """to change filter mode from HA"""
-        await self.hass.async_add_executor_job(self.set_filter_mode(mode))
+        # TODO
+        # await self.hass.async_add_executor_job(self.set_filter_mode(mode))
+        # self.hass.create_task(self.set_filter_mode(mode))
+        self.set_filter_mode(mode)
 
     def set_filter_mode(self, mode):
         """Set new filter for the temp sensor."""
