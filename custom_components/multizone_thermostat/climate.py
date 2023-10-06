@@ -1238,7 +1238,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._async_routine_pwm()
             self.control_output = {ATTR_CONTROL_OFFSET: 0, ATTR_CONTROL_PWM_OUTPUT: 0}
             # stop tracking satelites
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 await self._async_routine_track_satelites()
                 satelite_reset = {sat: 0 for sat in self._hvac_on.get_satelites}
                 self._async_change_satelite_modes(
@@ -1285,11 +1285,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 datetime.datetime.fromtimestamp(self._pwm_start_time),
             )
 
-        elif (
-            self._hvac_on.is_hvac_master_mode or self._hvac_on.is_hvac_proportional_mode
-        ):
+        elif self.is_master or self._hvac_on.is_hvac_proportional_mode:
             # update and track satelites
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 # bring controllers of satelite in sync with master
                 # use the pwm
                 satelite_reset = {sat: 0 for sat in self._hvac_on.get_satelites}
@@ -1791,7 +1789,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if not self._kf_temp:
                 self._hvac_on.current_temperature = self._current_temperature
             else:
-                if not self._hvac_on.is_hvac_master_mode:
+                if not self.is_master:
                     self._hvac_on.current_state = [
                         self._kf_temp.get_temp,
                         self._kf_temp.get_vel,
@@ -1917,10 +1915,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 return
 
             # update and check current temperatures for pwm cycle
-            if routine and not self._hvac_on.is_hvac_master_mode:
+            if routine and not self.is_master:
                 await self._async_update_current_temp()
             # send temperature to controller
-            if not self._hvac_on.is_hvac_master_mode:
+            if not self.is_master:
                 await self._async_update_controller_temp()
 
             if (
@@ -1967,7 +1965,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 offset = 0
             self._hvac_on.calculate(routine=routine, force=force, current_offset=offset)
 
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 # set offsets at satelites
                 satelite_info = self._hvac_on.get_satelite_offset()
                 self._async_change_satelite_modes(satelite_info)
@@ -1981,10 +1979,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 force
                 or self._hvac_on.is_hvac_on_off_mode
                 or (
-                    (
-                        self._hvac_on.is_hvac_proportional_mode
-                        or self._hvac_on.is_hvac_master_mode
-                    )
+                    (self._hvac_on.is_hvac_proportional_mode or self.is_master)
                     and not self._hvac_on.get_pwm_time
                 )
             ):
@@ -2522,7 +2517,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def min_temp(self) -> float:
         """Return the minimum temperature."""
         if self._hvac_on:
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 return None
             if self._hvac_mode != HVACMode.OFF:
                 if self.preset_mode == PRESET_AWAY:
@@ -2536,7 +2531,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def max_temp(self) -> float:
         """Return the maximum temperature."""
         if self._hvac_on:
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 return None
             elif self._hvac_mode != HVACMode.OFF:
                 if self.preset_mode == PRESET_AWAY:
@@ -2550,7 +2545,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def current_temperature(self):
         """Return the sensor temperature."""
         if self._hvac_on:
-            if self._hvac_on.is_hvac_master_mode:
+            if self.is_master:
                 return None
 
         if not self._kf_temp:
@@ -2614,7 +2609,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Return a list of available preset modes."""
         modes = [PRESET_NONE]
         if self._hvac_on:
-            if self._hvac_on.get_away_temp or self._hvac_on.is_hvac_master_mode:
+            if self._hvac_on.get_away_temp or self.is_master:
                 modes = modes + [PRESET_AWAY]
 
         return modes
