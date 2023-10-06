@@ -58,6 +58,9 @@ ATTR_CURRENT_OUTDOOR_TEMPERATURE = "current_outdoor_temp"
 ATTR_FILTER_MODE = "filter_mode"
 ATTR_DETAILED_OUTPUT = "detailed_output"
 
+PRESET_EMERGENCY = "emergency mode"
+PRESET_RESTORE = "restore"
+
 # only required for hvac_Settings
 CONF_TARGET_TEMP_INIT = "initial_target_temp"
 CONF_TARGET_TEMP_MIN = "min_target_temp"

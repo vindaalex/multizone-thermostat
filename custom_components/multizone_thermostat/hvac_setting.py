@@ -58,6 +58,8 @@ from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; propo
     ATTR_CONTROL_OUTPUT,
     ATTR_CONTROL_PWM_OUTPUT,
     PID_CONTROLLER,
+    PRESET_EMERGENCY,
+    PRESET_RESTORE,
     PWM_UPDATE_CHANGE,
 )
 
@@ -469,7 +471,13 @@ class HVACSetting:
     @preset_mode.setter
     def preset_mode(self, mode):
         """set preset mode"""
-        if not self.is_hvac_master_mode:
+        if mode == PRESET_EMERGENCY:
+            if self._old_preset != PRESET_EMERGENCY:
+                self._old_preset = self.preset_mode
+        elif mode == PRESET_RESTORE:
+            mode = self._old_preset
+                
+        if not self.is_hvac_master_mode and mode != PRESET_EMERGENCY:
             if self._preset_mode == PRESET_NONE and mode == PRESET_AWAY:
                 self.restore_temperature = self.target_temperature
                 self.target_temperature = self.get_away_temp

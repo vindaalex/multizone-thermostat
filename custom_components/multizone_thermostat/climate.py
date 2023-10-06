@@ -162,6 +162,8 @@ from .const import (
     MASTER_MIN_ON,
     NC_SWITCH_MODE,
     NO_SWITCH_MODE,
+    PRESET_RESTORE,
+    PRESET_EMERGENCY,
     PWM_LAG,
     SAT_CONTROL_LEAD,
     SERVICE_SET_VALUE,
@@ -169,10 +171,7 @@ from .const import (
 )
 
 SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
-SUPPORTED_PRESET_MODES = [
-    PRESET_NONE,
-    PRESET_AWAY,
-]
+SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_AWAY, PRESET_EMERGENCY]
 SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
 ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_JAMMED, STATE_PROBLEM]
 NOT_SUPPORTED_SWITCH_STATES = [STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING]
@@ -738,6 +737,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         self._hvac_mode = HVACMode.OFF
         self._hvac_mode_init = initial_hvac_mode
+        self._old_preset = None
         self._preset_mode = initial_preset_mode
         self._enabled_hvac_mode = enabled_hvac_modes
         self._enable_old_state = enable_old_state
@@ -1230,8 +1230,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._hvac_mode = hvac_mode
 
         if self._hvac_on:
-            # restore preset mode
-            self._preset_mode = PRESET_NONE
             # cancel scheduled switch routines
             self._async_cancel_pwm_routines()
             # stop keep_live
@@ -1258,6 +1256,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
         self._hvac_on = self._hvac_def[self._hvac_mode]
+        if self._preset_mode == PRESET_EMERGENCY:
+            self._hvac_on.preset_mode = self._preset_mode
 
         # reset time stamp pid to avoid integral run-off
         if self._hvac_on.is_prop_pid_mode or self._hvac_on.is_valve_mode:
@@ -1639,10 +1639,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if new_state.state in ERROR_STATE:
             # self.hass.create_task(
             self._async_activate_emergency_stop("switch state change", sensor=entity_id)
-            # )
+        elif new_state.state in NOT_SUPPORTED_SWITCH_STATES:
+            # MOD
+            self._async_activate_emergency_stop(
+                "not supported switch state {}".format(new_state.state),
+                sensor=entity_id,
+            )
         else:
             if entity_id in self._emergency_stop:
                 self._emergency_stop.remove(entity_id)
+                if not self._emergency_stop:
+                    # MOD
+                    self.hass.create_task(self.async_set_preset_mode(PRESET_RESTORE))
 
             if self._hvac_on is None:
                 if self._old_mode != HVACMode.OFF:
@@ -1708,6 +1716,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 current_temp,
             )
             self._emergency_stop.remove(self._sensor_entity_id)
+            if not self._emergency_stop:
+                self.hass.async_create_task(self.async_set_preset_mode(PRESET_RESTORE))
 
         if current_temp:
             self._logger.debug("Current temperature updated to '%s'", current_temp)
@@ -1758,6 +1768,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 current_temp,
             )
             self._emergency_stop.remove(self._sensor_out_entity_id)
+            if not self._emergency_stop:
+                # MOD
+                self.hass.create_task(self.async_set_preset_mode(PRESET_RESTORE))
         try:
             if current_temp:
                 self._logger.debug(
@@ -2347,26 +2360,40 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._emergency_stop.append(sensor)
             # cancel scheduled switch routines
             self._async_cancel_pwm_routines()
-            self.hass.async_create_task(self._async_switch_turn_off())
+            self.hass.create_task(self._async_switch_turn_off())
+            self.hass.create_task(self.async_set_preset_mode(PRESET_EMERGENCY))
         else:
             self._logger.debug("Emergency OFF recall send from {}".format(source))
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
-        if preset_mode not in self.preset_modes and preset_mode != PRESET_NONE:
+        if preset_mode not in self.preset_modes and preset_mode not in [
+            PRESET_NONE,
+            PRESET_EMERGENCY,
+            PRESET_RESTORE,
+        ]:
             self._logger.error(
                 "This preset (%s) is not enabled (see the configuration)", preset_mode
             )
             return
+        if preset_mode == PRESET_EMERGENCY:
+            self._logger.debug("Preset changed due to mergency mode")
+
+            self._old_preset = self._preset_mode
+        if preset_mode == PRESET_RESTORE:
+            preset_mode = self._old_preset
 
         self._preset_mode = preset_mode
-        self._hvac_on.preset_mode = preset_mode
-        self._logger.debug("Set preset mode to '%s'", preset_mode)
+        if self._hvac_on:
+            self._hvac_on.preset_mode = preset_mode
+            self._logger.debug("Set preset mode to '%s'", preset_mode)
 
-        if self._hvac_on.is_hvac_master_mode:
+        if self.is_master:
             await self._async_set_satelite_preset(preset_mode)
 
-        await self._async_controller(force=True)
+        if self._hvac_on:
+            self.hass.async_create_task(self._async_controller(force=True))
+
         self.async_write_ha_state()
 
     async def _async_set_satelite_preset(self, preset_mode):
@@ -2407,13 +2434,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if switch_state in ERROR_STATE or (
             not _hvac_on.is_hvac_switch_on_off and not is_float(switch_state)
         ):
-            self._async_activate_emergency_stop(
-                "active switch state check", sensor=entity_id
+            self.hass.create_task(
+                self._async_activate_emergency_stop(
+                    "active switch state check", sensor=entity_id
+                )
             )
             return None
         else:
             if entity_id in self._emergency_stop:
                 self._emergency_stop.remove(entity_id)
+                if self._emergency_stop == []:
+                    self.hass.create_task(self.async_set_preset_mode(PRESET_RESTORE))
 
             if _hvac_on.is_hvac_switch_on_off:
                 if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
