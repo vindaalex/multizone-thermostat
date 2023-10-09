@@ -1318,7 +1318,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
             self.async_on_remove(self._loop_pwm)
             if self._self_controlled == OperationMode.SELF:
-                self.hass.async_create_task(self._async_controller_pwm(force=True))
+                self.hass.create_task(self._async_controller_pwm(force=True))
 
     async def _async_routine_track_satelites(self, entity_list=None):
         """get changes from satelite thermostats"""
@@ -1716,7 +1716,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     sat_id = self._hvac_on.get_satelites.index(satelite) + 1
                 else:
                     sat_id = 0
-                self.hass.async_create_task(
+                self.hass.create_task(
                     self._async_send_satelite_data(
                         satelite,
                         offset,
@@ -1895,8 +1895,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.debug(
                     "Running pwm controller from control loop with 'force=%s'", force
                 )
-                # self.hass.async_create_task(self._async_controller_pwm(force=force))
-                await self._async_controller_pwm(force=force)
+                self.hass.async_create_task(self._async_controller_pwm(force=force))
+                # await self._async_controller_pwm(force=force)
             else:
                 self.async_write_ha_state()
 
@@ -1917,7 +1917,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             or self._emergency_stop
         ):
             self._async_cancel_pwm_routines()
-            await self._async_switch_turn_off()
+            self.hass.async_create_task(self._async_switch_turn_off())
             return
 
         if self._hvac_on.get_pwm_time:
