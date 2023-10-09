@@ -1389,7 +1389,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "Sensor outdoor temperature updated to '%s'", new_state.state
         )
         if new_state is None or new_state.state in ERROR_STATE:
-            self._logger.warning(
+            self._logger.debug(
                 "Sensor temperature {} invalid {}, skip current state".format(
                     new_state.name, new_state.state
                 )
@@ -1484,7 +1484,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 datetime.datetime.now(datetime.timezone.utc) - sensor_state.last_updated
                 > data[1]
             ):
-                self._logger.warning(
+                self._logger.info(
                     "Switch '%s' stuck prevention activated: not changed state for '%s'"
                     % (
                         data[0],
