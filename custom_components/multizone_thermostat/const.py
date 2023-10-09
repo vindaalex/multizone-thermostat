@@ -57,8 +57,9 @@ ATTR_CONTROL_MODE = "control_mode"
 ATTR_CURRENT_OUTDOOR_TEMPERATURE = "current_outdoor_temp"
 ATTR_FILTER_MODE = "filter_mode"
 ATTR_DETAILED_OUTPUT = "detailed_output"
+ATTR_EMERGENCY_MODE = "emergency mode"
 
-PRESET_EMERGENCY = "emergency mode"
+PRESET_EMERGENCY = "emergency"
 PRESET_RESTORE = "restore"
 
 # only required for hvac_Settings

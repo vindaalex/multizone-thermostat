@@ -58,8 +58,8 @@ sensors (at least one sensor needs to be specified):
 * detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
 
 checks for sensor and switch:
-* sensor_stale_duration (Optional): safety routine to turn switches off when sensor has not updated for a specified time period. Specify time period. Default is not activated.
-* passive_switch_check (Optional): check at midnight (02:00) if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Per hvac_mode the duration (where switch is specified) is specified. During satelite mode only activated when master is idle or off. Specify 'True' to activate. Default = False.
+* sensor_stale_duration (Optional): safety routine "emergency mode" to turn switches off when sensor has not updated for a specified time period. Specify time period. Activation of emergency mode is visible via a forced climate preset state. Default is not activated. 
+* passive_switch_check (Optional): check at night (02:00) if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Per hvac_mode the duration (where switch is specified) is specified. During satelite mode only activated when master is idle or off. Specify 'True' to activate. Default is not activated Default is False.
 
 recovery of settings
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. Specify 'True' to activate. (setpoints, KP,KI,PD values, modes). Default = False
