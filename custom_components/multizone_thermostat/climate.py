@@ -1555,13 +1555,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self.preset_mode == PRESET_EMERGENCY:
                 self._async_restore_emergency_stop(entity_id)
 
-            if self._hvac_on is None:
-                if self._old_mode != HVACMode.OFF:
-                    _hvac_on = self._hvac_def[self._old_mode]
-                elif self._old_mode == HVACMode.OFF:
-                    _hvac_on = None
-            else:
+            if self._hvac_on:
                 _hvac_on = self._hvac_on
+            elif self._old_mode != HVACMode.OFF:
+                _hvac_on = self._hvac_def[self._old_mode]
+            else:
+                _hvac_on = None
 
             if _hvac_on:
                 if is_float(new_state.state):
