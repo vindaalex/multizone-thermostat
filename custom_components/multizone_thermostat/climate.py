@@ -1336,37 +1336,32 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     @callback
     def _async_indoor_temp_change(self, event):
-        """Handle temperature changes."""
+        """
+        Handle temperature change
+        Only call emergency stop due to stale sensor, ignore invalid values
+        """
         new_state = event.data.get("new_state")
         self._logger.debug("Sensor temperature updated to '%s'", new_state.state)
-        wrong_state = False
+
         if new_state is None or new_state.state in ERROR_STATE:
             self._logger.warning(
                 "Sensor temperature {} invalid: {}, skip current state".format(
                     new_state.name, new_state.state
                 )
             )
-            wrong_state = True
-
+            return
         elif not is_float(new_state.state):
             self._logger.warning(
                 "Sensor temperature {} unclear: {} type {}, skip current state".format(
                     new_state.name, new_state.state, type(new_state.state)
                 )
             )
-            wrong_state = True
-
+            return
         elif float(new_state.state) < -50 or float(new_state.state) > 50:
             self._logger.warning(
                 "Sensor temperature {} unrealistic: {}, skip current state".format(
                     new_state.name, new_state.state
                 )
-            )
-            wrong_state = True
-
-        if wrong_state:
-            self._async_activate_emergency_stop(
-                "indoor temp update", sensor=self._sensor_entity_id
             )
             return
         elif self.preset_mode == PRESET_EMERGENCY:
@@ -1375,20 +1370,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self.hass.create_task(self._async_update_current_temp(new_state.state))
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if (
-            self._hvac_mode != HVACMode.OFF
-            and self._hvac_mode is not None
-            and self._hvac_on is not None
-        ):
-            if self._hvac_on.is_hvac_on_off_mode:
-                self.hass.create_task(self._async_controller())
+        if self._hvac_on is not None and self._hvac_on.is_hvac_on_off_mode:
+            self.hass.create_task(self._async_controller())
 
         # self.async_write_ha_state()
 
     @callback
     def _async_outdoor_temp_change(self, event):
-        """Handle outdoor temperature changes."""
-        wrong_state = False
+        """
+        Handle outdoor temperature changes
+        Only call emergency stop due to stale sensor, ignore invalid values
+        """
         new_state = event.data.get("new_state")
         self._logger.debug(
             "Sensor outdoor temperature updated to '%s'", new_state.state
@@ -1399,26 +1391,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     new_state.name, new_state.state
                 )
             )
-            wrong_state = True
+            return
         elif not is_float(new_state.state):
             self._logger.warning(
                 "Outdoor sensor temperature {} unclear: {} type {}, skip current state".format(
                     new_state.name, new_state.state, type(new_state.state)
                 )
             )
-            wrong_state = True
-
-        if wrong_state:
-            self._async_activate_emergency_stop(
-                "outdoor temp update", sensor=self._sensor_out_entity_id
-            )
             return
         elif self.preset_mode == PRESET_EMERGENCY:
             self._async_restore_emergency_stop(self._sensor_out_entity_id)
 
         self._async_update_outdoor_temperature(new_state.state)
-
-        # when weather mode is active: do not call operate but let pwm cycle handle it
 
     @callback
     def _async_stale_sensor_check(self, now=None):
@@ -1453,7 +1437,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Check if the switch has not changed for a certain period and force operation to avoid stuck or jammed."""
 
         if self._self_controlled == OperationMode.PENDING:
-            # changing opretation mode, wait for the net loop
+            # changing operation mode, wait for the net loop
             return
         # operated by master and check if currently active
         elif self._self_controlled != OperationMode.SELF:
