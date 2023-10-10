@@ -6,26 +6,19 @@ Incl support for:
     - temperature: PID
     - outdoor temperature: weather
     - valve position: PID
-For more details about this platform, please refer to the README
+For more details about this platform, please read to the README
 """
-# 3 TODO: async_write_ha_state, async_schedule_update_ha_state, async_write_ha_state
+# TODO: async_write_ha_state, async_schedule_update_ha_state, async_write_ha_state
 from __future__ import annotations
 
 import asyncio
 import datetime
-from datetime import timedelta
-from collections.abc import Callable
 import logging
 import time
-from typing import Any
-
-
-import voluptuous as vol
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
-    PLATFORM_SCHEMA,
     PRESET_AWAY,
     PRESET_NONE,
     ClimateEntity,
@@ -36,13 +29,9 @@ from homeassistant.components.climate import (
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
-    CONF_ENTITY_ID,
     CONF_NAME,
     CONF_UNIQUE_ID,
     EVENT_HOMEASSISTANT_START,
-    PRECISION_HALVES,
-    PRECISION_TENTHS,
-    PRECISION_WHOLE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     STATE_ON,
@@ -62,7 +51,7 @@ from homeassistant.exceptions import ConditionError
 from homeassistant.helpers import condition, entity_platform
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.event import (  # async_track_utc_time_change,
+from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
     async_track_state_change_event,
     async_track_time_change,
@@ -76,13 +65,10 @@ from homeassistant.helpers.typing import (
     DiscoveryInfoType,
 )
 
-from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting
+from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting, services
 from .const import *
 from .platform_schema import PLATFORM_SCHEMA
 
-SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
-SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_AWAY, PRESET_EMERGENCY]
-SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
 ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_JAMMED, STATE_PROBLEM]
 NOT_SUPPORTED_SWITCH_STATES = [STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING]
 
