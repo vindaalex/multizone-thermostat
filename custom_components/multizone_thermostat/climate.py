@@ -78,6 +78,7 @@ from homeassistant.helpers.typing import (
 
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting
 from .const import *
+from .platform_schema import PLATFORM_SCHEMA
 
 SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
 SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_AWAY, PRESET_EMERGENCY]
