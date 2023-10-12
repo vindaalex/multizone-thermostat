@@ -667,8 +667,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.error("Unrecognized hvac mode: '%s'", hvac_mode)
             return
         self._logger.info("HVAC mode changed to '%s'", hvac_mode)
-        self._old_mode = self._hvac_mode
-        self._hvac_mode = hvac_mode
 
         if self._hvac_on:
             # cancel scheduled switch routines
@@ -678,6 +676,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._loop_pwm:
                 self._async_routine_pwm()
             self.control_output = {ATTR_CONTROL_OFFSET: 0, ATTR_CONTROL_PWM_OUTPUT: 0}
+            if self._is_valve_open():
+                await self._async_switch_turn_off()
             # stop tracking satelites
             if self.is_master:
                 await self._async_routine_track_satelites()
@@ -686,10 +686,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     satelite_reset, control_mode=OperationMode.SELF
                 )
 
+        self._old_mode = self._hvac_mode
+        self._hvac_mode = hvac_mode
         self._hvac_on = None
-        # new hvac mode thus all switches off
-        for key, _ in self._hvac_def.items():
-            await self._async_switch_turn_off(hvac_mode=key)
 
         if self._hvac_mode == HVACMode.OFF:
             self._logger.info("HVAC mode is OFF. Turn the devices OFF and exit")
