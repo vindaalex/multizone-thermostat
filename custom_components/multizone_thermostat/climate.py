@@ -1760,15 +1760,19 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug("Set preset mode to '%s'", preset_mode)
             self._hvac_on.preset_mode = preset_mode
             self._preset_mode = self._hvac_on.preset_mode
-        elif preset_mode == PRESET_RESTORE:
-            self._preset_mode = PRESET_NONE
         elif preset_mode == PRESET_EMERGENCY:
             self._preset_mode = PRESET_EMERGENCY
+        elif preset_mode == PRESET_RESTORE:
+            self._preset_mode = PRESET_NONE
 
-        if self.is_master:
+        if self._hvac_on and self.is_master:
             self.hass.async_create_task(self._async_set_satelite_preset(preset_mode))
 
-        if self._hvac_on and self.preset_mode != PRESET_EMERGENCY:
+        elif (
+            self._hvac_on
+            and self.preset_mode != PRESET_EMERGENCY
+            and self._self_controlled == OperationMode.SELF
+        ):
             self.hass.async_create_task(self._async_controller(force=True))
 
         self.async_write_ha_state()
