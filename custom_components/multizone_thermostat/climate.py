@@ -1288,9 +1288,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             routine = now is not None  # boolean
 
             if self.preset_mode == PRESET_EMERGENCY:
-                self._logger.warning(
-                    "Controller update: Cannot operate in emergency stop state, exit routine"
-                )
                 return
 
             if not self._hvac_on:
@@ -1381,11 +1378,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.debug(
             "Running pwm routine, routine=%s, forced=%s", now is not None, force
         )
-
-        if self.preset_mode == PRESET_EMERGENCY:
-            self._logger.warning(
-                "PWM controller update: Cannot operate in emergency stop state, switch off"
-            )
 
         if (
             self.control_output[ATTR_CONTROL_PWM_OUTPUT] in [None, 0]
