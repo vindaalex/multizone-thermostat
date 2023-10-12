@@ -1796,11 +1796,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         If the valve is open.
         NC/NO aware. NO converted to NC
         """
-        if hvac_mode:
+        # if self.hass.state == CoreState.running:
+        if hvac_mode == HVACMode.OFF:
+            return False
+        elif hvac_mode:
             _hvac_on = self._hvac_def[hvac_mode]
         else:
             _hvac_on = self._hvac_on
             hvac_mode = self._hvac_mode
+
         if _hvac_on:
             entity_id = _hvac_on.get_hvac_switch
         else:
@@ -1808,9 +1812,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if not entity_id:
             self._logger.debug("no found entity for {}".format(hvac_mode))
-            return None
+            return False
 
-        switch_state = self.hass.states.get(entity_id).state
+        try:
+            switch_state = self.hass.states.get(entity_id).state
+        except:
+            self.hass.create_task(
+                self._async_activate_emergency_stop(
+                    "valve open check entity not found", sensor=entity_id
+                )
+            )
+            return False
         # check if error state or to restore from error state
         if switch_state in ERROR_STATE or (
             not _hvac_on.is_hvac_switch_on_off and not is_float(switch_state)
@@ -1820,7 +1832,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     "active switch state check", sensor=entity_id
                 )
             )
-            return None
+            return False
         else:
             if self.preset_mode == PRESET_EMERGENCY:
                 self._async_restore_emergency_stop(entity_id)
@@ -1846,6 +1858,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     return True
                 else:
                     return False
+        # else:
+        #     return False
 
     @property
     def switch_position(self):
