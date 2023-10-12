@@ -970,13 +970,17 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._self_controlled == OperationMode.PENDING:
             # changing operation mode, wait for the net loop
             return
+
+        if self.preset_mode == PRESET_EMERGENCY:
+            return
+
         # operated by master and check if currently active
         elif self._self_controlled != OperationMode.SELF:
             master_mode = state_attr(
                 self.hass, "climate." + self._self_controlled, "hvac_action"
             )
 
-            if master_mode in [HVACMode.COOL, HVACMode.HEAT]:
+            if master_mode not in [HVACAction.IDLE, HVACAction.OFF]:
                 return
 
         entity_list = {}
@@ -995,12 +999,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         for hvac_mode, data in entity_list.items():
             sensor_state = self.hass.states.get(data[0])
-
-            if not sensor_state:
-                self._logger.warning(
-                    "Stuck prevention ignored %s, no state (NoneType)" % (data[0])
-                )
-                continue
 
             self._logger.debug(
                 "Switch '%s' stuck prevention check with last update '%s'"
