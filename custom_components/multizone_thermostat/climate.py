@@ -1070,10 +1070,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             new_state.state,
         )
         # catch multipe options
-        switch_activated = False
         if new_state.state in ERROR_STATE:
-            # self.hass.create_task(
-            self._async_activate_emergency_stop("switch state change", sensor=entity_id)
+            # MOD self.hass.create_task(
+            self._async_activate_emergency_stop(
+                "switch to error state change", sensor=entity_id
+            )
         elif new_state.state in NOT_SUPPORTED_SWITCH_STATES:
             # MOD
             self._async_activate_emergency_stop(
@@ -1084,31 +1085,33 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self.preset_mode == PRESET_EMERGENCY:
                 self._async_restore_emergency_stop(entity_id)
 
-            if self._hvac_on:
-                _hvac_on = self._hvac_on
-            elif self._old_mode != HVACMode.OFF:
-                _hvac_on = self._hvac_def[self._old_mode]
-            else:
-                _hvac_on = None
+            if self._hvac_mode in [HVACMode.HEAT, HVACMode.COOL]:
+                if (
+                    entity_id != self._hvac_on.get_hvac_switch
+                    and self._is_valve_open()
+                    and self._is_valve_open(hvac_mode=hvac_mode)
+                ):
+                    self._logger.warning(
+                        "valve of %s is open. Other hvac mode switch changed '%s' changed to %s, keep in closed state",
+                        self._hvac_mode,
+                        entity_id,
+                        new_state.state,
+                    )
+                    other_mode = [HVACMode.HEAT, HVACMode.COOL]
+                    other_mode.remove(self._hvac_mode)
+                    self.hass.create_task(
+                        # self._async_switch_idle(hvac_mode=hvac_mode)
+                        self._async_switch_turn_off(hvac_mode=other_mode)
+                    )
 
-            if _hvac_on:
-                if is_float(new_state.state):
-                    if float(new_state.state) != 0:
-                        switch_activated = True
-                elif new_state.state == STATE_ON:
-                    switch_activated = True
             else:
-                # neither current or previous state thus make sure all are off
-                switch_activated = True
-
-            if self._hvac_on is None or _hvac_on is None:
-                # not current active thermostat thus switch state change should not be triggered
+                # not a current active thermostat thus switch state change should not be triggered
                 # unless stuck loop prevention is running
                 for hvac_mode, data in self._hvac_def.items():
                     if (
-                        not data.stuck_loop
-                        and data.get_hvac_switch == entity_id
-                        # and self._is_valve_open(hvac_mode=hvac_mode)
+                        data.get_hvac_switch == entity_id
+                        and not data.stuck_loop
+                        and self._is_valve_open(hvac_mode=hvac_mode)
                     ):
                         self._logger.warning(
                             "No switches should be activated in hvac 'off' mode: restore switch '%s' from  %s to 'idle' state",
@@ -1116,23 +1119,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                             new_state.state,
                         )
                         self.hass.create_task(
-                            self._async_switch_idle(hvac_mode=hvac_mode)
+                            # self._async_switch_idle(hvac_mode=hvac_mode)
+                            self._async_switch_turn_off(hvac_mode=hvac_mode)
                         )
-
-            elif self._hvac_on:
-                if entity_id != self._hvac_on.get_hvac_switch and self._is_valve_open():
-                    self._logger.warning(
-                        "valve of %s is open. Other hvac mode switch changed '%s' changed to %s, keep in idle state",
-                        self._hvac_mode,
-                        entity_id,
-                        new_state.state,
-                    )
-                    for hvac_mode, data in self._hvac_def.items():
-                        if data.get_hvac_switch == entity_id:
-                            self.hass.create_task(
-                                self._async_switch_idle(hvac_mode=hvac_mode)
-                            )
-                            break
 
         # if new_state is None:
         #     return
