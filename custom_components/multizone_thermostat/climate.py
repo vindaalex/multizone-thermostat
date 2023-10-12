@@ -1058,7 +1058,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.hass.create_task(self._async_controller(force=True))
 
         # if master mode is active: do not call operate but let pwm cycle handle it
-        self.schedule_update_ha_state(force_refresh=False)
+        # self.schedule_update_ha_state(force_refresh=False)
         # self.async_write_ha_state()
 
     @callback
@@ -1127,7 +1127,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # if new_state is None:
         #     return
-        self.schedule_update_ha_state(force_refresh=False)
+        # self.schedule_update_ha_state(force_refresh=False)
         # self.async_write_ha_state()  # this catches al switch changes
 
     async def _async_update_current_temp(self, current_temp=None):
