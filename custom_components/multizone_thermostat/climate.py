@@ -364,7 +364,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 or old_hvac_mode not in self.hvac_modes
                 or ATTR_HVAC_DEFINITION not in old_state.attributes
             ):
-                raise ValueError("Invalid old state, init in default off mode")
+                raise ValueError(
+                    f"Invalid old hvac def '{ATTR_HVAC_DEFINITION},start in off mode"
+                )
 
             self._logger.info("restore old controller settings")
             self._hvac_mode_init = old_hvac_mode
