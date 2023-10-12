@@ -1653,7 +1653,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 context=self._context,
             )
 
-            self._hvac_def[hvac_mode].stuck_loop = False
+            _hvac_on.stuck_loop = False
 
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id):
         """toggle the state of a switch temporarily and hereafter set it to 0 or 1"""
