@@ -1655,30 +1655,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             self._hvac_def[hvac_mode].stuck_loop = False
 
-    async def _async_switch_idle(self, hvac_mode):
-        """Bring switch to idle state"""
-        self._logger.debug("Bring switch to default state")
-
-        _hvac_on = self._hvac_def[hvac_mode]
-        entity_id = _hvac_on.get_hvac_switch
-
-        if _hvac_on.is_hvac_switch_on_off:
-            data = {ATTR_ENTITY_ID: entity_id}
-            operation = SERVICE_TURN_OFF
-            await self.hass.services.async_call(
-                HA_DOMAIN, operation, data, context=self._context
-            )
-        else:
-            control_val = 0
-            data = {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: control_val}
-            method = entity_id.split(".")[0]
-            await self.hass.services.async_call(
-                method,
-                SERVICE_SET_VALUE,
-                data,
-                context=self._context,
-            )
-
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id):
         """toggle the state of a switch temporarily and hereafter set it to 0 or 1"""
         DURATION = 30
