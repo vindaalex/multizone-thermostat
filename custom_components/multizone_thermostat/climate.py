@@ -1681,46 +1681,30 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id):
         """toggle the state of a switch temporarily and hereafter set it to 0 or 1"""
-        DURATION = 60
+        DURATION = 30
         if self._hvac_on is None or (
-            self._hvac_on and self._is_valve_open() is not True
+            self._hvac_on
+            and not self._is_valve_open()  # current hvacmode switch is closed
         ):
             self._hvac_def[hvac_mode].stuck_loop = True
-            if self._is_valve_open(hvac_mode=hvac_mode):
-                self._logger.info(
-                    "switch '%s' toggle state temporarily to OFF for %s sec"
-                    % (entity_id, DURATION)
-                )
-                await self._async_switch_turn_off(hvac_mode=hvac_mode)
-                # await asyncio.sleep(DURATION)
 
-                # await self._async_switch_turn_on(
-                #     hvac_mode=hvac_mode, control_val=self._hvac_def[hvac_mode].pwm_scale
-                # )
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_turn_switch_on_factory(hvac_mode=hvac_mode),
-                    datetime.datetime.fromtimestamp(time.time() + DURATION),
-                )
+            self._logger.info(
+                "switch '%s' toggle state temporarily to ON for %s sec"
+                % (entity_id, DURATION)
+            )
+            if self._hvac_def[hvac_mode].get_hvac_switch_mode == NC_SWITCH_MODE:
+                control_val = 0
             else:
-                self._logger.info(
-                    "switch '%s' toggle state temporarily to ON for %s sec"
-                    % (entity_id, DURATION)
-                )
-                if self._hvac_def[hvac_mode].get_hvac_switch_mode == NC_SWITCH_MODE:
-                    control_val = 0
-                else:
-                    control_val = self._hvac_def[hvac_mode].pwm_scale
+                control_val = self._hvac_def[hvac_mode].pwm_scale
 
-                await self._async_switch_turn_on(
-                    hvac_mode=hvac_mode, control_val=control_val
-                )
-                # BUG: timedelta
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_turn_switch_off_factory(hvac_mode=hvac_mode),
-                    datetime.datetime.fromtimestamp(time.time() + DURATION),
-                )
+            await self._async_switch_turn_on(
+                hvac_mode=hvac_mode, control_val=control_val
+            )
+            async_track_point_in_utc_time(
+                self.hass,
+                self.async_turn_switch_off_factory(hvac_mode=hvac_mode),
+                datetime.datetime.fromtimestamp(time.time() + DURATION),
+            )
 
     @callback
     def _async_activate_emergency_stop(self, source, sensor):
