@@ -1385,77 +1385,71 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             or self.preset_mode == PRESET_EMERGENCY
         ):
             self._async_cancel_pwm_routines()
-            self.hass.async_create_task(self._async_switch_turn_off())
-            return
-
-        if self._hvac_on.get_pwm_time:
-            pwm_duration = self._hvac_on.get_pwm_time.seconds
+            await self._async_switch_turn_off()
         else:
-            pwm_duration = None
+            if self._hvac_on.get_pwm_time:
+                pwm_duration = self._hvac_on.get_pwm_time.seconds
+            else:
+                pwm_duration = None
 
-        if self._hvac_on.is_hvac_on_off_mode:
-            if (
-                self._is_valve_open()
-                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] <= 0
-            ):
-                await self._async_switch_turn_off()
-            elif (
-                not self._is_valve_open()
-                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] > 0
-            ):
-                await self._async_switch_turn_on()
+            if self._hvac_on.is_hvac_on_off_mode:
+                if self.control_output[ATTR_CONTROL_PWM_OUTPUT] <= 0:
+                    await self._async_switch_turn_off()
+                else:
+                    await self._async_switch_turn_on()
 
-        elif pwm_duration:
-            now = time.time()
-            self.update_pwm_time()
+            elif pwm_duration:
+                now = time.time()
+                self.update_pwm_time()
 
-            pwm_scale = self._hvac_on.pwm_scale
-            scale_factor = pwm_duration / pwm_scale
-            start_time = (
-                self._pwm_start_time
-                + self.control_output[ATTR_CONTROL_OFFSET] * scale_factor
-            )
-            end_time = (
-                self._pwm_start_time
-                + min(sum(self.control_output.values()), self._hvac_on.pwm_scale)
-                * scale_factor
-            )
+                pwm_scale = self._hvac_on.pwm_scale
+                scale_factor = pwm_duration / pwm_scale
+                start_time = (
+                    self._pwm_start_time
+                    + self.control_output[ATTR_CONTROL_OFFSET] * scale_factor
+                )
+                end_time = (
+                    self._pwm_start_time
+                    + min(sum(self.control_output.values()), self._hvac_on.pwm_scale)
+                    * scale_factor
+                )
 
-            # stop current schedules
-            if self._start_pwm is not None:
-                await self._async_start_pwm()
-            if self._stop_pwm is not None:
-                await self._async_stop_pwm()
+                # stop current schedules
+                if self._start_pwm is not None:
+                    await self._async_start_pwm()
+                if self._stop_pwm is not None:
+                    await self._async_stop_pwm()
 
-            valve_open = self._is_valve_open()
-            # check if current switch state is matching
-            if self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale:
-                self.hass.async_create_task(self._async_switch_turn_on())
-            elif (start_time >= now or end_time <= now) and valve_open:
-                self.hass.async_create_task(self._async_switch_turn_off())
-            elif (start_time <= now < end_time) and not valve_open:
-                self.hass.async_create_task(self._async_switch_turn_on())
+                # check if current switch state is matching
+                if self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale:
+                    await self._async_switch_turn_on()
+                elif start_time >= now or end_time <= now:
+                    await self._async_switch_turn_off()
+                elif start_time <= now < end_time:
+                    await self._async_switch_turn_on()
 
-            # schedule new switch changes
-            if start_time > now:
-                self.hass.async_create_task(self._async_start_pwm(start_time))
-            if (
-                end_time > now
-                and self.control_output[ATTR_CONTROL_PWM_OUTPUT] != pwm_scale
-            ):
-                self.hass.async_create_task(self._async_stop_pwm(end_time))
+                # schedule new switch changes
+                if start_time > now:
+                    await self._async_start_pwm(start_time)
+                if (
+                    end_time > now
+                    and self.control_output[ATTR_CONTROL_PWM_OUTPUT] != pwm_scale
+                ):
+                    await self._async_stop_pwm(end_time)
 
-        else:
-            # proportional valve
-            if (
-                self._hvac_on.pwm_threshold
-                > self.control_output[ATTR_CONTROL_PWM_OUTPUT]
-                and self.switch_position > 0
-            ):
-                self.hass.async_create_task(self._async_switch_turn_off())
-            elif self.switch_position != self.control_output[ATTR_CONTROL_PWM_OUTPUT]:
-                self.hass.async_create_task(self._async_switch_turn_on())
-        self.async_write_ha_state()
+            else:
+                # proportional valve
+                if (
+                    self._hvac_on.pwm_threshold
+                    > self.control_output[ATTR_CONTROL_PWM_OUTPUT]
+                    and self.switch_position > 0
+                ):
+                    await self._async_switch_turn_off()
+                elif (
+                    self.switch_position != self.control_output[ATTR_CONTROL_PWM_OUTPUT]
+                ):
+                    await self._async_switch_turn_on()
+        # self.async_write_ha_state()
 
     @callback
     def _async_cancel_pwm_routines(self):
