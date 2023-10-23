@@ -8,7 +8,6 @@ Incl support for:
     - valve position: PID
 For more details about this platform, please read to the README
 """
-# TODO: async_write_ha_state, async_schedule_update_ha_state, async_write_ha_state
 from __future__ import annotations
 
 import asyncio
@@ -72,6 +71,7 @@ from .platform_schema import PLATFORM_SCHEMA
 ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_JAMMED, STATE_PROBLEM]
 NOT_SUPPORTED_SWITCH_STATES = [STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING]
 HVAC_ACTIVE = [HVACMode.HEAT, HVACMode.COOL]
+
 
 async def async_setup_platform(
     hass: HomeAssistant,
@@ -226,7 +226,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
 
         self._logger = logging.getLogger(DOMAIN).getChild(name)
-        self._logger.info("initialise")
 
         if unique_id is not None:
             self._attr_unique_id = unique_id
@@ -237,7 +236,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Run when entity about to be added.
         Attach the listeners.
         """
-        self._logger.info("init thermostat")
+        self._logger.info("Add thermostat to hass")
         await super().async_added_to_hass()
 
         # Add listeners to track changes from the temp sensor
@@ -295,6 +294,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         async def _async_startup(*_):
             """Init on startup."""
+            self._logger.debug("Run start-up")
             save_state = False
             if self._sensor_entity_id:
                 sensor_state = self.hass.states.get(self._sensor_entity_id)
@@ -308,6 +308,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 sensor_state = self.hass.states.get(self._sensor_out_entity_id)
             else:
                 sensor_state = None
+
             if sensor_state and sensor_state.state not in ERROR_STATE:
                 self._async_update_outdoor_temperature(sensor_state.state)
                 save_state = True
@@ -764,6 +765,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def async_routine_controller_factory(self, interval=None):
         """Generate turn on callbacks as factory."""
 
+        # TODO: factory needed?
         async def async_run_routine(now):
             """run controller with interval."""
             self._async_routine_controller(interval=interval)
@@ -851,7 +853,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         Only call emergency stop due to stale sensor, ignore invalid values
         """
         new_state = event.data.get("new_state")
-        self._logger.debug("Sensor temperature updated to '%s'", new_state.state)
+        self._logger.debug("New sensor temperature '%s'", new_state.state)
 
         if new_state is None or new_state.state in ERROR_STATE:
             self._logger.warning(
@@ -892,9 +894,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         Only call emergency stop due to stale sensor, ignore invalid values
         """
         new_state = event.data.get("new_state")
-        self._logger.debug(
-            "Sensor outdoor temperature updated to '%s'", new_state.state
-        )
+        self._logger.debug("New sensor outdoor temperature '%s'", new_state.state)
         if new_state is None or new_state.state in ERROR_STATE:
             self._logger.debug(
                 "Outdoor sensor temperature {} invalid {}, skip current state".format(
@@ -1034,6 +1034,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
         if update_required:
+            self._logger.debug(
+                "Significant update from satelite: '%s' rerun controller",
+                new_state.name,
+            )
             self.hass.async_create_task(self._async_controller(force=True))
 
         # if master mode is active: do not call operate but let pwm cycle handle it
@@ -1110,7 +1114,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def _async_update_current_temp(self, current_temp=None):
         """Update thermostat, optionally with latest state from sensor."""
         if current_temp:
-            self._logger.debug("Current temperature updated to '%s'", current_temp)
+            self._logger.debug("Room temperature updated to '%s'", current_temp)
             # store local in case current hvac mode is off
             self._current_temperature = float(current_temp)
 
@@ -1140,15 +1144,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _async_update_outdoor_temperature(self, current_temp=None):
         """Update thermostat with latest state from outdoor sensor."""
         if current_temp:
-            self._logger.debug(
-                "Current outdoor temperature updated to '%s'", current_temp
-            )
+            self._logger.debug("Outdoor temperature updated to '%s'", current_temp)
             self._outdoor_temperature = float(current_temp)
             if self._hvac_on:
                 self._hvac_on.outdoor_temperature = self._outdoor_temperature
 
     async def _async_update_controller_temp(self):
         """Update temperature to controller routines."""
+        # TODO: async needed?
         if self._hvac_on:
             if not self._kf_temp:
                 self._hvac_on.current_temperature = self._current_temperature
@@ -1254,6 +1257,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def async_run_controller_factory(self, force=False):
         """Generate controller callbacks as factory."""
 
+        # TODO: factory needed?
         async def async_run_controller(now):
             """Run controller."""
             await self._async_controller(force=force)
@@ -1479,6 +1483,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def async_turn_switch_on_factory(self, hvac_mode=None, control_val=None):
         """Generate turn on callbacks as factory."""
 
+        # TODO: factory needed?
         async def async_turn_on_switch(now):
             """Turn on specific switch."""
             await self._async_switch_turn_on(

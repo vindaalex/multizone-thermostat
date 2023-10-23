@@ -25,7 +25,7 @@ class HVACSetting:
         # self._logger = logging.getLogger(log_id).getChild(hvac_mode)
         self._name = name + "." + hvac_mode
         self._logger = logging.getLogger(DOMAIN).getChild(self._name)
-        self._logger.info("Config hvac settings for hvac_mode : '%s'", hvac_mode)
+        self._logger.debug("Init config for hvac_mode: '%s'", hvac_mode)
 
         self._hvac_mode = hvac_mode
         self._preset_mode = PRESET_NONE
@@ -79,25 +79,24 @@ class HVACSetting:
     def init_mode(self):
         """init the defined control modes"""
         if self.is_hvac_on_off_mode:
-            self._logger.debug("HVAC mode 'on_off' active")
+            self._logger.debug("Setup control mode 'on_off'")
             self._pwm_threshold = 50
             self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_proportional_mode:
-            self._logger.debug("HVAC mode 'proportional' active")
+            self._logger.debug("Setup control mode 'proportional'")
             self._pwm_threshold = self._proportional[CONF_PWM_THRESHOLD]
             if self.is_prop_pid_mode:
-                self._logger.debug("HVAC mode 'pid' active")
                 self.start_pid()
                 self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
             if self.is_wc_mode:
-                self._logger.debug("HVAC mode 'weather control' active")
+                self._logger.debug("Init 'weather control' settings")
                 self._wc[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_master_mode:
-            self._logger.debug("HVAC mode 'master' active")
+            self._logger.debug("Setup control mode 'master'")
             self._pwm_threshold = self._master[CONF_PWM_THRESHOLD]
             self.start_master()
             if self.is_valve_mode:
-                self._logger.debug("HVAC mode 'valve control' active")
+                self._logger.debug("setup 'valve control' controller")
                 self.start_pid()
                 self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
 
@@ -167,7 +166,7 @@ class HVACSetting:
 
     def start_pid(self):
         """Init the PID controller"""
-        self._logger.debug("Init pid settings for mode : '%s'", self._hvac_mode)
+        self._logger.debug("Init pid settings")
         self._pid.PID = {}
 
         if self.is_hvac_proportional_mode:
