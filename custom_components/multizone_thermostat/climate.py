@@ -1266,7 +1266,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # now is passed by to the callback the async_track_time_interval function , and is set to "now"
             routine = now is not None  # boolean
 
+            self._logger.debug(
+                "Controller: calculate output, routine=%s; forced=%s", routine, force
+            )
+
             if self.preset_mode == PRESET_EMERGENCY:
+                self._logger.debug("Controller cancelled due to 'emergency mode'")
                 return
 
             if not self._hvac_on:
@@ -1290,9 +1295,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     self._logger.warning(
                         "cancel control loop: current temp is None while running controller routine."
                     )
-                    # self._async_activate_emergency_stop(
-                    #     "controller", sensor=self._sensor_entity_id
-                    # )
                     return
 
             if self._hvac_on.is_wc_mode:
@@ -1305,9 +1307,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._hvac_on.outdoor_temperature,
                         self._hvac_on.target_temperature,
                     )
-                    # self._async_activate_emergency_stop(
-                    #     "controller", sensor=self._sensor_out_entity_id
-                    # )
                     return
 
             # for mode on_off
@@ -1315,9 +1314,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 if not await self._async_check_duration(routine, force):
                     return
 
-            self._logger.debug(
-                "Controller: calculate output, routine=%s; forced=%s", routine, force
-            )
             if self._hvac_on.get_pwm_time.seconds:
                 offset = (
                     time.time() - self._pwm_start_time
