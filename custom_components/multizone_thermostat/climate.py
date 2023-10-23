@@ -877,11 +877,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         elif self.preset_mode == PRESET_EMERGENCY:
             self._async_restore_emergency_stop(self._sensor_entity_id)
 
-        self.hass.create_task(self._async_update_current_temp(new_state.state))
+        self.hass.async_create_task(self._async_update_current_temp(new_state.state))
 
         # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
         if self._hvac_on is not None and self._hvac_on.is_hvac_on_off_mode:
-            self.hass.create_task(self._async_controller())
+            self.hass.async_create_task(self._async_controller())
 
         # self.async_write_ha_state()
 
@@ -999,7 +999,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         - sensor_state.last_updated,
                     )
                 )
-                self.hass.create_task(self._async_toggle_switch(hvac_mode, data[0]))
+                self.hass.async_create_task(
+                    self._async_toggle_switch(hvac_mode, data[0])
+                )
 
     @callback
     def _async_satelite_change(self, event):
@@ -1032,7 +1034,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
         if update_required:
-            self.hass.create_task(self._async_controller(force=True))
+            self.hass.async_create_task(self._async_controller(force=True))
 
         # if master mode is active: do not call operate but let pwm cycle handle it
         self.schedule_update_ha_state(force_refresh=False)
@@ -1078,7 +1080,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     )
                     other_mode = [HVACMode.HEAT, HVACMode.COOL]
                     other_mode.remove(self._hvac_mode)
-                    self.hass.create_task(
+                    self.hass.async_create_task(
                         # self._async_switch_idle(hvac_mode=hvac_mode)
                         self._async_switch_turn_off(hvac_mode=other_mode)
                     )
@@ -1097,7 +1099,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                             entity_id,
                             new_state.state,
                         )
-                        self.hass.create_task(
+                        self.hass.async_create_task(
                             # self._async_switch_idle(hvac_mode=hvac_mode)
                             self._async_switch_turn_off(hvac_mode=hvac_mode)
                         )
@@ -1171,7 +1173,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     sat_id = self._hvac_on.get_satelites.index(satelite) + 1
                 else:
                     sat_id = 0
-                self.hass.create_task(
+                self.hass.async_create_task(
                     self._async_send_satelite_data(
                         satelite,
                         offset,
@@ -1433,9 +1435,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _async_cancel_pwm_routines(self):
         """cancel scheduled switch routines"""
         if self._async_start_pwm is not None:
-            self.hass.create_task(self._async_start_pwm())
+            self.hass.async_create_task(self._async_start_pwm())
         if self._async_stop_pwm is not None:
-            self.hass.create_task(self._async_stop_pwm())
+            self.hass.async_create_task(self._async_stop_pwm())
 
     async def _async_start_pwm(self, start_time=None):
         """
@@ -1679,7 +1681,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if not self._emergency_stop and self.preset_mode == PRESET_EMERGENCY:
                 self._logger.info("Recover from emergency mode")
-                self.hass.create_task(self.async_set_preset_mode(PRESET_RESTORE))
+                self.hass.async_create_task(self.async_set_preset_mode(PRESET_RESTORE))
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
