@@ -636,7 +636,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode != HVACMode.OFF:
             await self._async_controller(force=True)
 
-        # self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Main routine to set hvac mode."""
@@ -791,6 +791,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.hass, self._async_controller, interval
             )
             self.async_on_remove(self._loop_controller)
+            # mod
+            self.hass.async_create_task(self._async_controller(force=True))
 
     @callback
     def async_routine_pwm_factory(self, interval=None):
@@ -827,8 +829,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self.hass, self._async_controller_pwm, interval
             )
             self.async_on_remove(self._loop_pwm)
-            if self._self_controlled == OperationMode.SELF:
-                self.hass.create_task(self._async_controller_pwm(force=True))
 
     async def _async_routine_track_satelites(self, entity_list=None):
         """get changes from satelite thermostats"""
@@ -1035,7 +1035,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.hass.create_task(self._async_controller(force=True))
 
         # if master mode is active: do not call operate but let pwm cycle handle it
-        # self.schedule_update_ha_state(force_refresh=False)
+        self.schedule_update_ha_state(force_refresh=False)
         # self.async_write_ha_state()
 
     @callback
@@ -1104,7 +1104,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # if new_state is None:
         #     return
-        # self.schedule_update_ha_state(force_refresh=False)
+        self.schedule_update_ha_state(force_refresh=False)
         # self.async_write_ha_state()  # this catches al switch changes
 
     async def _async_update_current_temp(self, current_temp=None):
@@ -1347,10 +1347,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.debug(
                     "Running pwm controller from control loop with 'force=%s'", force
                 )
-                self.hass.async_create_task(self._async_controller_pwm(force=force))
-                # await self._async_controller_pwm(force=force)
-            else:
-                self.async_write_ha_state()
+                await self._async_controller_pwm(force=force)
+            # else:
+            self.async_write_ha_state()
 
     async def _async_controller_pwm(self, now=None, force=False):
         """convert control output to pwm signal"""
@@ -1714,14 +1713,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._preset_mode = PRESET_NONE
 
         if self._hvac_on and self.is_master:
-            self.hass.async_create_task(self._async_set_satelite_preset(preset_mode))
-
+            await self._async_set_satelite_preset(preset_mode)
         elif (
             self._hvac_on
             and self.preset_mode != PRESET_EMERGENCY
             and self._self_controlled == OperationMode.SELF
         ):
-            self.hass.async_create_task(self._async_controller(force=True))
+            await self._async_controller(force=True)
 
         self.async_write_ha_state()
 
