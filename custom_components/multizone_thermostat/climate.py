@@ -343,17 +343,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.debug("Old state stored : '%s'", old_state)
 
         try:
-            if old_state is None:
-                self._hvac_mode_init = HVACMode.OFF
-                raise ValueError("No old state, init in default off mode")
-
-            old_preset_mode = old_state.attributes.get(ATTR_PRESET_MODE)
-            if old_preset_mode is None:
-                old_preset_mode = "none"
             old_hvac_mode = old_state.state
+            old_preset_mode = old_state.attributes.get(ATTR_PRESET_MODE, PRESET_NONE)
             old_temperature = old_state.attributes.get(ATTR_TEMPERATURE)
             self._logger.debug(
-                "Old state preset mode %s, hvac mode %s, temperature '%s'",
+                "Old state preset mode %s, hvac mode %s, temperature set point '%s'",
                 old_preset_mode,
                 old_hvac_mode,
                 old_temperature,
@@ -361,21 +355,27 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             if (
                 old_hvac_mode is None
-                or old_preset_mode not in self.preset_modes
                 or old_hvac_mode not in self.hvac_modes
+                or old_preset_mode not in self.preset_modes
                 or ATTR_HVAC_DEFINITION not in old_state.attributes
             ):
                 raise ValueError(
-                    f"Invalid old hvac def '{ATTR_HVAC_DEFINITION},start in off mode"
+                    f"Invalid old hvac def '{old_hvac_mode}', start in off mode"
                 )
 
             self._logger.info("restore old controller settings")
             self._hvac_mode_init = old_hvac_mode
             self._preset_mode = old_preset_mode
+
+            # no more data needed for master
+            if self.is_master:
+                return
+
             self._self_controlled = old_state.attributes.get(
                 ATTR_SELF_CONTROLLED, OperationMode.SELF
             )
             if self._self_controlled == OperationMode.MASTER:
+                self._logger.info("change state to pending master update")
                 self._self_controlled = OperationMode.PENDING
 
             if self._hvac_mode_init != HVACMode.OFF:
