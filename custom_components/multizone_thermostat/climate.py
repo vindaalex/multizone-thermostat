@@ -517,9 +517,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, control_mode, offset=None, sat_id=0, pwm_start_time=0
     ):
         """
-        to control satelite routines called from master
+        originates from master
+        to control satelite routines
         control_mode 'no_change' to only update offset
         """
+        # mod controller update
         self._logger.info(
             "sat update received for mode:'%s'; offset:'%s'", control_mode, offset
         )
@@ -529,95 +531,74 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._pwm_start_time = pwm_start_time
             return
 
-        if self._hvac_on is not None:
-            hvac_ref = self._hvac_on
-        else:
-            # if current mode is off , change old state
-            hvac_ref = self._hvac_def[self._old_mode]
+        # if current mode is off: return
+        if self._hvac_on is None:
+            return
+
+        if not self._hvac_on.is_hvac_proportional_mode:
+            self._logger.warning("sat update for non-proportional thermostat")
+            return
 
         # update offset
         if offset is not None:
-            hvac_ref.time_offset = offset
-            self.control_output[ATTR_CONTROL_OFFSET] = offset
+            if self.control_output[ATTR_CONTROL_OFFSET] != offset:
+                self._hvac_on.time_offset = offset
+                self.control_output[ATTR_CONTROL_OFFSET] = offset
+                self.hass.async_create_task(self._async_controller_pwm(force=True))
         else:
-            hvac_ref.time_offset = 0
+            self._hvac_on.time_offset = 0
             self.control_output[ATTR_CONTROL_OFFSET] = 0
 
-        if control_mode == OperationMode.NO_CHANGE:
-            # pass
-            self._logger.debug("sat update: run controller")
-            self.hass.create_task(self._async_controller_pwm())
-        else:
-            # only when valve is pwm mode not proportional
-            if (
-                hvac_ref.is_hvac_proportional_mode
-            ):  # and hvac_ref.is_hvac_switch_on_off:
-                if (
-                    control_mode == OperationMode.SELF
-                    and self._self_controlled != OperationMode.SELF
-                ):
-                    self._self_controlled = OperationMode.SELF
-                    self._sat_id = 0
+        if (
+            control_mode == OperationMode.SELF
+            and self._self_controlled != OperationMode.SELF
+        ):
+            self._self_controlled = OperationMode.SELF
+            self._sat_id = 0
+        # activate satelite mode
+        elif control_mode == OperationMode.MASTER:
+            if self._self_controlled in [
+                OperationMode.PENDING,
+                OperationMode.SELF,
+            ]:
+                # new hvac mode thus all switches off
+                self._pwm_start_time = pwm_start_time
+                self._sat_id = sat_id
+                self._self_controlled = OperationMode.MASTER
 
-                elif control_mode == OperationMode.MASTER:
-                    if self._self_controlled in [
-                        OperationMode.PENDING,
-                        OperationMode.SELF,
-                    ]:
-                        # new hvac mode thus all switches off
-                        self._pwm_start_time = pwm_start_time
-                        self._sat_id = sat_id
-                        self._self_controlled = OperationMode.MASTER
+                # stop controller/pwm routines
+                if self._loop_controller:
+                    self._logger.debug("sat update: stopping controller routine")
+                    self._async_routine_controller()
+                if self._loop_pwm:
+                    self._logger.debug("sat update: stopping pwm routine")
+                    self._async_routine_pwm()
 
-                        if self._hvac_on is not None:
-                            # stop keep_live
-                            self._logger.debug(
-                                "sat update: stopping controller routine"
-                            )
-                            if self._loop_controller:
-                                self._async_routine_controller()
-                            if self._loop_pwm:
-                                self._logger.debug("sat update: stopping pwm routine")
-                                self._async_routine_pwm()
+                # cancel scheduled switch routines
+                self._async_cancel_pwm_routines()
+                # if self._hvac_on.is_hvac_switch_on_off:
+                #     self.hass.async_create_task(self._async_switch_turn_off())
 
-                            # cancel scheduled switch routines
-                            self._async_cancel_pwm_routines()
+                # schedule controller loop in sync with master
+                async_track_point_in_utc_time(
+                    self.hass,
+                    self.async_routine_controller_factory(
+                        self._hvac_on.get_operate_cycle_time
+                    ),
+                    datetime.datetime.fromtimestamp(
+                        self._pwm_start_time
+                        - sat_id * SAT_CONTROL_LEAD
+                        - MASTER_CONTROL_LEAD
+                    ),
+                )
 
-                            for key, _ in self._hvac_def.items():
-                                self.hass.create_task(
-                                    self._async_switch_turn_off(hvac_mode=key)
-                                )
+                # run pwm just after controller
+                async_track_point_in_utc_time(
+                    self.hass,
+                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
+                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
+                )
 
-                            async_track_point_in_utc_time(
-                                self.hass,
-                                self.async_routine_controller_factory(
-                                    self._hvac_on.get_operate_cycle_time
-                                ),
-                                datetime.datetime.fromtimestamp(
-                                    self._pwm_start_time
-                                    - sat_id * SAT_CONTROL_LEAD
-                                    - MASTER_CONTROL_LEAD
-                                ),
-                            )
-
-                            # run pwm just after controller
-                            async_track_point_in_utc_time(
-                                self.hass,
-                                self.async_routine_pwm_factory(
-                                    self._hvac_on.get_pwm_time
-                                ),
-                                datetime.datetime.fromtimestamp(
-                                    self._pwm_start_time + PWM_LAG
-                                ),
-                            )
-                            # await self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
-
-                else:
-                    self._logger.warning(
-                        "changing satelite opertion mode should not come here: c.mode=%s; self controlled=%s",
-                        control_mode,
-                        self._self_controlled,
-                    )
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
