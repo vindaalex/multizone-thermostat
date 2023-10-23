@@ -1052,12 +1052,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         )
         # catch multipe options
         if new_state.state in ERROR_STATE:
-            # MOD self.hass.create_task(
             self._async_activate_emergency_stop(
                 "switch to error state change", sensor=entity_id
             )
         elif new_state.state in NOT_SUPPORTED_SWITCH_STATES:
-            # MOD
             self._async_activate_emergency_stop(
                 "not supported switch state {}".format(new_state.state),
                 sensor=entity_id,
