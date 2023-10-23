@@ -56,7 +56,6 @@ class PIDController(object):
         self.p_var = 0
         self.i_var = 0
         self.d_var = 0
-        self._logger.debug("_sampletime: %.2f", sampletime)
         self._sampletime = sampletime
         self._out_min = out_min
         self._out_max = out_max

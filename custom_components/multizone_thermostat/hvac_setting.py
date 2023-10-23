@@ -7,6 +7,7 @@ import numpy as np
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
     PRESET_AWAY,
     PRESET_NONE,
     HVACMode,
@@ -14,52 +15,7 @@ from homeassistant.components.climate import (
 from homeassistant.const import ATTR_TEMPERATURE, CONF_ENTITY_ID
 
 from . import DOMAIN, pid_controller, pwm_nesting
-from .const import (  # HVACMode.COOL,; HVACMode.HEAT,; on_off thermostat; proportional mode; CONF_VALVE_DELAY,; PID controller; weather compensating mode; Master mode; valve_control_mode
-    ATTR_CONTROL_MODE,
-    ATTR_CONTROL_OFFSET,
-    ATTR_DETAILED_OUTPUT,
-    ATTR_HVAC_DEFINITION,
-    ATTR_SAT_ALLOWED,
-    ATTR_SELF_CONTROLLED,
-    CONF_AREA,
-    CONF_TARGET_TEMP_AWAY,
-    CONF_CONTROL_REFRESH_INTERVAL,
-    ATTR_GOAL,
-    CONF_TARGET_TEMP_INIT,
-    CONF_TARGET_TEMP_MAX,
-    CONF_TARGET_TEMP_MIN,
-    CONF_HYSTERESIS_TOLERANCE_OFF,
-    CONF_HYSTERESIS_TOLERANCE_ON,
-    ATTR_KA,
-    ATTR_KB,
-    ATTR_KD,
-    ATTR_KI,
-    ATTR_KP,
-    CONF_MASTER_MODE,
-    CONF_PWM_SCALE_HIGH,
-    CONF_MIN_CYCLE_DURATION,
-    CONF_PWM_THRESHOLD,
-    CONF_CONTINUOUS_LOWER_LOAD,
-    CONF_PWM_SCALE_LOW,
-    CONF_ON_OFF_MODE,
-    CONF_MASTER_OPERATION_MODE,
-    CONF_PASSIVE_SWITCH_DURATION,
-    CONF_PID_MODE,
-    CONF_PROPORTIONAL_MODE,
-    CONF_PWM_DURATION,
-    CONF_PWM_RESOLUTION,
-    CONF_PWM_SCALE,
-    CONF_SATELITES,
-    CONF_SENSOR_OUT,
-    CONF_SWITCH_MODE,
-    CONF_VALVE_MODE,
-    CONF_WC_MODE,
-    CONF_WINDOW_OPEN_TEMPDROP,
-    ATTR_CONTROL_OUTPUT,
-    ATTR_CONTROL_PWM_OUTPUT,
-    PID_CONTROLLER,
-    PWM_UPDATE_CHANGE,
-)
+from .const import *
 
 
 class HVACSetting:
@@ -69,10 +25,11 @@ class HVACSetting:
         # self._logger = logging.getLogger(log_id).getChild(hvac_mode)
         self._name = name + "." + hvac_mode
         self._logger = logging.getLogger(DOMAIN).getChild(self._name)
-        self._logger.info("Config hvac settings for hvac_mode : '%s'", hvac_mode)
+        self._logger.debug("Init config for hvac_mode: '%s'", hvac_mode)
 
         self._hvac_mode = hvac_mode
         self._preset_mode = PRESET_NONE
+        self._old_preset = None
         self._hvac_settings = conf
         self._switch_entity = self._hvac_settings[CONF_ENTITY_ID]
         self.area = area
@@ -122,25 +79,24 @@ class HVACSetting:
     def init_mode(self):
         """init the defined control modes"""
         if self.is_hvac_on_off_mode:
-            self._logger.debug("HVAC mode 'on_off' active")
+            self._logger.debug("Setup control mode 'on_off'")
             self._pwm_threshold = 50
             self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_proportional_mode:
-            self._logger.debug("HVAC mode 'proportional' active")
+            self._logger.debug("Setup control mode 'proportional'")
             self._pwm_threshold = self._proportional[CONF_PWM_THRESHOLD]
             if self.is_prop_pid_mode:
-                self._logger.debug("HVAC mode 'pid' active")
                 self.start_pid()
                 self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
             if self.is_wc_mode:
-                self._logger.debug("HVAC mode 'weather control' active")
+                self._logger.debug("Init 'weather control' settings")
                 self._wc[ATTR_CONTROL_PWM_OUTPUT] = 0
         if self.is_hvac_master_mode:
-            self._logger.debug("HVAC mode 'master' active")
+            self._logger.debug("Setup control mode 'master'")
             self._pwm_threshold = self._master[CONF_PWM_THRESHOLD]
             self.start_master()
             if self.is_valve_mode:
-                self._logger.debug("HVAC mode 'valve control' active")
+                self._logger.debug("setup 'valve control' controller")
                 self.start_pid()
                 self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
 
@@ -210,7 +166,7 @@ class HVACSetting:
 
     def start_pid(self):
         """Init the PID controller"""
-        self._logger.debug("Init pid settings for mode : '%s'", self._hvac_mode)
+        self._logger.debug("Init pid settings")
         self._pid.PID = {}
 
         if self.is_hvac_proportional_mode:
@@ -469,7 +425,15 @@ class HVACSetting:
     @preset_mode.setter
     def preset_mode(self, mode):
         """set preset mode"""
-        if not self.is_hvac_master_mode:
+        if mode == PRESET_EMERGENCY:
+            self._old_preset = self.preset_mode
+        elif mode == PRESET_RESTORE:
+            mode = self._old_preset
+
+        if not self.is_hvac_master_mode and mode not in [
+            PRESET_EMERGENCY,
+            PRESET_RESTORE,
+        ]:
             if self._preset_mode == PRESET_NONE and mode == PRESET_AWAY:
                 self.restore_temperature = self.target_temperature
                 self.target_temperature = self.get_away_temp
@@ -741,6 +705,9 @@ class HVACSetting:
             control_mode = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
                 ATTR_CONTROL_MODE
             ]
+            preset_mode = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
+                ATTR_PRESET_MODE
+            ]
             pwm_time = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
                 CONF_PWM_DURATION
             ]
@@ -752,18 +719,21 @@ class HVACSetting:
                 state.state
             ][ATTR_CONTROL_OUTPUT].values()
 
+            if preset_mode == PRESET_EMERGENCY:
+                control_value = 0
+
             # check if controller update is needed
             if sat_name in self._satelites:
-                if self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT] == 0:
-                    pass
-                # if valve pos changed too much
-                elif (
+                if (
                     abs(
                         (
                             control_value
                             - self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
                         )
-                        / self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
+                        / max(
+                            self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT],
+                            control_value,
+                        )
                     )
                     > PWM_UPDATE_CHANGE
                 ):
@@ -771,12 +741,13 @@ class HVACSetting:
 
                 if setpoint != self._satelites[sat_name][ATTR_TEMPERATURE]:
                     update = True
-            else:
+            elif control_value > 0:
                 update = True
 
             self._satelites[sat_name] = {
                 ATTR_HVAC_MODE: state.state,
                 ATTR_SELF_CONTROLLED: self_controlled,
+                ATTR_EMERGENCY_MODE: preset_mode,
                 ATTR_CONTROL_MODE: control_mode,
                 CONF_PWM_DURATION: pwm_time,
                 CONF_PWM_SCALE: pwm_scale,
@@ -786,7 +757,7 @@ class HVACSetting:
                 ATTR_CONTROL_OFFSET: time_offset,
             }
 
-        else:
+        elif sat_name in self._satelites:
             self.nesting.remove_room(sat_name)
             self._satelites.pop(sat_name, None)
             update = True
@@ -898,6 +869,7 @@ class HVACSetting:
             current = self.current_state
             open_window = self.check_window_open(current[1])
         tmp_dict = {}
+        tmp_dict[ATTR_PRESET_MODE] = self.preset_mode
         tmp_dict[ATTR_TEMPERATURE] = self.target_temperature
         tmp_dict[ATTR_SAT_ALLOWED] = self.is_satelite_allowed
         tmp_dict[ATTR_CONTROL_MODE] = self.get_control_mode
