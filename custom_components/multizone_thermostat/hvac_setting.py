@@ -725,16 +725,16 @@ class HVACSetting:
 
             # check if controller update is needed
             if sat_name in self._satelites:
-                if self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT] == 0:
-                    pass
-                # if valve pos changed too much
-                elif (
+                if (
                     abs(
                         (
                             control_value
                             - self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
                         )
-                        / self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
+                        / max(
+                            self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT],
+                            control_value,
+                        )
                     )
                     > PWM_UPDATE_CHANGE
                 ):
@@ -742,7 +742,7 @@ class HVACSetting:
 
                 if setpoint != self._satelites[sat_name][ATTR_TEMPERATURE]:
                     update = True
-            else:
+            elif control_value > 0:
                 update = True
 
             self._satelites[sat_name] = {
@@ -758,7 +758,7 @@ class HVACSetting:
                 ATTR_CONTROL_OFFSET: time_offset,
             }
 
-        else:
+        elif sat_name in self._satelites:
             self.nesting.remove_room(sat_name)
             self._satelites.pop(sat_name, None)
             update = True
