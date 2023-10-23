@@ -1684,11 +1684,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
             )
             self._emergency_stop.append(sensor)
-            # cancel scheduled switch routines
-            self._async_cancel_pwm_routines()
-            self.hass.create_task(self._async_switch_turn_off())
             if self.preset_mode != PRESET_EMERGENCY:
-                self.hass.create_task(self.async_set_preset_mode(PRESET_EMERGENCY))
+                self.hass.async_create_task(
+                    self.async_set_preset_mode(PRESET_EMERGENCY)
+                )
+                # cancel scheduled switch routines
+                self.hass.async_create_task(self._async_controller_pwm)
         else:
             self._logger.debug("Emergency OFF recall send from {}".format(source))
 
