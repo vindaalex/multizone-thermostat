@@ -597,7 +597,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
                 )
 
-
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
@@ -740,15 +739,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # run controller before pwm loop
             # mod
-            if not self.is_master:
-                lead_time = 0  # self._sat_id * SAT_CONTROL_LEAD - MASTER_CONTROL_LEAD
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_routine_controller_factory(
-                        self._hvac_on.get_operate_cycle_time
-                    ),
-                    datetime.datetime.fromtimestamp(self._pwm_start_time - lead_time),
-                )
+            # if not self.is_master:
+            lead_time = 0  # self._sat_id * SAT_CONTROL_LEAD - MASTER_CONTROL_LEAD
+            async_track_point_in_utc_time(
+                self.hass,
+                self.async_routine_controller_factory(
+                    self._hvac_on.get_operate_cycle_time
+                ),
+                datetime.datetime.fromtimestamp(self._pwm_start_time - lead_time),
+            )
 
             # run pwm just after controller
             if self._hvac_on.get_pwm_time:
@@ -794,7 +793,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
             self.async_on_remove(self._loop_controller)
             # mod
-            self.hass.async_create_task(self._async_controller(force=True))
+            self.hass.async_create_task(self._async_controller())
 
     @callback
     def async_routine_pwm_factory(self, interval=None):
@@ -830,6 +829,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._loop_pwm = async_track_time_interval(
                 self.hass, self._async_controller_pwm, interval
             )
+            self.hass.async_create_task(self._async_controller_pwm())
             self.async_on_remove(self._loop_pwm)
 
     async def _async_routine_track_satelites(self, entity_list=None):
