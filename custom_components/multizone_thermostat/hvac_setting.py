@@ -755,6 +755,7 @@ class HVACSetting:
                 CONF_AREA: area,
                 ATTR_CONTROL_PWM_OUTPUT: control_value,
                 ATTR_CONTROL_OFFSET: time_offset,
+                ATTR_UPDATE_NEEDED: update,
             }
 
         elif sat_name in self._satelites:
@@ -779,9 +780,12 @@ class HVACSetting:
 
     def get_satelite_offset(self):
         """PWM offsets for satelites"""
+        self._logger.debug("get sat offsets")
         tmp_dict = {}
         for room, data in self._satelites.items():
-            tmp_dict[room] = data[ATTR_CONTROL_OFFSET]
+            if data[ATTR_UPDATE_NEEDED] == True:
+                data[ATTR_UPDATE_NEEDED] = False
+                tmp_dict[room] = data[ATTR_CONTROL_OFFSET]
         return tmp_dict
 
     def restore_satelites(self):
@@ -793,6 +797,8 @@ class HVACSetting:
         """Store offset per satelite"""
         for room, offset in new_offsets.items():
             if room in self._satelites:
+                # if self._satelites[room][ATTR_CONTROL_OFFSET] != offset or forced_update:
+                self._satelites[room][ATTR_UPDATE_NEEDED] = True
                 self._satelites[room][ATTR_CONTROL_OFFSET] = offset
 
     @property
