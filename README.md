@@ -65,6 +65,7 @@ recovery of settings
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. Specify 'True' to activate. (setpoints, KP,KI,PD values, modes). Default = False
 * restore_parameters (Optional): specify if previous controller parameters need to be restored. Specify 'True' to activate. Default = False
 * restore_integral (Optional): If PID integral needs to be restored. Avoid long restoration times. Specify 'True' to activate. Default = False
+
 ### HVAC modes: heat or cool (sub entity config)
 The control is specified per hvac mode (heat, cool). At least 1 to be included.
 EAch HVAC mode should include one of the control modes: on-off, proportional or master.
@@ -143,7 +144,7 @@ The configuration scheme is similar as for a satelite only with the following di
 * sensor_out (optional): For master mode not applicable
 * precision (Optional): For master mode not applicable
 
-### HVAC modes: heat or cool (sub entity config)
+## HVAC modes: heat or cool (sub entity config)
 The control is specified per hvac mode (heat, cool). At least 1 to be included.
 EAch HVAC mode should include one of the control modes: on-off, proportional or master.
 
@@ -152,29 +153,38 @@ Generic HVAC mode setting:
 * max_target_temp (Optional): For master mode not applicable
 * initial_target_temp (Optional): For master mode not applicable
 * away_temp (Optional): For master mode not applicable
-#### on-off mode (Optional) (sub of hvac mode)
+### on-off mode (Optional) (sub of hvac mode)
 For master mode not applicable
 
-#### proportional mode (Optional) (sub of hvac mode)
+### proportional mode (Optional) (sub of hvac mode)
 For master mode not applicable
 
-#### Master configuration (Required) (sub of hvac mode)
+### Master configuration (Required) (sub of hvac mode)
 Specify the control of the satelites. Configured under 'master_mode:'
 
 Referenced thermostats (satelites) will be linked to this controller. The heat or cool requirement will be read from the satelites and are processed to determine master valve opening and adjust timing of satelite openings. 
 
 The master will check satelite states and group them in on-off and proportional valves. The govering group will define the opening time of the master valve.  
 
+The preset mode changes on the master will be synced to the satelites.
+
 The master can operate in 'minimal_on', 'balanced' or 'continuous' mode. This will determine the satelite timing scheduling. For the minimal_on mode the master valve is opened as short as possible, for balanced mode the opening time is balanced between heating power and duration and for continuous mode the valve opening time is extended as long as possible. All satelite valves operating as on-off switch are used for the nesting are scheduled in time to get a balanced heat requirement. In 'continuous' mode the satelite timing is scheduled aimed such that a continuous heat requirement is created. The master valve will be opened continuous when sufficient heat is needed. In low demand conditions an on-off mode is maintained. 
 
-The preset mode changes on the master will be synced to the satelites.
+The controller is called periodically and specified by control_interval.
+If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
 
 with the data (as sub):
 * satelites (Required): between square brackets defined list of thermostats by their name 
 * operation_mode (Optional): satelite nesting method: "minimal_on", "balanced" or "continuous". Default = "balanced"
 * lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.2. (a minimum heating capacity of 20%  assumed based on 100% when all rooms required heat)
+* control_interval (Required): interval that controller is updated. The satelites should have a control_interval equal to the master or the master control_interval should be dividable by the satelite control_interval. Specify a time period.
+* pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
+* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
+* pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
+* pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
+* min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0.1 (* pwm_scale)
 
-##### Valve controller (Optional) (sub of master mode)
+#### Valve controller (Optional) (sub of master mode)
 Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
 
 Configured under 'PID_valve_mode:'
@@ -184,6 +194,7 @@ Configured under 'PID_valve_mode:'
 * kd (Required): Set PID parameter, d control value.
 * pwm_scale_low (Optional): For master mode not applicable
 * pwm_scale_high (Optional): For master mode not applicable
+
 # Sensor filter (filter_mode):
 An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
 The filter intesity is defined by a factor between 0 to 5 (integer).
