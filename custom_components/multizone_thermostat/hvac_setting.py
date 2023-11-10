@@ -784,6 +784,11 @@ class HVACSetting:
             tmp_dict[room] = data[ATTR_CONTROL_OFFSET]
         return tmp_dict
 
+    def restore_satelites(self):
+        """remove the satelites and nesting"""
+        self._satelites = {}
+        self.nesting.satelite_data(self._satelites)
+
     def set_satelite_offset(self, new_offsets):
         """Store offset per satelite"""
         for room, offset in new_offsets.items():
