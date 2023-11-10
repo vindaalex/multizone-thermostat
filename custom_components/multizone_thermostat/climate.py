@@ -691,6 +691,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._async_change_satelite_modes(
                     satelite_reset, control_mode=OperationMode.SELF
                 )
+                # reset to be ready for new satelites
+                self._hvac_on.restore_satelites()
 
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
