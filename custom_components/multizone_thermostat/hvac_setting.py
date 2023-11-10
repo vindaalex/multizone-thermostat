@@ -174,7 +174,7 @@ class HVACSetting:
             lower_pwm_scale, upper_pwm_scale = self.pwm_scale_limits(self._pid)
         else:
             mode = CONF_VALVE_MODE
-            lower_pwm_scale = 0
+            lower_pwm_scale = -1
             upper_pwm_scale = 1
 
         kp, ki, kd = self.get_pid_param(self._pid)  # pylint: disable=invalid-name
