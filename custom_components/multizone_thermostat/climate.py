@@ -519,6 +519,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         to control satelite routines
         control_mode 'no_change' to only update offset
         """
+        pwm_loop = False
         # mod controller update
         self._logger.info(
             "sat update received for mode:'%s'; offset:'%s'", control_mode, offset
@@ -542,17 +543,44 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self.control_output[ATTR_CONTROL_OFFSET] != offset:
                 self._hvac_on.time_offset = offset
                 self.control_output[ATTR_CONTROL_OFFSET] = offset
-                self.hass.async_create_task(self._async_controller_pwm(force=True))
+            pwm_loop = True
+
         else:
             self._hvac_on.time_offset = 0
             self.control_output[ATTR_CONTROL_OFFSET] = 0
+            pwm_loop = True
 
         if (
             control_mode == OperationMode.SELF
             and self._self_controlled != OperationMode.SELF
         ):
+            self._logger.debug("sat update to self-controlled state")
             self._self_controlled = OperationMode.SELF
             self._sat_id = 0
+            # stop and reset current controller
+            self._async_routine_controller()
+            # cancel scheduled switch routines
+            self._async_cancel_pwm_routines()
+
+            self.hass.async_create_task(self._async_switch_turn_off())
+
+            # include pwm routine
+            self._pwm_start_time = time.time() + CONTROL_START_DELAY
+
+            async_track_point_in_utc_time(
+                self.hass,
+                self.async_routine_controller_factory(
+                    self._hvac_on.get_operate_cycle_time
+                ),
+                datetime.datetime.fromtimestamp(self._pwm_start_time),
+            )
+
+            async_track_point_in_utc_time(
+                self.hass,
+                self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
+                datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
+            )
+
         # activate satelite mode
         elif control_mode == OperationMode.MASTER:
             if self._self_controlled in [
@@ -574,8 +602,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
                 # cancel scheduled switch routines
                 self._async_cancel_pwm_routines()
-                # if self._hvac_on.is_hvac_switch_on_off:
-                #     self.hass.async_create_task(self._async_switch_turn_off())
 
                 # schedule controller loop in sync with master
                 async_track_point_in_utc_time(
@@ -584,19 +610,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._hvac_on.get_operate_cycle_time
                     ),
                     datetime.datetime.fromtimestamp(
-                        self._pwm_start_time
-                        - sat_id * SAT_CONTROL_LEAD
-                        - MASTER_CONTROL_LEAD
+                        self._pwm_start_time  # master control loop
+                        - sat_id * SAT_CONTROL_LEAD  # create some time inbetween sats
+                        - MASTER_CONTROL_LEAD  # sat control loop before master
                     ),
                 )
 
-                # run pwm just after controller
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
-                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
-                )
+                pwm_loop = True
 
+        if pwm_loop:
+            self.hass.async_create_task(self._async_controller_pwm(force=True))
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -668,6 +691,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._async_change_satelite_modes(
                     satelite_reset, control_mode=OperationMode.SELF
                 )
+                # reset to be ready for new satelites
+                self._hvac_on.restore_satelites()
 
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
@@ -693,31 +718,67 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on.is_wc_mode and self.outdoor_temperature is not None:
             self._hvac_on.outdoor_temperature = self.outdoor_temperature
 
-        if self._self_controlled == OperationMode.SELF:
-            self._pwm_start_time = time.time() + CONTROL_START_DELAY
+
+
+        if self._self_controlled == OperationMode.MASTER:
+            self._logger.info(
+                "HVAC change to active state in MASTER state, wait for MASTER. Set on PENDING and wait for master"
+            )
+            self._self_controlled = OperationMode.PENDING
+            self.async_write_ha_state()
+            return
 
         elif self._self_controlled == OperationMode.PENDING:
             self._logger.info(
-                "HVAC change in pending state. Turn the switch OFF and exit hvac change"
+                "HVAC change in pending state, wait for MASTER. Turn the switch OFF and exit hvac change"
             )
             await self._async_switch_turn_off()
             self.async_write_ha_state()
             return
+
+        self._pwm_start_time = time.time() #+ CONTROL_START_DELAY
+            # if self.is_master:
+            #     self._pwm_start_time += (
+            #         len(self._hvac_on.get_satelites) * SAT_CONTROL_LEAD
+            #     )
 
         if self._hvac_on.is_hvac_on_off_mode:
             # no need for pwm routine as controller assures update
             if self._hvac_on.get_operate_cycle_time:
                 self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
 
-            async_track_point_in_utc_time(
-                self.hass,
-                self.async_run_controller_factory(force=True),
-                datetime.datetime.fromtimestamp(self._pwm_start_time),
-            )
+            # async_track_point_in_utc_time(
+            #     self.hass,
+            #     self.async_run_controller_factory(force=True),
+            #     datetime.datetime.fromtimestamp(self._pwm_start_time),
+            # )
 
         elif self.is_master or self._hvac_on.is_hvac_proportional_mode:
+
+            if self._hvac_on.get_operate_cycle_time:
+                self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
+
+            # run controller before pwm loop
+            # async_track_point_in_utc_time(
+            #     self.hass,
+            #     self.async_routine_controller_factory(
+            #         self._hvac_on.get_operate_cycle_time
+            #     ),
+            #     datetime.datetime.fromtimestamp(self._pwm_start_time),
+            # )
+
+            # run pwm just after controller
+            if self._hvac_on.get_pwm_time:
+                async_track_point_in_utc_time(
+                    self.hass,
+                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
+                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
+                )
+
             # update and track satelites
             if self.is_master:
+                # update controller (reset) to be ready for new satelites
+                self._hvac_on.restore_satelites()
                 # bring controllers of satelite in sync with master
                 # use the pwm
                 satelite_reset = {sat: 0 for sat in self._hvac_on.get_satelites}
@@ -731,32 +792,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     entity_list=self._hvac_on.get_satelites
                 )
 
-            # update pwm cycle
-            if (
-                self._self_controlled != OperationMode.SELF
-                and self._hvac_on.get_pwm_time
-            ):
-                self.update_pwm_time()
 
-            # run controller before pwm loop
-            # mod
-            if not self.is_master:
-                lead_time = 0  # self._sat_id * SAT_CONTROL_LEAD - MASTER_CONTROL_LEAD
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_routine_controller_factory(
-                        self._hvac_on.get_operate_cycle_time
-                    ),
-                    datetime.datetime.fromtimestamp(self._pwm_start_time - lead_time),
-                )
-
-            # run pwm just after controller
-            if self._hvac_on.get_pwm_time:
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
-                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
-                )
 
         # Ensure we update the current operation after changing the mode
         self.async_write_ha_state()
@@ -794,7 +830,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
             self.async_on_remove(self._loop_controller)
             # mod
-            self.hass.async_create_task(self._async_controller(force=True))
+            self.hass.async_create_task(self._async_controller())
 
     @callback
     def async_routine_pwm_factory(self, interval=None):
@@ -830,6 +866,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._loop_pwm = async_track_time_interval(
                 self.hass, self._async_controller_pwm, interval
             )
+            self.hass.async_create_task(self._async_controller_pwm())
             self.async_on_remove(self._loop_pwm)
 
     async def _async_routine_track_satelites(self, entity_list=None):
@@ -1033,7 +1070,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
-        if update_required:
+        if update_required and not self.pwm_controller_time:
             self._logger.debug(
                 "Significant update from satelite: '%s' rerun controller",
                 new_state.name,
@@ -1041,7 +1078,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.hass.async_create_task(self._async_controller(force=True))
 
         # if master mode is active: do not call operate but let pwm cycle handle it
-        self.schedule_update_ha_state(force_refresh=False)
+        else:
+            self.schedule_update_ha_state(force_refresh=False)
         # self.async_write_ha_state()
 
     @callback
@@ -1050,7 +1088,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         new_state = event.data.get("new_state")
         entity_id = event.data.get(ATTR_ENTITY_ID)
         self._logger.debug(
-            "Switch off '%s' changed to '%s'",
+            "HVACmode '%s' switch changed to '%s'",
             entity_id,
             new_state.state,
         )
@@ -1249,9 +1287,20 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def update_pwm_time(self):
         """determine if new pwm cycle has started and update cycle time"""
         pwm_duration = self._hvac_on.get_pwm_time.seconds
-        if time.time() > self._pwm_start_time + pwm_duration:
-            while time.time() > self._pwm_start_time + pwm_duration:
-                self._pwm_start_time += pwm_duration
+        while time.time() > self._pwm_start_time + pwm_duration:
+            self._pwm_start_time += pwm_duration
+
+    @property
+    def pwm_controller_time(self):
+        """check if pwm loop is to be started soon"""
+        next_pwm_loop = self._pwm_start_time + self._hvac_on.get_pwm_time.seconds
+        if (
+            next_pwm_loop - time.time()
+        ) / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM:
+            return True
+        else:
+            self._logger.debug("no pwm loop to start soon")
+            return False
 
     @callback
     def async_run_controller_factory(self, force=False):
@@ -1273,6 +1322,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug(
                 "Controller: calculate output, routine=%s; forced=%s", routine, force
             )
+
+            if self._self_controlled == OperationMode.PENDING:
+                self._logger.debug("Controller cancelled due to 'pending mode'")
+                return
 
             if self.preset_mode == PRESET_EMERGENCY:
                 self._logger.debug("Controller cancelled due to 'emergency mode'")
@@ -1341,7 +1394,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 or self._hvac_on.is_hvac_on_off_mode
                 or (
                     (self._hvac_on.is_hvac_proportional_mode or self.is_master)
-                    and not self._hvac_on.get_pwm_time
+                    and not self._hvac_on.get_pwm_time  # only when a proportional valve
                 )
             ):
                 self._logger.debug(
@@ -1668,7 +1721,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     self.async_set_preset_mode(PRESET_EMERGENCY)
                 )
                 # cancel scheduled switch routines
-                self.hass.async_create_task(self._async_controller_pwm)
+                self.hass.async_create_task(self._async_controller_pwm())
         else:
             self._logger.debug("Emergency OFF recall send from {}".format(source))
 

@@ -58,6 +58,7 @@ ATTR_CURRENT_OUTDOOR_TEMPERATURE = "current_outdoor_temp"
 ATTR_FILTER_MODE = "filter_mode"
 ATTR_DETAILED_OUTPUT = "detailed_output"
 ATTR_EMERGENCY_MODE = "emergency mode"
+ATTR_UPDATE_NEEDED = "update satelite"
 
 PRESET_EMERGENCY = "emergency"
 PRESET_RESTORE = "restore"
@@ -132,6 +133,7 @@ ATTR_KB = "kb"
 CONF_MASTER_MODE = "master_mode"
 CONF_MASTER_OPERATION_MODE = "operation_mode"
 CONF_SATELITES = "satelites"
+CONF_MIN_VALVE = "min_opening_for_propvalve"
 CONF_CONTINUOUS_LOWER_LOAD = "lower_load_scale"
 
 CONF_GOAL = "goal"  # pid valve mode
@@ -142,11 +144,13 @@ MASTER_BALANCED = "balanced"
 MASTER_CONTINUOUS = "continuous"
 
 # control constants
-CONTROL_START_DELAY = 0.2  # seconds, calculate pwm and offset before pwm loop
-MASTER_CONTROL_LEAD = 0.1  # seconds
-SAT_CONTROL_LEAD = 0.15  # seconds
-PWM_LAG = 0.05  # seconds
-PWM_UPDATE_CHANGE = 0.05
+CONTROL_START_DELAY = 0.5  #   # seconds, control loop start delay rel to time()
+MASTER_CONTROL_LEAD = 1  # 0.1  # seconds, time between last sat and master control
+SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
+PWM_LAG = 0.5  # 0.05  # seconds
+PWM_UPDATE_CHANGE = 0.05  # percentage, pwm difference above which an update is needed
+CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
+DEFAULT_MIN_VALVE_PWM = 0.1 # factor of master pwm
 
 NESTING_MATRIX = 20
 NESTING_BALANCE = 0.1

@@ -129,6 +129,9 @@ master = {
             vol.Optional(
                 CONF_CONTINUOUS_LOWER_LOAD, default=DEFAULT_MIN_LOAD
             ): vol.Coerce(float),
+            vol.Optional(CONF_MIN_VALVE, default=DEFAULT_MIN_VALVE_PWM): vol.Coerce(
+                float
+            ),
             vol.Optional(CONF_VALVE_MODE): vol.Schema(VALVE_control_options_req),
         }
     )
