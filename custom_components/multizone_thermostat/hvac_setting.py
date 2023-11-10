@@ -864,13 +864,12 @@ class HVACSetting:
     @property
     def is_valve_mode(self):
         """return the control mode"""
+        mode_present = False
         if self.is_hvac_master_mode:
-            if ATTR_GOAL in self._master[CONF_VALVE_MODE]:
-                return True
-            else:
-                return False
-        else:
-            return False
+            if CONF_VALVE_MODE in self._master:
+                mode_present = True
+
+        return mode_present
 
     @property
     def is_wc_mode(self):
