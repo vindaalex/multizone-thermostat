@@ -300,6 +300,9 @@ class HVACSetting:
                         max_pwm = data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE]
                         max_area = data[CONF_AREA]
 
+        # assure minimum opening and flow towards prop valves
+        sum_pwm = max(self.get_min_valve_opening * self.area, sum_pwm)
+
         if self._pid:
             # adjust pwm from prop valves to target valve position
             sum_pwm += self._pid[ATTR_CONTROL_PWM_OUTPUT] * max_area
@@ -639,6 +642,11 @@ class HVACSetting:
             return (ka, kb)
         else:
             return (None, None)
+
+    @property
+    def get_min_valve_opening(self):
+        """initial minimum opening of master when prop valves are present"""
+        return self._master[CONF_MIN_VALVE]
 
     @property
     def get_wc_sensor(self):
