@@ -1287,9 +1287,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def update_pwm_time(self):
         """determine if new pwm cycle has started and update cycle time"""
         pwm_duration = self._hvac_on.get_pwm_time.seconds
-        if time.time() > self._pwm_start_time + pwm_duration:
-            while time.time() > self._pwm_start_time + pwm_duration:
-                self._pwm_start_time += pwm_duration
+        while time.time() > self._pwm_start_time + pwm_duration:
+            self._pwm_start_time += pwm_duration
 
     @property
     def pwm_controller_time(self):
