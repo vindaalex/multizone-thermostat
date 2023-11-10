@@ -339,6 +339,9 @@ class HVACSetting:
             # - take maximum from both
             prop_control = self.valve_pos_pwm_prop
             pwm_on_off = self.valve_pos_pwm_on_off
+            self._logger.debug(
+                f"master control contributions; prop:{prop_control}, pwm on_off:{pwm_on_off}"
+            )
             control_output = max(prop_control, pwm_on_off)
 
         if self.is_hvac_master_mode or self.is_hvac_proportional_mode:
@@ -347,6 +350,7 @@ class HVACSetting:
             elif control_output < 0:
                 control_output = 0
 
+            self._logger.debug(f"control output before rounding {control_output}")
             control_output = get_rounded(
                 control_output, self.pwm_scale / self.pwm_resolution
             )
@@ -459,7 +463,7 @@ class HVACSetting:
         """check if on-off mode is active"""
         if (
             self.is_hvac_on_off_mode or not self.get_pwm_time.seconds == 0
-        ):  # change wpm to on_off or prop
+        ):  # change pwm to on_off or prop
             return True
         else:
             return False
@@ -709,7 +713,7 @@ class HVACSetting:
             # and control_mode == CONF_PROPORTIONAL_MODE
             # and self_controlled is False
         ):
-            self._logger.debug("Save update from '%s'", sat_name)
+            self._logger.debug("Save update from '%s'", state)
             control_mode = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
                 ATTR_CONTROL_MODE
             ]
