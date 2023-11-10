@@ -1070,7 +1070,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
-        if update_required:
+        if update_required and not self.pwm_controller_time:
             self._logger.debug(
                 "Significant update from satelite: '%s' rerun controller",
                 new_state.name,
@@ -1290,6 +1290,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if time.time() > self._pwm_start_time + pwm_duration:
             while time.time() > self._pwm_start_time + pwm_duration:
                 self._pwm_start_time += pwm_duration
+
+    @property
+    def pwm_controller_time(self):
+        """check if pwm loop is to be started soon"""
+        next_pwm_loop = self._pwm_start_time + self._hvac_on.get_pwm_time.seconds
+        if (
+            next_pwm_loop - time.time()
+        ) / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM:
+            return True
+        else:
+            self._logger.debug("no pwm loop to start soon")
+            return False
 
     @callback
     def async_run_controller_factory(self, force=False):
