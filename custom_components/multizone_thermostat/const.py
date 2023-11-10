@@ -142,11 +142,12 @@ MASTER_BALANCED = "balanced"
 MASTER_CONTINUOUS = "continuous"
 
 # control constants
-CONTROL_START_DELAY = 0.2  # seconds, calculate pwm and offset before pwm loop
-MASTER_CONTROL_LEAD = 0.1  # seconds
-SAT_CONTROL_LEAD = 0.15  # seconds
-PWM_LAG = 0.05  # seconds
-PWM_UPDATE_CHANGE = 0.05
+CONTROL_START_DELAY = 0.5  #   # seconds, control loop start delay rel to time()
+MASTER_CONTROL_LEAD = 1  # 0.1  # seconds, time between last sat and master control
+SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
+PWM_LAG = 0.5  # 0.05  # seconds
+PWM_UPDATE_CHANGE = 0.05  # percentage, pwm difference above which an update is needed
+CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
 
 NESTING_MATRIX = 20
 NESTING_BALANCE = 0.1
