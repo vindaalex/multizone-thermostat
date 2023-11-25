@@ -1,5 +1,5 @@
 """module where configuration of climate is handeled"""
-from datetime import timedelta
+import datetime
 import logging
 import time
 
@@ -35,6 +35,8 @@ class HVACSetting:
         self.area = area
         self._detailed_output = detailed_output
         self._store_integral = False
+
+        self._last_change = datetime.datetime.now(datetime.timezone.utc)
 
         self._target_temp = None
         self._current_state = None
@@ -479,6 +481,11 @@ class HVACSetting:
         return self._hvac_settings.get(CONF_PASSIVE_SWITCH_DURATION)
 
     @property
+    def get_switch_stale_open_time(self):
+        """return the switch max passive duration"""
+        return self._hvac_settings.get(CONF_PASSIVE_SWITCH_OPEN_TIME)
+
+    @property
     def stuck_loop(self):
         """return if stuck loop is active"""
         return self._stuck_loop
@@ -489,9 +496,19 @@ class HVACSetting:
         self._stuck_loop = val
 
     @property
+    def switch_last_change(self):
+        """return last time valve opened for stale check"""
+        return self._last_change
+
+    @switch_last_change.setter
+    def switch_last_change(self, val):
+        """store last time valve opened for stale check"""
+        self._last_change = val
+
+    @property
     def get_pwm_time(self):
         """return pwm interval time"""
-        return self.active_control_data.get(CONF_PWM_DURATION, timedelta(seconds=0))
+        return self.active_control_data.get(CONF_PWM_DURATION, datetime.timedelta(seconds=0))
 
     @property
     def pwm_resolution(self):
@@ -505,7 +522,7 @@ class HVACSetting:
 
     def pwm_scale_limits(self, hvac_data):
         """Bandwidth for control value"""
-        upper_pwm_scale = hvac_data.get(CONF_PWM_SCALE_HIGH, self.pwm_scale)
+        upper_pwm_scale = hvac_data.get(CONF_PWM_SCALE_HIGH, self.pwm_scale) # else max = pwm scale
         if CONF_PWM_SCALE_LOW in hvac_data:
             lower_pwm_scale = hvac_data.get(CONF_PWM_SCALE_LOW, 0)
         else:
@@ -536,14 +553,14 @@ class HVACSetting:
     def get_operate_cycle_time(self):
         """return interval for recalculate (control value)"""
         return self.active_control_data.get(
-            CONF_CONTROL_REFRESH_INTERVAL, timedelta(seconds=0)
+            CONF_CONTROL_REFRESH_INTERVAL, datetime.timedelta(seconds=0)
         )
 
     @property
     def get_min_on_off_cycle(self):
         """minimum duration before recalcute"""
         if self.is_hvac_on_off_mode:
-            return self._on_off.get(CONF_MIN_CYCLE_DURATION, timedelta(seconds=0))
+            return self._on_off.get(CONF_MIN_CYCLE_DURATION, datetime.timedelta(seconds=0))
 
     @property
     def get_hysteris(self):
@@ -900,6 +917,7 @@ class HVACSetting:
         tmp_dict[CONF_PWM_SCALE] = self.pwm_scale
         tmp_dict[ATTR_CONTROL_OUTPUT] = self.get_control_output
         tmp_dict[ATTR_DETAILED_OUTPUT] = self._detailed_output
+        tmp_dict[ATTR_LAST_SWITCH_CHANGE] = self.switch_last_change
         tmp_dict["Open_window"] = open_window
         if self.is_hvac_master_mode:
             tmp_dict[CONF_SATELITES] = self.get_satelites
@@ -966,6 +984,7 @@ class HVACSetting:
         """restore attributes for climate entity"""
         self._store_integral = restore_integral
         self.target_temperature = data[ATTR_TEMPERATURE]
+        self.switch_last_change = data[ATTR_LAST_SWITCH_CHANGE]
 
         if self.is_prop_pid_mode:
             if restore_parameters and "PID_values" in data:

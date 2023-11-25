@@ -27,6 +27,9 @@ hvac_control_options = {
     vol.Optional(CONF_PASSIVE_SWITCH_DURATION): vol.All(
         cv.time_period, cv.positive_timedelta
     ),
+    vol.Optional(CONF_PASSIVE_SWITCH_OPEN_TIME, default=DEFAULT_PASSIVE_SWITCH_OPEN_TIME): vol.All(
+        cv.time_period, cv.positive_timedelta
+    ),
 }
 
 controller_config = {

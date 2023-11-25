@@ -1,4 +1,6 @@
 """Multizone constants"""
+from datetime import timedelta
+
 from homeassistant.backports.enum import StrEnum
 
 # general
@@ -21,6 +23,7 @@ DEFAULT_MIN_LOAD = 0
 
 # safety routines
 DEFAULT_PASSIVE_SWITCH = False
+DEFAULT_PASSIVE_SWITCH_OPEN_TIME = timedelta(seconds=60)
 
 # restore old states
 DEFAULT_OLD_STATE = False
@@ -59,6 +62,7 @@ ATTR_FILTER_MODE = "filter_mode"
 ATTR_DETAILED_OUTPUT = "detailed_output"
 ATTR_EMERGENCY_MODE = "emergency mode"
 ATTR_UPDATE_NEEDED = "update satelite"
+ATTR_LAST_SWITCH_CHANGE = "switch_last_change"
 
 PRESET_EMERGENCY = "emergency"
 PRESET_RESTORE = "restore"
@@ -77,6 +81,7 @@ CONF_ENABLE_OLD_INTEGRAL = "restore_integral"
 CONF_STALE_DURATION = "sensor_stale_duration"
 
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
+CONF_PASSIVE_SWITCH_OPEN_TIME = "passive_switch_opening_time"
 
 ATTR_CONTROL_OUTPUT = "control_output"  # offset and pwm_output
 ATTR_CONTROL_PWM_OUTPUT = "pwm_out"
