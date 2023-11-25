@@ -301,13 +301,13 @@ class HVACSetting:
                         max_area = data[CONF_AREA]
 
         # assure minimum opening and flow towards prop valves
-        sum_pwm = max(self.get_min_valve_opening * self.area, sum_pwm)
-
-        if self._pid:
-            # adjust pwm from prop valves to target valve position
-            sum_pwm += self._pid[ATTR_CONTROL_PWM_OUTPUT] * max_area
-
         if sum_pwm > 0:
+            sum_pwm = max(self.get_min_valve_opening * self.area, sum_pwm)
+
+            if self._pid:
+                # adjust pwm from prop valves to target valve position
+                sum_pwm += self._pid[ATTR_CONTROL_PWM_OUTPUT] * max_area
+
             sum_pwm /= self.area
 
         # scale to master pwm_scale
