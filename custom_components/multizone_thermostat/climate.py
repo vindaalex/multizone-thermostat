@@ -1004,6 +1004,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 entity_list[hvac_mode] = [
                     mode_config.get_hvac_switch,
                     mode_config.get_switch_stale,
+                    mode_config.switch_last_change
                 ]
 
         if not entity_list:
@@ -1019,12 +1020,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 "Switch '%s' stuck prevention check with last update '%s'"
                 % (
                     data[0],
-                    sensor_state.last_updated,
+                    data[2],
                 )
             )
 
             if (
-                datetime.datetime.now(datetime.timezone.utc) - sensor_state.last_updated
+                datetime.datetime.now(datetime.timezone.utc) - data[2]
                 > data[1]
             ):
                 self._logger.info(
@@ -1032,7 +1033,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     % (
                         data[0],
                         datetime.datetime.now(datetime.timezone.utc)
-                        - sensor_state.last_updated,
+                        - data[2],
                     )
                 )
                 self.hass.async_create_task(
@@ -1569,13 +1570,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self._is_valve_open(hvac_mode=hvac_mode):
                 self._logger.debug("Switch already ON")
                 return
+
             data = {ATTR_ENTITY_ID: entity_id}
             self._logger.debug("Order 'ON' sent to switch device '%s'", entity_id)
+            _hvac_on.switch_last_change = datetime.datetime.now(datetime.timezone.utc)
 
             if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
                 operation = SERVICE_TURN_ON
             else:
                 operation = SERVICE_TURN_OFF
+
             await self.hass.services.async_call(
                 HA_DOMAIN, operation, data, context=self._context
             )
@@ -1593,11 +1597,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 entity_id,
                 control_val,
             )
+
+            _hvac_on.switch_last_change = datetime.datetime.now(datetime.timezone.utc)
             data = {
                 ATTR_ENTITY_ID: entity_id,
                 ATTR_VALUE: control_val,
             }
-
             method = entity_id.split(".")[0]
 
             await self.hass.services.async_call(
@@ -1666,7 +1671,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 control_val = _hvac_on.pwm_scale
 
             data = {ATTR_ENTITY_ID: entity_id, ATTR_VALUE: control_val}
-
             method = entity_id.split(".")[0]
 
             await self.hass.services.async_call(
@@ -1680,7 +1684,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id):
         """toggle the state of a switch temporarily and hereafter set it to 0 or 1"""
-        DURATION = 30
+        DURATION = self._hvac_def[hvac_mode].get_switch_stale_open_time
         if self._hvac_on is None or (
             self._hvac_on
             and not self._is_valve_open()  # current hvacmode switch is closed
