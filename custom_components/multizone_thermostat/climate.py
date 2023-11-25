@@ -398,9 +398,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 ):
                     self._hvac_def[old_hvac_mode].target_temperature = old_temperature
 
-        except ValueError as eror:
+        except Exception as e:
             self._hvac_mode_init = HVACMode.OFF
-            self._logger.warning("restoring old state failed:%s", str(eror))
+            self._logger.warning("restoring old state failed:%s", str(e))
             return
 
     @property
