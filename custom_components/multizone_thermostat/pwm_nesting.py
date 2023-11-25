@@ -295,11 +295,12 @@ class Nesting:
                     mod_lid = self.packed[lid_i]
 
                     # fill area segments and pwm space with room id
+                    max_pwm = min(self.get_pwm_max, np.shape(mod_lid)[1])
                     for area_i in range(self.area[room_index]):
                         for pwm_i in range(self.pwm[room_index]):
                             mod_lid[
                                 x_start + area_i,
-                                self.get_pwm_max - y_width + pwm_i,
+                                max_pwm - y_width + pwm_i,
                             ] = self.rooms[room_index]
 
         return nested
