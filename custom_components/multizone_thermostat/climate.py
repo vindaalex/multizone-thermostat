@@ -379,15 +379,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.info("change state to pending master update")
                 self._self_controlled = OperationMode.PENDING
 
-            if self._hvac_mode_init != HVACMode.OFF:
-                old_def = old_state.attributes[ATTR_HVAC_DEFINITION]
-                for key, data in old_def.items():
-                    if key in self._hvac_def:
-                        self._hvac_def[key].restore_reboot(
-                            data,
-                            self._restore_parameters,
-                            self._restore_integral,
-                        )
+            old_def = old_state.attributes[ATTR_HVAC_DEFINITION]
+            for key, data in old_def.items():
+                if key in self._hvac_def:
+                    self._hvac_def[key].restore_reboot(
+                        data,
+                        self._restore_parameters,
+                        self._restore_integral,
+                    )
 
                 # Restore the target temperature
                 min_temp, max_temp = self._hvac_def[
