@@ -785,25 +785,27 @@ class HVACSetting:
 
             # check if controller update is needed
             if sat_name in self._satelites:
-                if (
-                    abs(
-                        (
-                            control_value
-                            - self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
-                        )
-                        / max(
-                            self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT],
-                            control_value,
-                        )
-                    )
-                    > PWM_UPDATE_CHANGE
-                ):
-                    update = True
+                old_val = self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
+                if control_value == 0:
+                    if old_val != 0:
+                        self.nesting.remove_room(sat_name)
+                        update = True
+                else:
+                    if  old_val == 0:
+                        update = True
+                    elif abs((control_value - old_val) / old_val) > PWM_UPDATE_CHANGE:
+                        update = True
 
                 if setpoint != self._satelites[sat_name][ATTR_TEMPERATURE]:
                     update = True
-            elif control_value > 0:
+
+            elif control_value > 0:# or self_controlled != OperationMode.MASTER:
+            # elif control_value > 0 or self_controlled != OperationMode.MASTER:
                 update = True
+
+            # always update prop valves in order to scale to new master pwm
+            # if pwm_time == 0:
+            #     update = True
 
             self._satelites[sat_name] = {
                 ATTR_HVAC_MODE: state.state,
@@ -845,6 +847,9 @@ class HVACSetting:
         tmp_dict = {}
         for room, data in self._satelites.items():
             if data[ATTR_UPDATE_NEEDED] == True:
+                # only reset update for on-off valves
+                # such that prop valves keep scaling to new master pwm
+                # if data[CONF_PWM_DURATION] > 0:
                 data[ATTR_UPDATE_NEEDED] = False
                 tmp_dict[room] = data[ATTR_CONTROL_OFFSET]
         return tmp_dict
@@ -854,12 +859,13 @@ class HVACSetting:
         self._satelites = {}
         self.nesting.satelite_data(self._satelites)
 
-    def set_satelite_offset(self, new_offsets):
+    def set_satelite_offset(self, new_offsets, forced=True):
         """Store offset per satelite"""
         for room, offset in new_offsets.items():
             if room in self._satelites:
                 # if self._satelites[room][ATTR_CONTROL_OFFSET] != offset or forced_update:
-                self._satelites[room][ATTR_UPDATE_NEEDED] = True
+                if forced or self._satelites[room][ATTR_CONTROL_OFFSET] != offset:
+                    self._satelites[room][ATTR_UPDATE_NEEDED] = True
                 self._satelites[room][ATTR_CONTROL_OFFSET] = offset
 
     @property
