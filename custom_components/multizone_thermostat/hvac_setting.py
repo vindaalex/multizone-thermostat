@@ -121,10 +121,12 @@ class HVACSetting:
                     ):
                         self.pid_reset_time()
                 self.run_pid(force)
+                # reset integral when no heat is required
                 if self._wc and self._pid:
                     if (
                         self._wc[ATTR_CONTROL_PWM_OUTPUT] <= 0
                         and self._pid[ATTR_CONTROL_PWM_OUTPUT] < 0
+                        and self.get_integral != 0
                     ):
                         # reset integral as wc is also off
                         self.set_integral(0)
@@ -179,12 +181,12 @@ class HVACSetting:
             upper_pwm_scale = 1
 
         kp, ki, kd = self.get_pid_param(self._pid)  # pylint: disable=invalid-name
-        min_cycle_duration = self.get_operate_cycle_time.seconds
 
         self._pid.PID[PID_CONTROLLER] = pid_controller.PIDController(
             self._name,
             mode,
-            min_cycle_duration,
+            self.is_hvac_master_mode,
+            self.get_operate_cycle_time.seconds,
             kp,
             ki,
             kd,
@@ -256,7 +258,7 @@ class HVACSetting:
             self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
         else:
             self._pid[ATTR_CONTROL_PWM_OUTPUT] = self._pid.PID[PID_CONTROLLER].calc(
-                current, setpoint, force=force, master_mode=self.is_hvac_master_mode
+                current, setpoint, force=force
             )
 
     @property

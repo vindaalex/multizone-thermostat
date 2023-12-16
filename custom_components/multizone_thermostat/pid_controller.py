@@ -28,6 +28,7 @@ class PIDController(object):
         self,
         name,
         PID_type,  # pylint: disable=invalid-name
+        master_mode,
         sampletime,
         kp,  # pylint: disable=invalid-name
         ki,  # pylint: disable=invalid-name
@@ -35,6 +36,7 @@ class PIDController(object):
         time,
         out_min=float("-inf"),
         out_max=float("inf"),
+
     ):
         if kp is None:
             raise ValueError("kp must be specified")
@@ -63,11 +65,13 @@ class PIDController(object):
         self._differential = 0
         self._windupguard = 1
         self._last_input = 0
+        # self._old_setpoint = None
         self._last_output = 0
-        self._last_calc_timestamp = 0
+        self._last_calc_timestamp = None
         self._time = time
+        self.master_mode = master_mode
 
-    def calc(self, input_val, setpoint, force=False, master_mode=False):
+    def calc(self, input_val, setpoint, force=False):
         """Adjusts and holds the given setpoint.
 
         Args:
@@ -84,25 +88,24 @@ class PIDController(object):
             )
             return self._last_output
 
+        if not input_val:
+            self._logger.warning(
+                "no current value specified, return with previous control value %.2f",
+                self._last_output,
+            )
+            return self._last_output
+
         now = self._time()
-        if self._last_calc_timestamp != 0:
-            # *0.95 for minor scheduling differences
-            # if (
-            #     int(now - self._last_calc_timestamp) < int(self._sampletime) * 0.95
-            #     and not force
-            # ):
-            #     self._logger.debug(
-            #         "pid timediff: %.0f < sampletime %.0f: keep previous value",
-            #         (now - self._last_calc_timestamp),
-            #         self._sampletime,
-            #     )
-            #     return self._last_output
+        time_diff = None
+        if self._last_calc_timestamp is not None:
             time_diff = now - self._last_calc_timestamp
 
+        # reset previous result in case filter mode changed the output
+        # between temp only and temp + velocity
         if type(input_val) is not type(self._last_input):
-            # reset previous result in case filter mode changed the output
             self._last_input = input_val
 
+        # UKF temp + velocity
         if isinstance(input_val, (list, tuple, np.ndarray)):
             current_temp, self._differential = input_val
             self._logger.debug(
@@ -110,73 +113,100 @@ class PIDController(object):
                 current_temp,
                 self._differential,
             )
+        # when only current temp is provided
         else:
-            # this is only triggered for master mode, velocity is less stable.
-            if not input_val:
-                self._logger.warning(
-                    "no current value specified, return with previous control value %.2f",
-                    self._last_output,
-                )
-                return self._last_output
             current_temp = input_val
-            if self._last_calc_timestamp != 0:
+            if self._last_calc_timestamp is not None and time_diff is not None:
                 input_diff = current_temp - self._last_input
                 self._differential = input_diff / time_diff
 
         # Compute all the working error variables
         error = setpoint - current_temp
 
-        if (
-            (self._Kp > 0 and error > 0 and error > self._out_max / self._Kp)
-            or (self._Kp < 0 and error < 0 and error < self._out_max / self._Kp)
-        ) and not master_mode:
-            # when temp is too low when heating or too high when cooling set fully open
-            # similar as honeywell TPI
-            self._logger.debug(
-                "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
-                setpoint,
-                current_temp,
-                self._out_max,
-            )
-            self._last_output = self._out_max
+        self.calc_integral(error, time_diff)
+        self.p_var = self._Kp * error
+        self.i_var = self._Ki * self._integral
+        self.d_var = self._Kd * self._differential
 
-        else:
-            # In order to prevent windup, only integrate if the process is not saturated
-            # if self._last_output < self._out_max and self._last_output > self._out_min:
-            if self._last_calc_timestamp != 0:
-                if self._Ki:
-                    self._integral += time_diff * error
-                    self._integral = min(
-                        self._integral,
-                        self._out_max / (self._windupguard * abs(self._Ki)),
-                    )
-                    self._integral = max(
-                        self._integral,
-                        self._out_min / (self._windupguard * abs(self._Ki)),
-                    )
+        # Compute PID Output
+        self._last_output = self.p_var + self.i_var + self.d_var
+        self._last_output = min(self._last_output, self._out_max)
+        self._last_output = max(self._last_output, self._out_min)
 
-            self.p_var = self._Kp * error
-            self.i_var = self._Ki * self._integral
-            self.d_var = self._Kd * self._differential
+        # Log some debug info
+        self._logger.debug(
+            "Contribution P: %.4f; I: %.4f; D: %.4f; Output: %.2f",
+            self.p_var,
+            self.i_var,
+            self.d_var,
+            self._last_output,
+        )
 
-            # Compute PID Output
-            self._last_output = self.p_var + self.i_var + self.d_var
-            self._last_output = min(self._last_output, self._out_max)
-            self._last_output = max(self._last_output, self._out_min)
+        if not self.master_mode:
+            # fully open if error is too high
+            if ( # heating
+                (self._Kp > 0 and (
+                    (error > 0 and error > self._out_max / self._Kp) or
+                    (error > 1.5)
+                ))
+                # cooling
+                or
+                (self._Kp < 0 and (
+                    (error < 0 and error < self._out_max / self._Kp) or
+                    (error < -1.5)
+                ))
+            ):
+                # when temp is too low when heating or too high when cooling set fully open
+                # similar as honeywell TPI
+                self._logger.debug(
+                    "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
+                    setpoint,
+                    current_temp,
+                    self._out_max,
+                )
+                self._last_output = self._out_max
 
-            # Log some debug info
-            self._logger.debug(
-                "Contribution P: %.4f; I: %.4f; D: %.4f; Output: %.2f",
-                self.p_var,
-                self.i_var,
-                self.d_var,
-                self._last_output,
-            )
+            # fully close if error is too low
+            elif (
+                # heating
+                (self._Kp > 0 and error < -1.5) or
+                # cooling
+                (self._Kp < 0 and error > 1.5)
+            ):
+                # when temp is too low when heating or too high when cooling set fully open
+                # similar as honeywell TPI
+                self._logger.debug(
+                    "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
+                    setpoint,
+                    current_temp,
+                    self._out_max,
+                )
+                self._last_output = self._out_min
+
 
         # Remember some variables for next time
+        # self._old_setpoint = setpoint
         self._last_input = input_val
         self._last_calc_timestamp = now
         return self._last_output
+
+    def calc_integral(self, error, time_diff):
+        # In order to prevent windup, only integrate if the process is not saturated
+        # if self._last_output < self._out_max and self._last_output > self._out_min:
+        if time_diff is None or self._last_calc_timestamp is None:
+            return
+
+        if self._Ki:
+            self._integral += time_diff * error
+            self._integral = min(
+                self._integral,
+                self._out_max / (self._windupguard * abs(self._Ki)),
+            )
+            self._integral = max(
+                self._integral,
+                self._out_min / (self._windupguard * abs(self._Ki)),
+            )
+
 
     def reset_time(self):
         """reset time to void large intergrl buildup"""
@@ -200,6 +230,11 @@ class PIDController(object):
     def differential(self):
         """get differential"""
         return self._differential
+
+    # @property
+    # def get_old_setpoint(self):
+    #     """check if a setpoint is present"""
+    #     return self._old_setpoint
 
     def set_pid_param(self, kp=None, ki=None, kd=None):  # pylint: disable=invalid-name
         """Set PID parameters."""
