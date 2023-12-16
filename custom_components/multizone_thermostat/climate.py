@@ -454,6 +454,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     async def async_set_filter_mode(self, mode):
         """to change filter mode from HA"""
         self.set_filter_mode(mode)
+        self.schedule_update_ha_state()
 
     def set_filter_mode(self, mode):
         """Set new filter for the temp sensor."""
