@@ -38,7 +38,7 @@ DEFAULT_PWM_SCALE = 100
 DEFAULT_MIN_DIFF = 0
 DEFAULT_PWM = 0
 DEFAULT_PWM_RESOLUTION = 50
-# DEFAULT_VALVE_DELAY = 0
+DEFAULT_MASTER_SCALE_BOUND = 1
 
 # MASTER
 DEFAULT_OPERATION = "on_off"
@@ -68,7 +68,7 @@ ATTR_LAST_SWITCH_CHANGE = "switch_last_change"
 PRESET_EMERGENCY = "emergency"
 PRESET_RESTORE = "restore"
 
-# only required for hvac_Settings
+# only required for hvac_settings
 CONF_TARGET_TEMP_INIT = "initial_target_temp"
 CONF_TARGET_TEMP_MIN = "min_target_temp"
 CONF_TARGET_TEMP_MAX = "max_target_temp"
@@ -102,6 +102,8 @@ CONF_PWM_SCALE_LOW = "pwm_scale_low"
 CONF_PWM_SCALE_HIGH = "pwm_scale_high"
 CONF_PWM_RESOLUTION = "pwm_resolution"
 CONF_PWM_THRESHOLD = "pwm_threshold"
+CONF_MASTER_SCALE_BOUND = "bounded_scale_to_master"
+
 
 ATTR_PWM_THRESHOLD = "pwm_threshold"
 

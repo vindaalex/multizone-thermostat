@@ -477,6 +477,14 @@ class HVACSetting:
             return False
 
     @property
+    def master_scaled_bound(self):
+        """check if proporitional valve scales with master pwm"""
+        if self.is_hvac_proportional_mode:
+            return self._proportional.get(CONF_MASTER_SCALE_BOUND)
+        else:
+            return 1
+
+    @property
     def get_hvac_switch_mode(self):
         """return the switch entity"""
         return self._hvac_settings[CONF_SWITCH_MODE]
