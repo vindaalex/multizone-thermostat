@@ -660,6 +660,10 @@ class HVACSetting:
         """function to overwrite integral value"""
         self._pid.PID[PID_CONTROLLER].integral = integral
 
+    @property
+    def get_integral(self):
+        """function to get pid integral value"""
+        return self._pid.PID[PID_CONTROLLER].integral
     
     @property
     def get_velicity(self):
@@ -931,20 +935,23 @@ class HVACSetting:
         tmp_dict[ATTR_DETAILED_OUTPUT] = self._detailed_output
         tmp_dict[ATTR_LAST_SWITCH_CHANGE] = self.switch_last_change
         tmp_dict["Open_window"] = open_window
+
+
         if self.is_hvac_master_mode:
             tmp_dict[CONF_SATELITES] = self.get_satelites
             tmp_dict[CONF_MASTER_OPERATION_MODE] = self._operation_mode
             if self.is_valve_mode:
                 tmp_dict["Valve_PID_values"] = self.get_pid_param(self._pid)
+                PID_parts = self._pid.PID[PID_CONTROLLER].get_PID_parts
                 if self._detailed_output:
                     tmp_dict["Valve_PID_P"] = round(
-                        self._pid.PID[PID_CONTROLLER].p_var, 3
+                        PID_parts["p"], 3
                     )
                     tmp_dict["Valve_PID_I"] = round(
-                        self._pid.PID[PID_CONTROLLER].i_var, 3
+                        PID_parts["i"], 3
                     )
                     tmp_dict["Valve_PID_D"] = round(
-                        self._pid.PID[PID_CONTROLLER].d_var, 3
+                        PID_parts["d"], 3
                     )
                     tmp_dict["Valve_PID_valve_pos"] = round(
                         self._pid[ATTR_CONTROL_PWM_OUTPUT], 3
@@ -961,15 +968,17 @@ class HVACSetting:
             if self.is_prop_pid_mode:
                 tmp_dict["PID_values"] = self.get_pid_param(self._pid)
                 if self.is_prop_pid_mode:
+                    PID_parts = self._pid.PID[PID_CONTROLLER].get_PID_parts
                     if self._detailed_output:
+
                         tmp_dict["PID_P"] = round(
-                            self._pid.PID[PID_CONTROLLER].p_var, 3
+                            PID_parts["p"], 3
                         )
                         tmp_dict["PID_I"] = round(
-                            self._pid.PID[PID_CONTROLLER].i_var, 3
+                            PID_parts["i"], 3
                         )
                         tmp_dict["PID_D"] = round(
-                            self._pid.PID[PID_CONTROLLER].d_var, 3
+                            PID_parts["d"], 3
                         )
                         tmp_dict["PID_valve_pos"] = round(
                             self._pid[ATTR_CONTROL_PWM_OUTPUT], 3
@@ -977,7 +986,7 @@ class HVACSetting:
                     elif self._store_integral:
                         tmp_dict["PID_P"] = None
                         tmp_dict["PID_I"] = round(
-                            self._pid.PID[PID_CONTROLLER].i_var, 3
+                            PID_parts["i"], 3
                         )
                         tmp_dict["PID_D"] = None
                         tmp_dict["PID_valve_pos"] = None
@@ -1013,10 +1022,10 @@ class HVACSetting:
         if restore_integral:
             if self.is_prop_pid_mode:
                 if "PID_integral" in data:
-                    self._pid.PID[PID_CONTROLLER].integral = data["PID_integral"]
+                    self.set_integral(data["PID_integral"])
             if self.is_valve_mode:
                 if "Valve_PID_integral" in data:
-                    self._pid.PID[PID_CONTROLLER].integral = data["Valve_PID_integral"]
+                    self.set_integral(data["Valve_PID_integral"])
         if self._pid:
             self.pid_reset_time()
 

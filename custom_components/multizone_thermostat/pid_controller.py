@@ -194,7 +194,7 @@ class PIDController(object):
     def integral(self, integral):
         """set integral"""
         self._logger.info("Forcing new integral: {0}".format(integral))
-        self._integral = integral
+        self._integral = integral / self._Ki
 
     @property
     def differential(self):
@@ -209,3 +209,13 @@ class PIDController(object):
             self._Ki = ki
         if kd is not None:
             self._Kd = kd
+
+    @property
+    def get_PID_parts(self):
+        part = {
+            "p": self.p_var,
+            "i": self.i_var,
+            "d": self.d_var
+        }
+
+        return part
