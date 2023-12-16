@@ -10,7 +10,12 @@
     # honeywell 2-way 24v valve
     entity_id: switch.main_valve
     passive_switch_duration:
-      days: 14
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4
+    custom_presets:
+      night: 15
+      holiday: 5
     master_mode:
       satelites: [living, sl1, bathroom, sl2, sl3, sl4, sl5]
       # operation_mode: "continuous"
@@ -50,9 +55,13 @@
     # thermostatic actuator
     entity_id: input_boolean.living
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4      
     initial_target_temp: 19
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5    
     proportional_mode:
       control_interval:
         minutes: 15
@@ -91,9 +100,13 @@
     # thermostatic actuator
     entity_id: switch.verdeler_8
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4      
     initial_target_temp: 17.5
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5    
     proportional_mode:
       control_interval:
         minutes: 15
@@ -132,9 +145,13 @@
     # thermostatic actuator
     entity_id: switch.verdeler_6
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4  
     initial_target_temp: 17.5
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5
     proportional_mode:
       control_interval:
         minutes: 15
@@ -172,9 +189,13 @@
     # thermostatic actuator
     entity_id: switch.verdeler_5
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4  
     initial_target_temp: 17.5
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5
     proportional_mode:
       control_interval:
         minutes: 15
@@ -212,9 +233,13 @@
     # thermostatic actuator
     entity_id: switch.verdeler_7
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4  
     initial_target_temp: 19.0
-    away_temp: 17
+    custom_presets:
+      night: 15
+      holiday: 5
     proportional_mode:
       control_interval:
         minutes: 15
@@ -249,9 +274,13 @@
     # proportional valve
     entity_id: number.sl4_valve_control
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4  
     initial_target_temp: 17.5
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5
     proportional_mode:
       control_interval:
         minutes: 15
@@ -288,9 +317,13 @@
     # proportional valve  
     entity_id: number.sl5_valve_control
     passive_switch_duration:
-      days: 15
+      days: 60
+    passive_switch_opening_time:
+      minutes: 4  
     initial_target_temp: 17.5
-    away_temp: 15
+    custom_presets:
+      night: 15
+      holiday: 5
     proportional_mode:
       control_interval:
         minutes: 15
