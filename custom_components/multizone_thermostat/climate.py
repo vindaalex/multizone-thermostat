@@ -421,6 +421,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return {
                 ATTR_EMERGENCY_MODE: self._emergency_stop,
                 ATTR_SELF_CONTROLLED: self._self_controlled,
+                ATTR_CURRENT_TEMP_VEL: self.current_temperature_velocity,
                 ATTR_CURRENT_OUTDOOR_TEMPERATURE: self.outdoor_temperature,
                 ATTR_FILTER_MODE: self.filter_mode,
                 CONF_AREA: self._area,
@@ -1952,6 +1953,24 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return self._current_temperature
         else:
             return round(self._kf_temp.get_temp, 3)
+
+    @property
+    def current_temperature_velocity(self):
+        """Return the sensor temperature velocity."""
+        if self._hvac_on:
+            if self.is_master:
+                return None
+
+        if not self._kf_temp:
+            if self._hvac_on:
+                if self._hvac_on.is_prop_pid_mode:
+                    return self._hvac_on.get_velocity
+                else:
+                    return "no velocity calculated"
+            else:
+                return "only available when hvac on"
+        else:
+            return round(self._kf_temp.get_vel, 5)
 
     @property
     def outdoor_temperature(self):
