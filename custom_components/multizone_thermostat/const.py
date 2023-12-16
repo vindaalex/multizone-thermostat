@@ -71,7 +71,6 @@ PRESET_RESTORE = "restore"
 CONF_TARGET_TEMP_INIT = "initial_target_temp"
 CONF_TARGET_TEMP_MIN = "min_target_temp"
 CONF_TARGET_TEMP_MAX = "max_target_temp"
-CONF_TARGET_TEMP_AWAY = "away_temp"
 
 CONF_PRECISION = "precision"
 CONF_AREA = "room_area"
