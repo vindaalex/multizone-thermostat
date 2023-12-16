@@ -46,6 +46,8 @@ controller_config = {
         float
     ),
     vol.Optional(CONF_PWM_THRESHOLD, default=DEFAULT_MIN_DIFF): vol.Coerce(float),
+    vol.Optional(CONF_MASTER_SCALE_BOUND, default=DEFAULT_MASTER_SCALE_BOUND): cv.positive_float,
+
 }
 
 

@@ -1588,21 +1588,35 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             # valve mode
             if not control_val:
-                control_val = self.control_output[ATTR_CONTROL_PWM_OUTPUT]
+                valve_pos = self.control_output[ATTR_CONTROL_PWM_OUTPUT]
+            else:
+                valve_pos = control_val
+
+            if self._self_controlled == OperationMode.MASTER:
+                master_mode = state_attr(
+                    self.hass, "climate." + self._self_controlled, ATTR_HVAC_DEFINITION
+                )
+                if self.hvac_mode in master_mode and _hvac_on.master_scaled_bound > 1:
+                    master_control_val = master_mode[self.hvac_mode][ATTR_CONTROL_OUTPUT][ATTR_CONTROL_PWM_OUTPUT]
+                    master_pwm_scale = master_mode[self.hvac_mode][CONF_PWM_SCALE]
+                    if master_pwm_scale > 0:
+                        master_util = max(1/_hvac_on.master_scaled_bound, master_control_val / master_pwm_scale)
+                        valve_pos /= master_util
+                        valve_pos = round(max(0, min(valve_pos, _hvac_on.pwm_scale)),0)
 
             if _hvac_on.get_hvac_switch_mode == NO_SWITCH_MODE:
-                control_val = _hvac_on.pwm_scale - control_val
+                valve_pos = _hvac_on.pwm_scale - valve_pos
 
             self._logger.debug(
                 "Change state of heater '%s' to '%s'",
                 entity_id,
-                control_val,
+                valve_pos,
             )
 
             _hvac_on.switch_last_change = datetime.datetime.now(datetime.timezone.utc)
             data = {
                 ATTR_ENTITY_ID: entity_id,
-                ATTR_VALUE: control_val,
+                ATTR_VALUE: valve_pos,
             }
             method = entity_id.split(".")[0]
 
