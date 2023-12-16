@@ -80,6 +80,8 @@ CONF_ENABLE_OLD_PARAMETERS = "restore_parameters"
 CONF_ENABLE_OLD_INTEGRAL = "restore_integral"
 CONF_STALE_DURATION = "sensor_stale_duration"
 
+CONF_EXTRA_PRESETS = "extra_presets"
+
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
 CONF_PASSIVE_SWITCH_OPEN_TIME = "passive_switch_opening_time"
 
