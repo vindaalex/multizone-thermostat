@@ -660,6 +660,12 @@ class HVACSetting:
         """function to overwrite integral value"""
         self._pid.PID[PID_CONTROLLER].integral = integral
 
+    
+    @property
+    def get_velicity(self):
+        """function to get pid velocity value"""
+        return self._pid.PID[PID_CONTROLLER].differential
+
     @property
     def get_ka_kb_param(self):
         """Return the wc parameters of the thermostat."""
