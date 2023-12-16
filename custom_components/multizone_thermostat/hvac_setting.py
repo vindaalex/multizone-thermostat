@@ -32,7 +32,7 @@ class HVACSetting:
         self._hvac_settings = conf
         self._switch_entity = self._hvac_settings[CONF_ENTITY_ID]
         self.area = area
-        self._detailed_output = detailed_output
+        self.detailed_output = detailed_output
         self._store_integral = False
 
         self._last_change = datetime.datetime.now(datetime.timezone.utc)
@@ -587,7 +587,13 @@ class HVACSetting:
         if self._current_state:
             self.current_temperature = state[0]
 
-    def set_detailed_output(self, new_mode):
+    @property
+    def detailed_output(self):
+        """get state detailed output"""
+        return self._detailed_output
+
+    @detailed_output.setter
+    def detailed_output(self, new_mode):
         """change detailed output from service"""
         self._detailed_output = new_mode
 
@@ -932,7 +938,7 @@ class HVACSetting:
         tmp_dict[CONF_PWM_DURATION] = self.get_pwm_time.seconds
         tmp_dict[CONF_PWM_SCALE] = self.pwm_scale
         tmp_dict[ATTR_CONTROL_OUTPUT] = self.get_control_output
-        tmp_dict[ATTR_DETAILED_OUTPUT] = self._detailed_output
+        tmp_dict[ATTR_DETAILED_OUTPUT] = self.detailed_output
         tmp_dict[ATTR_LAST_SWITCH_CHANGE] = self.switch_last_change
         tmp_dict["Open_window"] = open_window
 
@@ -943,7 +949,7 @@ class HVACSetting:
             if self.is_valve_mode:
                 tmp_dict["Valve_PID_values"] = self.get_pid_param(self._pid)
                 PID_parts = self._pid.PID[PID_CONTROLLER].get_PID_parts
-                if self._detailed_output:
+                if self.detailed_output:
                     tmp_dict["Valve_PID_P"] = round(
                         PID_parts["p"], 3
                     )
@@ -969,7 +975,7 @@ class HVACSetting:
                 tmp_dict["PID_values"] = self.get_pid_param(self._pid)
                 if self.is_prop_pid_mode:
                     PID_parts = self._pid.PID[PID_CONTROLLER].get_PID_parts
-                    if self._detailed_output:
+                    if self.detailed_output:
 
                         tmp_dict["PID_P"] = round(
                             PID_parts["p"], 3
@@ -993,7 +999,7 @@ class HVACSetting:
 
             if self.is_wc_mode:
                 tmp_dict["ab_values"] = self.get_ka_kb_param
-                if self._detailed_output:
+                if self.detailed_output:
                     tmp_dict["wc_valve_pos"] = round(
                         self._wc[ATTR_CONTROL_PWM_OUTPUT], 3
                     )

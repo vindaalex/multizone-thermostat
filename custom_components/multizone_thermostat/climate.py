@@ -190,7 +190,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._sensor_stale_duration = sensor_stale_duration
         self._passive_switch = passive_switch
         self._area = area
-        self._detailed_output = detailed_output
         self._emergency_stop = []
         self._current_temperature = None
         self._outdoor_temperature = None
@@ -224,7 +223,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 hvac_mode,
                 mode_config,
                 self._area,
-                self._detailed_output,
+                detailed_output,
             )
 
         self._logger = logging.getLogger(DOMAIN).getChild(name)
@@ -430,7 +429,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     def set_detailed_output(self, hvac_mode: HVACMode, new_mode):
         """configure attribute output level"""
-        self._hvac_def[hvac_mode].set_detailed_output(new_mode)
+        self._hvac_def[hvac_mode].detailed_output = new_mode
         self.schedule_update_ha_state()
 
     @callback
