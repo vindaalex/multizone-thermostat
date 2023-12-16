@@ -1706,7 +1706,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             async_track_point_in_utc_time(
                 self.hass,
                 self.async_turn_switch_off_factory(hvac_mode=hvac_mode),
-                datetime.datetime.fromtimestamp(time.time() + DURATION),
+                datetime.datetime.fromtimestamp(time.time() + DURATION.total_seconds()),
             )
 
     @callback

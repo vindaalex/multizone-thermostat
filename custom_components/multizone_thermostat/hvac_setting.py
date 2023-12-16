@@ -990,7 +990,10 @@ class HVACSetting:
         """restore attributes for climate entity"""
         self._store_integral = restore_integral
         self.target_temperature = data[ATTR_TEMPERATURE]
-        self.switch_last_change = data[ATTR_LAST_SWITCH_CHANGE]
+        self.switch_last_change = datetime.datetime.strptime(
+            data[ATTR_LAST_SWITCH_CHANGE],
+            '%Y-%m-%dT%H:%M:%S.%f%z'
+        )
 
         if self.is_prop_pid_mode:
             if restore_parameters and "PID_values" in data:
