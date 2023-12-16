@@ -16,7 +16,7 @@ from .validations import *
 
 SUPPORTED_MASTER_MODES = [MASTER_CONTINUOUS, MASTER_BALANCED, MASTER_MIN_ON]
 SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
-SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_AWAY]
+
 
 # Configuration of thermostats
 hvac_control_options = {
@@ -30,6 +30,8 @@ hvac_control_options = {
     vol.Optional(CONF_PASSIVE_SWITCH_OPEN_TIME, default=DEFAULT_PASSIVE_SWITCH_OPEN_TIME): vol.All(
         cv.time_period, cv.positive_timedelta
     ),
+    #TODO multiple presets
+    vol.Optional(CONF_EXTRA_PRESETS,default={}):vol.Schema(dict),
 }
 
 controller_config = {
@@ -92,7 +94,6 @@ temp_set_heat = {
     vol.Optional(CONF_TARGET_TEMP_INIT, default=DEFAULT_TARGET_TEMP_HEAT): vol.Coerce(
         float
     ),
-    vol.Optional(CONF_TARGET_TEMP_AWAY): vol.Coerce(float),
 }
 
 temp_set_cool = {
@@ -105,7 +106,6 @@ temp_set_cool = {
     vol.Optional(CONF_TARGET_TEMP_INIT, default=DEFAULT_TARGET_TEMP_COOL): vol.Coerce(
         float
     ),
-    vol.Optional(CONF_TARGET_TEMP_AWAY): vol.Coerce(float),
 }
 
 on_off_heat = {vol.Optional(CONF_ON_OFF_MODE): vol.Schema({**on_off})}
@@ -159,7 +159,6 @@ hvac_control_cool = {
 PLATFORM_SCHEMA = vol.All(
     cv.has_at_least_one_key(HVACMode.HEAT, HVACMode.COOL),
     validate_initial_hvac_mode(),
-    check_presets_in_both_modes(),
     validate_initial_preset_mode(),
     validate_initial_control_mode(),
     validate_initial_sensors(),
@@ -176,9 +175,7 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(CONF_INITIAL_HVAC_MODE, default=HVACMode.OFF): vol.In(
                 SUPPORTED_HVAC_MODES
             ),
-            vol.Optional(CONF_INITIAL_PRESET_MODE, default=PRESET_NONE): vol.In(
-                SUPPORTED_PRESET_MODES
-            ),
+            vol.Optional(CONF_INITIAL_PRESET_MODE, default=PRESET_NONE): cv.string,
             vol.Optional(CONF_PRECISION): vol.In(
                 [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
             ),

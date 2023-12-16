@@ -52,7 +52,7 @@ sensors (at least one sensor needs to be specified):
 * sensor_out (Optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature (float). Only required when running weather mode. No filtering possible.
 
 * initial_hvac_mode (Optional): Set the initial operation mode. Valid values are 'off', 'cool' or 'heat'. Default = off
-* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is 'away'
+* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is any in 'custom_presets'. The 'inital_preset_mode' needs to be present in the 'custom_presets' of the 'initial_hvac_mode'
 
 * precision (Optional): specifiy setpoint precision: 0.1, 0.5 or 1
 * detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
@@ -77,7 +77,7 @@ Generic HVAC mode setting:
 * min_target_temp (Optional): Lower limit temperature setpoint. Default heat=17, cool=20
 * max_target_temp (Optional): Upper limit temperature setpoint. Default for heat=24, cool=35
 * initial_target_temp (Optional): Initial setpoint at start. Default for heat=19, cool=28
-* away_temp (Optional): Setpoint when away preset is activated. Defining an away setpoint will make away preset available. default no away preset mode available. 
+* custom_presets (Optional): A list of custom presets. Needs to be in to form of a list of name and value. Defining 'custom_presets' will make away preset available. default no preset mode available. 
 
 * passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve. Specify a time period. Default is not activated.
 * passive_switch_opening_time (Optional): specify the minium opening time of valve when running passive switch operation. Specify a time period. Default 1 minute.
@@ -104,6 +104,14 @@ If no pwm interval is defined, it will set the state of "heater" from 0 to "diff
 * pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
 * pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
+* bounded_scale_to_master(Optional): scale proporitional valves with the master's pwm. 'bounded_scale_to_master' defines the scale limit. For example: 
+  - bounded scale = 3
+  - prop valve pwm = 15
+  - master pwm = 25
+  - master pwm scale = 100 
+  - valve pwm output = 15 / min( 25/100, 3)
+
+  Default = 1 (no scaling)
 
 ##### PID controller (Optional) (sub of proportional mode)
 PID controller. Configured under 'PID_mode:'

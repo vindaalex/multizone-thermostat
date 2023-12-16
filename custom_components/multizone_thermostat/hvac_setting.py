@@ -8,7 +8,6 @@ import numpy as np
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
-    PRESET_AWAY,
     PRESET_NONE,
     HVACMode,
 )
@@ -419,12 +418,18 @@ class HVACSetting:
         self._target_temp = target_temp
 
     @property
-    def get_away_temp(self):
-        """return away temp for current hvac mode"""
+    def get_preset_temp(self):
+        """return preset temp for current custom preset"""
         if self.is_hvac_on_off_mode or self.is_hvac_proportional_mode:
-            return self._hvac_settings.get(CONF_TARGET_TEMP_AWAY)
+            return self.custom_presets[self.preset_mode]
         else:
             return None
+
+    @property
+    def custom_presets(self):
+        """get allowed preset modes"""
+        custom = self._hvac_settings.get(CONF_EXTRA_PRESETS,{})
+        return custom
 
     @property
     def preset_mode(self):
@@ -443,16 +448,17 @@ class HVACSetting:
             PRESET_EMERGENCY,
             PRESET_RESTORE,
         ]:
-            if self._preset_mode == PRESET_NONE and mode == PRESET_AWAY:
+            if self._preset_mode == PRESET_NONE and mode in self.custom_presets:
                 self.restore_temperature = self.target_temperature
-                self.target_temperature = self.get_away_temp
+                self.target_temperature = self.custom_presets[mode]
 
-            elif self._preset_mode == PRESET_AWAY and mode == PRESET_NONE:
+            elif self._preset_mode in self.custom_presets and mode == PRESET_NONE:
                 if self.restore_temperature is not None:
                     self.target_temperature = self.restore_temperature
                 else:
                     self.target_temperature = self._hvac_settings[CONF_TARGET_TEMP_INIT]
-
+            elif self._preset_mode in self.custom_presets and mode in self.custom_presets:
+                self.target_temperature = self.custom_presets[mode]
         self._preset_mode = mode
 
     @property

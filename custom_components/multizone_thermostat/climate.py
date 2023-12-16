@@ -18,7 +18,6 @@ import time
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
-    PRESET_AWAY,
     PRESET_NONE,
     ClimateEntity,
     ClimateEntityFeature,
@@ -81,10 +80,6 @@ async def async_setup_platform(
 ) -> None:
     """Set up the multizone thermostat platform."""
 
-    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
-
-    services.register_services()
-
     name = config.get(CONF_NAME)
     sensor_entity_id = config.get(CONF_SENSOR)
     filter_mode = config.get(CONF_FILTER_MODE)
@@ -105,15 +100,22 @@ async def async_setup_platform(
     cool_conf = config.get(HVACMode.COOL)
 
     hvac_def = {}
+    custom_presets = []
     enabled_hvac_modes = []
 
     # Append the enabled hvac modes to the list
     if heat_conf:
         enabled_hvac_modes.append(HVACMode.HEAT)
         hvac_def[HVACMode.HEAT] = heat_conf
+        custom_presets.append(list(heat_conf.get(CONF_EXTRA_PRESETS).keys()))
     if cool_conf:
         enabled_hvac_modes.append(HVACMode.COOL)
         hvac_def[HVACMode.COOL] = cool_conf
+        custom_presets.append(list(cool_conf.get(CONF_EXTRA_PRESETS).keys()))
+
+    custom_presets = list(set([key_i for list_i in custom_presets for key_i in list_i]))
+    await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
+    services.register_services(list(set(custom_presets)))
 
     async_add_entities(
         [
@@ -645,11 +647,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             "Temperature updated to '%s' for mode '%s'", temperature, hvac_mode
         )
 
-        if (
-            self.preset_mode == PRESET_AWAY
-        ):  # when preset mode is away, change the temperature but do not operate
+        if self.preset_mode in self._hvac_on.custom_presets:  # when custom preset mode is active, change the temperature but do not operate
             self._logger.debug(
-                "Preset mode away when temperature is updated : skipping operate"
+                "Preset mode {self.preset_mode} active when temperature is updated : skipping change"
             )
             return
 
@@ -1738,9 +1738,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._logger.info("Recover from emergency mode")
                 self.hass.async_create_task(self.async_set_preset_mode(PRESET_RESTORE))
 
-    async def async_set_preset_mode(self, preset_mode: str):
+    async def async_set_preset_mode(self, preset_mode: str, hvac_mode: HVACMode=None):
         """Set new preset mode."""
-        if preset_mode not in self.preset_modes and preset_mode not in [
+        if preset_mode not in self.valid_presets(hvac_mode) and preset_mode not in [
             PRESET_NONE,
             PRESET_EMERGENCY,
             PRESET_RESTORE,
@@ -1789,6 +1789,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 {
                     ATTR_ENTITY_ID: "climate." + sat,
                     ATTR_PRESET_MODE: preset_mode,
+                    ATTR_HVAC_MODE: self.hvac_mode
+
                 },
                 context=self._context,
                 # blocking=False,
@@ -1891,6 +1893,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             if self.preset_modes == [PRESET_NONE]:
                 return ClimateEntityFeature.TARGET_TEMPERATURE
+
             return (
                 ClimateEntityFeature.PRESET_MODE
                 | ClimateEntityFeature.TARGET_TEMPERATURE
@@ -1917,8 +1920,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self.is_master:
                 return None
             if self._hvac_mode != HVACMode.OFF:
-                if self.preset_mode == PRESET_AWAY:
-                    return self._hvac_on.get_away_temp
+                if self.preset_mode in self._hvac_on.custom_presets:
+                    return self._hvac_on.get_preset_temp
                 elif self._hvac_on.min_target_temp:
                     return self._hvac_on.min_target_temp
         else:
@@ -1931,8 +1934,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if self.is_master:
                 return None
             elif self._hvac_mode != HVACMode.OFF:
-                if self.preset_mode == PRESET_AWAY:
-                    return self._hvac_on.get_away_temp
+                if self.preset_mode in self._hvac_on.custom_presets:
+                    return self._hvac_on.get_preset_temp
                 elif self._hvac_on.max_target_temp:
                     return self._hvac_on.max_target_temp
         else:
@@ -2004,10 +2007,22 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def preset_modes(self):
         """Return a list of available preset modes."""
+        return self.valid_presets()
+
+    def valid_presets(self, hvac_mode: HVACMode=None):
+        """Return a list of available preset modes."""
+        if hvac_mode == HVACMode.OFF:
+            _hvac_on = None
+        elif hvac_mode:
+            _hvac_on = self._hvac_def[hvac_mode]
+        else:
+            _hvac_on = self._hvac_on
+            hvac_mode = self._hvac_mode
+
         modes = [PRESET_NONE]
         if self._hvac_on:
-            if self._hvac_on.get_away_temp or self.is_master:
-                modes = modes + [PRESET_AWAY]
+            if self._hvac_on.custom_presets or self.is_master:
+                modes = modes + list(self._hvac_on.custom_presets.keys())
 
         return modes
 

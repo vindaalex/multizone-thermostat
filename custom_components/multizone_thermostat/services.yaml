@@ -21,10 +21,13 @@ set_preset_mode:
   fields:
     entity_id:
       description: Thermostat entity_id
-      example: climate.study
+      example: climate.master
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
     preset_mode:
       description: New value of preset mode
-      example: "away"
+      example: "holiday"
 
 
 # Describes the format for available PIDThermostat services

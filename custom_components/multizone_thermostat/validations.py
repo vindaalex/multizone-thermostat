@@ -3,7 +3,7 @@ from typing import Any
 from datetime import timedelta
 import voluptuous as vol
 
-from homeassistant.components.climate import HVACMode, PRESET_AWAY
+from homeassistant.components.climate import HVACMode
 
 from .const import *
 
@@ -125,29 +125,39 @@ def validate_initial_sensors(*keys: str) -> Callable:
 
 
 def validate_initial_preset_mode(*keys: str) -> Callable:
-    """If an initial preset mode has been set, check if the values are set in both modes."""
-
-    def validate_by_mode(obj: dict[str, Any], preset: str, config_preset: str):
-        """Use a helper to validate mode by mode."""
-        if HVACMode.HEAT in obj.keys() and config_preset not in obj[HVACMode.HEAT]:
-            raise vol.Invalid(
-                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
-                    preset, config_preset, HVACMode.HEAT
-                )
-            )
-        if HVACMode.COOL in obj.keys() and config_preset not in obj[HVACMode.COOL]:
-            raise vol.Invalid(
-                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
-                    preset, config_preset, HVACMode.COOL
-                )
-            )
+    """If an initial preset mode has been set, check if it is defined in the hvac mode."""
 
     def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
-        if CONF_INITIAL_PRESET_MODE in obj and obj[CONF_INITIAL_PRESET_MODE] != "none":
-            if obj[CONF_INITIAL_PRESET_MODE] == PRESET_AWAY:
-                validate_by_mode(obj, PRESET_AWAY, CONF_TARGET_TEMP_AWAY)
-        return obj
+        if CONF_INITIAL_PRESET_MODE in obj:
+            if obj[CONF_INITIAL_PRESET_MODE] == "none":
+                return obj
+            elif CONF_INITIAL_HVAC_MODE not in obj:
+                raise vol.Invalid(
+                            "no initial hvac mode while specifying initial preset '{}'".format(
+                                obj[CONF_INITIAL_PRESET_MODE]
+                            )
+                        )
+            elif obj[CONF_INITIAL_HVAC_MODE] not in [HVACMode.HEAT, HVACMode.COOL]:
+                raise vol.Invalid(
+                            "initial hvac mode 'off' not valid while specifying initial preset '{}'".format(
+                                obj[CONF_INITIAL_PRESET_MODE]
+                            )
+                        )
+            elif obj[CONF_INITIAL_PRESET_MODE] not in obj[CONF_INITIAL_HVAC_MODE][CONF_EXTRA_PRESETS]:
+                raise vol.Invalid(
+                            "initial preset '{}' not valid for hvac mode {} mode".format(
+                                obj[CONF_INITIAL_PRESET_MODE],
+                                obj[CONF_INITIAL_HVAC_MODE]
+
+                            )
+                        )
+
+            else:
+                return obj
+        else:
+            return obj
+
 
     return validate
 
@@ -171,28 +181,3 @@ def validate_initial_hvac_mode(*keys: str) -> Callable:
 
     return validate
 
-
-def check_presets_in_both_modes(*keys: str) -> Callable:
-    """If one preset is set on one mode, then this preset is enabled and check it on the other modes."""
-
-    def validate_by_preset(obj: dict[str, Any], conf: str):
-        """Check this condition."""
-        if conf in obj[HVACMode.HEAT] and conf not in obj[HVACMode.COOL]:
-            raise vol.Invalid(
-                "{} is set for {} but not for {}".format(
-                    conf, HVACMode.HEAT, HVACMode.COOL
-                )
-            )
-        if conf in obj[HVACMode.COOL] and conf not in obj[HVACMode.HEAT]:
-            raise vol.Invalid(
-                "{} is set for {} but not for {}".format(
-                    conf, HVACMode.COOL, HVACMode.HEAT
-                )
-            )
-
-    def validate(obj: dict[str, Any]) -> dict[str, Any]:
-        if HVACMode.HEAT in obj.keys() and HVACMode.COOL in obj.keys():
-            validate_by_preset(obj, CONF_TARGET_TEMP_AWAY)
-        return obj
-
-    return validate
