@@ -153,7 +153,7 @@ MASTER_BALANCED = "balanced"
 MASTER_CONTINUOUS = "continuous"
 
 # control constants
-CONTROL_START_DELAY = 0.5  #   # seconds, control loop start delay rel to time()
+CONTROL_START_DELAY = 1  #   # seconds, control loop start delay rel to time()
 MASTER_CONTROL_LEAD = 1  # 0.1  # seconds, time between last sat and master control
 SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
 PWM_LAG = 0.5  # 0.05  # seconds

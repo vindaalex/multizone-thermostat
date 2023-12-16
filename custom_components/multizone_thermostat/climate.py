@@ -702,6 +702,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.info(
                 "HVAC mode is OFF. Turn the devices OFF and exit hvac change"
             )
+            self._self_controlled = OperationMode.SELF
             self.async_write_ha_state()
             return
 
@@ -736,11 +737,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_write_ha_state()
             return
 
-        self._pwm_start_time = time.time() #+ CONTROL_START_DELAY
-            # if self.is_master:
-            #     self._pwm_start_time += (
-            #         len(self._hvac_on.get_satelites) * SAT_CONTROL_LEAD
-            #     )
+
 
         if self._hvac_on.is_hvac_on_off_mode:
             # no need for pwm routine as controller assures update
@@ -755,26 +752,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         elif self.is_master or self._hvac_on.is_hvac_proportional_mode:
 
-            if self._hvac_on.get_operate_cycle_time:
-                self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
-
-            # run controller before pwm loop
-            # async_track_point_in_utc_time(
-            #     self.hass,
-            #     self.async_routine_controller_factory(
-            #         self._hvac_on.get_operate_cycle_time
-            #     ),
-            #     datetime.datetime.fromtimestamp(self._pwm_start_time),
-            # )
-
-            # run pwm just after controller
-            if self._hvac_on.get_pwm_time:
-                async_track_point_in_utc_time(
-                    self.hass,
-                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
-                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
-                )
-
+            self._pwm_start_time = time.time()
+            if self.is_master:
+                self._pwm_start_time += CONTROL_START_DELAY
+                #     self._pwm_start_time += (
+                #         len(self._hvac_on.get_satelites) * SAT_CONTROL_LEAD
+                #     )
             # update and track satelites
             if self.is_master:
                 # update controller (reset) to be ready for new satelites
@@ -792,7 +775,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     entity_list=self._hvac_on.get_satelites
                 )
 
+            # if self._hvac_on.get_operate_cycle_time:
+            #     self._async_routine_controller(self._hvac_on.get_operate_cycle_time)
 
+            # run controller before pwm loop
+            async_track_point_in_utc_time(
+                self.hass,
+                self.async_routine_controller_factory(
+                    self._hvac_on.get_operate_cycle_time
+                ),
+                datetime.datetime.fromtimestamp(self._pwm_start_time),
+            )
+
+            # run pwm just after controller
+            if self._hvac_on.get_pwm_time:
+                async_track_point_in_utc_time(
+                    self.hass,
+                    self.async_routine_pwm_factory(self._hvac_on.get_pwm_time),
+                    datetime.datetime.fromtimestamp(self._pwm_start_time + PWM_LAG),
+                )
 
         # Ensure we update the current operation after changing the mode
         self.async_write_ha_state()
@@ -1288,16 +1289,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def update_pwm_time(self):
         """determine if new pwm cycle has started and update cycle time"""
         pwm_duration = self._hvac_on.get_pwm_time.seconds
+        # if time.time() > self._pwm_start_time + pwm_duration:
         while time.time() > self._pwm_start_time + pwm_duration:
             self._pwm_start_time += pwm_duration
 
     @property
     def pwm_controller_time(self):
         """check if pwm loop is to be started soon"""
-        next_pwm_loop = self._pwm_start_time + self._hvac_on.get_pwm_time.seconds
-        if (
-            next_pwm_loop - time.time()
-        ) / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM:
+        next_pwm_loop = self._pwm_start_time #+ self._hvac_on.get_pwm_time.seconds
+        now = time.time()
+        time_diff = next_pwm_loop - now
+
+        if time_diff > 0 and time_diff / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM:
             return True
         else:
             self._logger.debug("no pwm loop to start soon")
