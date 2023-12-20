@@ -1748,7 +1748,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @callback
     def _async_restore_emergency_stop(self, entity_id):
         """update emergency list"""
-        if entity_id in self._emergency_stop:
+        if not self._emergency_stop:
+            self.hass.async_create_task(self.async_set_preset_mode(PRESET_RESTORE))
+
+        elif entity_id in self._emergency_stop:
             self._emergency_stop.remove(entity_id)
 
             if not self._emergency_stop and self.preset_mode == PRESET_EMERGENCY:
