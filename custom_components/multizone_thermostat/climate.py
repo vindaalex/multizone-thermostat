@@ -1911,9 +1911,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self.is_master:
             return ClimateEntityFeature.PRESET_MODE
         else:
-            if self.preset_modes == [PRESET_NONE]:
-                return ClimateEntityFeature.TARGET_TEMPERATURE
-
             return (
                 ClimateEntityFeature.PRESET_MODE
                 | ClimateEntityFeature.TARGET_TEMPERATURE
@@ -2047,7 +2044,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Return a list of available preset modes."""
         return self.valid_presets()
 
-    def valid_presets(self, hvac_mode: HVACMode=None):
+    def valid_presets(self, hvac_mode: HVACMode = None):
         """Return a list of available preset modes."""
         if hvac_mode == HVACMode.OFF:
             _hvac_on = None
@@ -2057,7 +2054,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             _hvac_on = self._hvac_on
             hvac_mode = self._hvac_mode
 
-        modes = [PRESET_NONE]
+        modes = [PRESET_NONE, PRESET_EMERGENCY]
         if self._hvac_on:
             if self._hvac_on.custom_presets or self.is_master:
                 modes = modes + list(self._hvac_on.custom_presets.keys())
