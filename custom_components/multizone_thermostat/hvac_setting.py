@@ -121,15 +121,6 @@ class HVACSetting:
                     ):
                         self.pid_reset_time()
                 self.run_pid(force)
-                # reset integral when no heat is required
-                if self._wc and self._pid:
-                    if (
-                        self._wc[ATTR_CONTROL_PWM_OUTPUT] <= 0
-                        and self._pid[ATTR_CONTROL_PWM_OUTPUT] < 0
-                        and self.get_integral != 0
-                    ):
-                        # reset integral as wc is also off
-                        self.set_integral(0)
 
         elif self.is_hvac_master_mode:
             # nesting of pwm controlled valves
