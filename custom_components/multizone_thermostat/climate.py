@@ -993,7 +993,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 "hvac_action",
             )
 
-            if master_mode not in [HVACAction.IDLE, HVACAction.OFF]:
+            if master_mode in [HVACAction.HEATING, HVACAction.COOLING]:
                 return
 
         entity_list = {}
