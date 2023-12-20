@@ -984,13 +984,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def _async_stuck_switch_check(self, now):
         """Check if the switch has not changed for a certain period and force operation to avoid stuck or jammed."""
 
-        if self._self_controlled == OperationMode.PENDING:
-            # changing operation mode, wait for the net loop
-            return
-
-        if self.preset_mode == PRESET_EMERGENCY:
-            return
-
         # operated by master and check if currently active
         elif self._self_controlled != OperationMode.SELF:
             master_mode = state_attr(
