@@ -985,9 +985,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Check if the switch has not changed for a certain period and force operation to avoid stuck or jammed."""
 
         # operated by master and check if currently active
-        elif self._self_controlled != OperationMode.SELF:
+        if self._self_controlled != OperationMode.SELF:
             master_mode = state_attr(
-                self.hass, "climate." + self._self_controlled, "hvac_action"
+                # self.hass, "climate." + self._self_controlled, "hvac_action"
+                self.hass,
+                "climate.master",
+                "hvac_action",
             )
 
             if master_mode not in [HVACAction.IDLE, HVACAction.OFF]:
