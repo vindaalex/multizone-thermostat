@@ -1012,7 +1012,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             return
 
         for hvac_mode, data in entity_list.items():
-            sensor_state = self.hass.states.get(data[0])
+            if data[0] in self._emergency_stop:
+                return
 
             self._logger.debug(
                 "Switch '%s' stuck prevention check with last update '%s'"
