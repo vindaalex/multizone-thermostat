@@ -1329,6 +1329,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 return
 
             if self.preset_mode == PRESET_EMERGENCY:
+                if not self._emergency_stop:
+                    self._async_restore_emergency_stop("")
                 self._logger.debug("Controller cancelled due to 'emergency mode'")
                 return
 
