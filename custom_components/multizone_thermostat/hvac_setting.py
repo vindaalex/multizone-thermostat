@@ -111,17 +111,20 @@ class HVACSetting:
                 self.run_wc()
 
             if self.is_prop_pid_mode:
-                # avoid integral run-off when sum is negative
+                # self.pid_reset_time()
+                self.run_pid(force)
                 if self._wc and self._pid:
+                    # avoid integral run-off when sum is negative
+                    pid = self._pid.PID[PID_CONTROLLER].get_PID_parts
                     if (
-                        self._wc[ATTR_CONTROL_PWM_OUTPUT] > 0
+                        # self._wc[ATTR_CONTROL_PWM_OUTPUT] > 0
+                        pid["p"] < 0  # too warm
+                        and pid["i"] < -self._wc[ATTR_CONTROL_PWM_OUTPUT]
                         and self._wc[ATTR_CONTROL_PWM_OUTPUT]
                         + self._pid[ATTR_CONTROL_PWM_OUTPUT]
                         < 0
                     ):
-                        self.pid_reset_time()
-                self.run_pid(force)
-
+                        self.set_integral(-self._wc[ATTR_CONTROL_PWM_OUTPUT])
         elif self.is_hvac_master_mode:
             # nesting of pwm controlled valves
             start_time = time.time()
