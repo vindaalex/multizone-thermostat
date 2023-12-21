@@ -433,6 +433,9 @@ class Nesting:
         # the maximum row size (pwm) is pwm_max
         # column size is variable and depends on nesting fit
         for i_r, _ in enumerate(self.rooms):
+            if self.pwm[i_r] == 0:
+                continue
+
             # first room in loop
             if not self.packed:
                 self.create_lid(i_r)
