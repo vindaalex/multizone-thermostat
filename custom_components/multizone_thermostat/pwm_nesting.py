@@ -245,7 +245,7 @@ class Nesting:
         else:
             return [None] * self.get_pwm_max
 
-    def create_lid(self, room_index, offset=0):
+    def create_lid(self, room_index, dt=None):
         """
         create a 2d array with length of pwm_max and rows equal to area
         fill/est array with room id equal to required pwm
@@ -253,16 +253,35 @@ class Nesting:
         if self.get_pwm_max == 0:
             return
 
+        # check if function started from pwm check or full nesting run
+        if dt is not None:
+            time_shift = dt
+            if (
+                self.max_nested_pwm() < time_shift
+                and self.area[room_index] < 0.15 * NESTING_MATRIX
+            ):
+                return
+            forced_room = room_index
+        else:
+            forced_room = None
+            time_shift = 0
+
         new_lid = np.array(
             copy.deepcopy(
-                [self.lid_segment for i in range(int(self.area[room_index]))]
+                [
+                    self.lid_segment(dt, forced_room)
+                    for i in range(int(self.area[room_index]))
+                ]
             ),
             dtype=object,
         )
+
+        max_len = min(self.pwm[room_index] + time_shift, new_lid.shape[1])
+
         # fill new lid with current room pwm need
         new_lid[
-            int(floor(offset)) : int(ceil(self.area[room_index] + offset)),
-            int(floor(offset)) : int(ceil(self.pwm[room_index] + offset)),
+            :,  # 0 : int(ceil(self.area[room_index])),
+            time_shift:max_len,
         ] = self.rooms[room_index]
         self.packed.append(new_lid)
 
