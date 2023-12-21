@@ -7,27 +7,29 @@ rooms switch delay are determined.
 import copy
 import itertools
 import logging
-import time
 from math import ceil, floor, sqrt
+import time
 
 import numpy as np
 
 from . import DOMAIN
 from .const import (
+    ATTR_CONTROL_OFFSET,
+    ATTR_CONTROL_PWM_OUTPUT,
+    ATTR_ROOMS,
+    ATTR_ROUNDED_PWM,
+    ATTR_SCALED_PWM,
     CONF_AREA,
     CONF_PWM_DURATION,
     CONF_PWM_SCALE,
-    ATTR_CONTROL_PWM_OUTPUT,
-    ATTR_CONTROL_OFFSET,
-    MASTER_CONTINUOUS,
     MASTER_BALANCED,
+    MASTER_CONTINUOUS,
+    MASTER_MIN_ON,
     NESTING_BALANCE,
     NESTING_MATRIX,
+    MIN_MASTER_LOAD,
+    NESTING_DOMINANCE
 )
-
-ATTR_ROOMS = "rooms"
-ATTR_SCALED_PWM = "scaled_pwm"
-ATTR_ROUNDED_PWM = "rounded_pwm"
 
 
 class Nesting:
