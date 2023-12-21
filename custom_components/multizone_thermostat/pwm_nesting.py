@@ -545,44 +545,43 @@ class Nesting:
 
     def get_nesting(self):
         """get offset per room with offset in satelite pwm scale"""
-        if self.packed:
-            self.offset = {}
-            len_pwm = self.max_nested_pwm
-            self.cleaned_rooms = [[] for _ in range(len_pwm)]
-            for lid in self.packed:
-                # loop over pwm
-                # first check if some are at end
-                # extract unique rooms by fromkeys method
-                if (
-                    self.operation_mode == MASTER_CONTINUOUS
-                    and self.get_pwm_max == NESTING_MATRIX
-                ):
-                    rooms = list(dict.fromkeys(lid[:, -1]))
+        len_pwm = self.max_nested_pwm()
+        if len_pwm == 0:
+            return {}
+
+        self.offset = {}
+        self.cleaned_rooms = [[] for _ in range(len_pwm)]
+        for lid in self.packed:
+            # loop over pwm
+            # first check if some are at end
+            # extract unique rooms by fromkeys method
+            if (
+                self.operation_mode == MASTER_CONTINUOUS
+                and self.get_pwm_max == NESTING_MATRIX
+            ):
+                rooms = list(dict.fromkeys(lid[:, -1]))
+                for room in rooms:
+                    if room is not None:
+                        self.cleaned_rooms[len_pwm - 1].append(room)
+                        if room not in self.offset:
+                            room_pwm = self.real_pwm[self.rooms.index(room)]
+                            self.offset[room] = (
+                                len_pwm - room_pwm
+                            ) / self.scale_factor[room]
+
+            for i_2, _ in enumerate(lid[0]):
+                # last one already done
+                if i_2 < len_pwm - 1:
+                    # extract unique rooms by fromkeys method
+                    rooms = list(dict.fromkeys(lid[:, i_2]))
                     for room in rooms:
                         if room is not None:
-                            self.cleaned_rooms[len_pwm - 1].append(room)
+                            if room not in self.cleaned_rooms[i_2]:
+                                self.cleaned_rooms[i_2].append(room)
                             if room not in self.offset:
-                                room_pwm = self.real_pwm[self.rooms.index(room)]
-                                self.offset[room] = (
-                                    len_pwm - room_pwm
-                                ) / self.scale_factor[room]
+                                self.offset[room] = i_2 / self.scale_factor[room]
 
-                for i_2, _ in enumerate(lid[0]):
-                    # last one already done
-                    if i_2 < len_pwm - 1:
-                        # extract unique rooms by fromkeys method
-                        rooms = list(dict.fromkeys(lid[:, i_2]))
-                        for room in rooms:
-                            if room is not None:
-                                if room not in self.cleaned_rooms[i_2]:
-                                    self.cleaned_rooms[i_2].append(room)
-                                if room not in self.offset:
-                                    self.offset[room] = i_2 / self.scale_factor[room]
-
-            return self.offset
-
-        else:
-            return None
+        return self.offset
 
     def get_master_output(self):
         """control ouput (offset and pwm) for master"""
