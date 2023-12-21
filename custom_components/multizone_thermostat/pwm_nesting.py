@@ -161,10 +161,23 @@ class Nesting:
         return_value = min(max(pwm_max, return_value), NESTING_MATRIX)
         return int(ceil(return_value))
 
-    @property
-    def max_nested_pwm(self):
+    def max_nested_pwm(self, dt=None, forced_room=None):
         """get max length of self.packed"""
-        return max([len(area_i) for lid in self.packed for area_i in lid])
+        if self.packed:
+            max_packed = max([len(area_i) for lid in self.packed for area_i in lid])
+        else:
+            max_packed = 0
+
+        if forced_room is not None:
+            if (
+                max_packed < dt + self.pwm[forced_room]
+                and self.area[forced_room] < 0.15 * NESTING_MATRIX
+            ):
+                return max_packed
+            else:
+                return dt + self.pwm[forced_room]
+        else:
+            return max_packed
 
     def satelite_data(self, sat_data):
         """convert new satelite data to correct format"""
