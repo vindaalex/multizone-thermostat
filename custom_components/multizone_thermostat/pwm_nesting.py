@@ -236,10 +236,14 @@ class Nesting:
             )
         ]
 
-    @property
-    def lid_segment(self):
+    def lid_segment(self, dt=None, forced_room=None):
         # prepare pwm size for nesting
-        return [None] * self.get_pwm_max
+        if forced_room is not None or self.packed:
+            return [None] * self.max_nested_pwm(dt, forced_room)
+        elif self.packed:
+            return [None] * self.max_nested_pwm()
+        else:
+            return [None] * self.get_pwm_max
 
     def create_lid(self, room_index, offset=0):
         """
