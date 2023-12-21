@@ -148,6 +148,11 @@ CONF_CONTINUOUS_LOWER_LOAD = "lower_load_scale"
 CONF_GOAL = "goal"  # pid valve mode
 ATTR_GOAL = "goal"  # pid valve mode
 
+# nesting
+ATTR_ROOMS = "rooms"
+ATTR_SCALED_PWM = "scaled_pwm"
+ATTR_ROUNDED_PWM = "rounded_pwm"
+
 MASTER_MIN_ON = "minimal_on"
 MASTER_BALANCED = "balanced"
 MASTER_CONTINUOUS = "continuous"
@@ -159,7 +164,9 @@ SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
 PWM_LAG = 0.5  # 0.05  # seconds
 PWM_UPDATE_CHANGE = 0.05  # percentage, pwm difference above which an update is needed
 CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
-DEFAULT_MIN_VALVE_PWM = 0.1 # factor of master pwm
+DEFAULT_MIN_VALVE_PWM = 0 # factor of master pwm
+MIN_MASTER_LOAD = 0.25 # min load for nesting
+NESTING_DOMINANCE = 0.75 # limit dominant room in nesting
 
 NESTING_MATRIX = 20
 NESTING_BALANCE = 0.1
