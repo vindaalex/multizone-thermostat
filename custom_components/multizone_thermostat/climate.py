@@ -1778,6 +1778,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 "Preset mode change to '%s' not allowed while in emergency mode",
                 preset_mode,
             )
+            self.async_write_ha_state()
             return
 
         if self._hvac_on:
