@@ -285,7 +285,7 @@ class Nesting:
         ] = self.rooms[room_index]
         self.packed.append(new_lid)
 
-    def insert_room(self, room_index, offset=0):
+    def insert_room(self, room_index, dt=0):
         """inserted room to current nesting"""
         nested = False
         options = []  # temp storage of each free spaces per room-area segment
@@ -303,7 +303,7 @@ class Nesting:
                 try:
                     start_empty = list(lid_i[area_segment]).index(None)
                     start_empty = max(
-                        start_empty, offset
+                        start_empty, dt
                     )  # when run in the middle of pwm loop
                 except ValueError:
                     start_empty = None
@@ -372,6 +372,7 @@ class Nesting:
                 # remove of options per lid and merge them
                 for lid_id in opt_arr:
                     for store_option in lid_id:
+                        # TODO: store only feasible skip -1
                         final_opt.append(store_option)
 
                 # when multiple storage options are present select the one with best fit
@@ -394,16 +395,25 @@ class Nesting:
                     # fill free space with room pwm
                     # select lid with free space
                     mod_lid = self.packed[lid_i]
+                    lid_bckup = copy.deepcopy(mod_lid)
 
                     # fill area segments and pwm space with room id
-                    max_pwm = min(self.get_pwm_max, np.shape(mod_lid)[1])
-                    for area_i in range(self.area[room_index]):
-                        for pwm_i in range(self.pwm[room_index]):
-                            mod_lid[
-                                x_start + area_i,
-                                max_pwm - y_width + pwm_i,
-                            ] = self.rooms[room_index]
-
+                    try:
+                        # max_pwm = min(self.get_pwm_max, np.shape(mod_lid)[1])
+                        # for area_i in range(self.area[room_index]):
+                        #     for pwm_i in range(self.pwm[room_index]):
+                        mod_lid[
+                            x_start : x_start + self.area[room_index],
+                            np.shape(mod_lid)[1] - y_width : np.shape(mod_lid)[1]
+                            - y_width
+                            + self.pwm[room_index],
+                        ] = self.rooms[room_index]
+                    except IndexError as e:
+                        nested = False
+                        mod_lid = lid_bckup
+                        # self._logger.error(f"failed nesting {self.rooms[room_index]} area {area_i} of {self.area[room_index]} with pwm {pwm_i} of {self.pwm[room_index]} in shape {mod_lid.shape} (offs {offset}; xstart {x_start}; pwmmax {self.get_pwm_max}; y_width {y_width}")
+                        self._logger.error(f"in nesting {mod_lid}")
+                        self._logger.error(f"error: {str(e)}")
         return nested
 
     def nest_rooms(self, data=None):
