@@ -128,13 +128,18 @@ class HVACSetting:
             if routine:
                 self.nesting.nest_rooms(self._satelites)
                 self.nesting.distribute_nesting()
-                new_offsets = self.nesting.get_nesting()
-                if new_offsets:
-                    self.set_satelite_offset(new_offsets)
+                forced_nest = True
             # update nesting length only to avoid too large shifts
             else:
-                self.nesting.check_pwm(self._satelites, current_offset)
-                _ = self.nesting.get_nesting()
+                self.nesting.check_pwm(self._satelites, dt=current_offset)
+                forced_nest = False
+            # TODO check offsets when therstat setpt is raised
+            #  - check offset (input val offset)
+            #  - excl other rooms
+
+            new_offsets = self.nesting.get_nesting()
+            if new_offsets:
+                self.set_satelite_offset(new_offsets, forced=forced_nest)
 
             # calculate for proportional valves
             if self.is_valve_mode:
