@@ -675,15 +675,18 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         if self._hvac_on:
             # cancel scheduled switch routines
-            self._async_cancel_pwm_routines()
-            # stop keep_live
-            # mod
-            if not self.is_master:
-                self._async_routine_controller()
+            self._async_cancel_pwm_routines(self._hvac_mode)
+
+            # stop controller loop
+            self._async_routine_controller()
+
+            # stop pwm loop when present
             if self._loop_pwm:
                 self._async_routine_pwm()
+
+            # reset control output
             self.control_output = {ATTR_CONTROL_OFFSET: 0, ATTR_CONTROL_PWM_OUTPUT: 0}
-            await self._async_switch_turn_off()
+
             # stop tracking satelites
             if self.is_master:
                 await self._async_routine_track_satelites()
@@ -694,6 +697,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # reset to be ready for new satelites
                 self._hvac_on.restore_satelites()
 
+        # set current mode
         self._old_mode = self._hvac_mode
         self._hvac_mode = hvac_mode
         self._hvac_on = None
@@ -706,9 +710,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_write_ha_state()
             return
 
-        self._hvac_on = self._hvac_def[self._hvac_mode]
-        if self.preset_mode != self._hvac_on.preset_mode:
-            await self.async_set_preset_mode(self.preset_mode)
+        # load current config
+        _hvac_on = self._hvac_def[self._hvac_mode]
+
+        # check and sync preset mode
+        if self.preset_mode != _hvac_on.preset_mode:
+            await self.async_set_preset_mode(
+                self.preset_mode, hvac_mode=self._hvac_mode
+            )
+
+        self._hvac_on = _hvac_on
 
         # reset time stamp pid to avoid integral run-off
         if self._hvac_on.is_prop_pid_mode or self._hvac_on.is_valve_mode:
