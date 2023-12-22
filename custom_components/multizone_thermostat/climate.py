@@ -1468,7 +1468,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # check if current switch state is matching
                 if self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale:
                     await self._async_switch_turn_on()
-                elif start_time >= now or end_time <= now:
+                elif (
+                    start_time - now > START_MISALINGMENT or end_time <= now
+                ) and self._is_valve_open():
                     await self._async_switch_turn_off()
                 elif start_time <= now < end_time:
                     await self._async_switch_turn_on()
