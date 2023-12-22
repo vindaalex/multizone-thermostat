@@ -1506,10 +1506,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._async_stop_pwm is not None:
             self.hass.async_create_task(self._async_stop_pwm())
 
-    async def _async_start_pwm(self, start_time=None):
-        """
-        start pwm at specified time
-        """
+        if self._hvac_on:
+            # stop switch
+            self.hass.async_create_task(
+                self._async_switch_turn_off(hvac_mode=hvac_mode)
+            )
+
         if start_time is None and self._start_pwm is not None:
             self._logger.debug("cancel scheduled switch on")
             self._start_pwm()
