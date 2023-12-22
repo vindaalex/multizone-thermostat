@@ -1,7 +1,6 @@
-"""Multizone constants"""
+"""Multizone constants."""
 from datetime import timedelta
-
-from homeassistant.backports.enum import StrEnum
+from enum import StrEnum
 
 # general
 DEFAULT_TARGET_TEMP_HEAT = 19.0
@@ -153,9 +152,14 @@ ATTR_ROOMS = "rooms"
 ATTR_SCALED_PWM = "scaled_pwm"
 ATTR_ROUNDED_PWM = "rounded_pwm"
 
-MASTER_MIN_ON = "minimal_on"
-MASTER_BALANCED = "balanced"
-MASTER_CONTINUOUS = "continuous"
+
+class NestingMode(StrEnum):
+    """Modes for nesting."""
+
+    MASTER_MIN_ON = "minimal_on"
+    MASTER_BALANCED = "balanced"
+    MASTER_CONTINUOUS = "continuous"
+
 
 # control constants
 CONTROL_START_DELAY = 1  #   # seconds, control loop start delay rel to time()
@@ -164,16 +168,19 @@ SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
 PWM_LAG = 0.5  # 0.05  # seconds
 PWM_UPDATE_CHANGE = 0.05  # percentage, pwm difference above which an update is needed
 CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
-DEFAULT_MIN_VALVE_PWM = 0 # factor of master pwm
-MIN_MASTER_LOAD = 0.25 # min load for nesting
-NESTING_DOMINANCE = 0.75 # limit dominant room in nesting
+DEFAULT_MIN_VALVE_PWM = 0  # factor of master pwm
+MIN_MASTER_LOAD = 0.25  # min load for nesting
+NESTING_DOMINANCE = 0.75  # limit dominant room in nesting
+START_MISALINGMENT = (
+    30  # seconds , skip switch off when in near future switch in turned on
+)
 
 NESTING_MATRIX = 20
 NESTING_BALANCE = 0.1
 
 
 class OperationMode(StrEnum):
-    """Operation modes for satelite thermostats"""
+    """Operation modes for satelite thermostats."""
 
     PENDING = "pending"
     MASTER = "master"
