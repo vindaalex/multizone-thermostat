@@ -1906,27 +1906,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         #     return False
 
     @property
-    def switch_position(self):
-        """
-        get state of switch.
+    def switch_position(self) -> float | None:
+        """Get state of switch.
+
         NC/NO aware. NO converted to NC
         """
+        return_val = None
         entity_id = self._hvac_on.get_hvac_switch
-        sensor_state = self.hass.states.get(entity_id)
 
-        if not sensor_state:
-            return False
         try:
-            valve_position = float(sensor_state.state)
+            sensor_state = self.hass.states.get(entity_id)
+            return_val = float(sensor_state.state)
             if self._hvac_on.get_hvac_switch_mode == NO_SWITCH_MODE:
-                valve_position = self._hvac_on.pwm_scale - valve_position
-            return valve_position
-        except:  # pylint: disable=bare-except
-            self._logger.error(
-                "not able to get position of {}, current state is {}".format(
-                    entity_id, sensor_state.state
-                )
+                return_val = self._hvac_on.pwm_scale - return_val
+        except:  # noqa: E722
+            self._async_activate_emergency_stop(
+                "Valve position cannot be read", sensor=entity_id
             )
+
+        return return_val
 
     @property
     def supported_features(self):
