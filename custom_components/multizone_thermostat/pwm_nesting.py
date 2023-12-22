@@ -374,22 +374,21 @@ class Nesting:
                 # remove of options per lid and merge them
                 for lid_id in opt_arr:
                     for store_option in lid_id:
-                        # TODO: store only feasible skip -1
-                        final_opt.append(store_option)
+                        if store_option[-1] != -1:
+                            final_opt.append(store_option)
+
+                if not final_opt:
+                    return nested
 
                 # when multiple storage options are present select the one with best fit
                 if len(final_opt) > 1:
                     fill_list = np.array(final_opt, dtype=object)[:, 4]
                     best_index = fill_list.tolist().index(max(fill_list))
-                    if final_opt[best_index][-1] != -1:
-                        # best option
-                        lid_i, y_width, _, x_start, _ = final_opt[best_index]
+                    lid_i, y_width, _, x_start, _ = final_opt[best_index]
 
                 # one option thus no choice
-                else:
-                    # check if it is a proper fit
-                    if len(final_opt[0]) == 5 and final_opt[0][-1] != -1:
-                        lid_i, y_width, _, x_start, _ = final_opt[0]
+                elif len(final_opt[0]) == 5 and final_opt[0][-1] != -1:
+                    lid_i, y_width, _, x_start, _ = final_opt[0]
 
                 # nest best found free space option with current room area-pwm
                 if lid_i is not None:
@@ -401,9 +400,6 @@ class Nesting:
 
                     # fill area segments and pwm space with room id
                     try:
-                        # max_pwm = min(self.get_pwm_max, np.shape(mod_lid)[1])
-                        # for area_i in range(self.area[room_index]):
-                        #     for pwm_i in range(self.pwm[room_index]):
                         mod_lid[
                             x_start : x_start + self.area[room_index],
                             np.shape(mod_lid)[1] - y_width : np.shape(mod_lid)[1]
@@ -413,9 +409,8 @@ class Nesting:
                     except IndexError as e:
                         nested = False
                         mod_lid = lid_bckup
-                        # self._logger.error(f"failed nesting {self.rooms[room_index]} area {area_i} of {self.area[room_index]} with pwm {pwm_i} of {self.pwm[room_index]} in shape {mod_lid.shape} (offs {offset}; xstart {x_start}; pwmmax {self.get_pwm_max}; y_width {y_width}")
-                        self._logger.error(f"in nesting {mod_lid}")
-                        self._logger.error(f"error: {str(e)}")
+                        self._logger.error("in nesting %s", mod_lid)
+                        self._logger.error("error: %s", str(e))
         return nested
 
     def nest_rooms(self, data=None):
