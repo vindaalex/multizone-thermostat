@@ -1775,20 +1775,27 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def async_set_preset_mode(self, preset_mode: str, hvac_mode: HVACMode=None):
         """Set new preset mode."""
-        if preset_mode not in self.valid_presets(hvac_mode) and preset_mode not in [
-            PRESET_NONE,
-            PRESET_EMERGENCY,
-            PRESET_RESTORE,
-        ]:
-            self._logger.error(
+        if (
+            preset_mode not in self.valid_presets(hvac_mode)
+            and preset_mode != PRESET_RESTORE
+        ):
+            self._logger.warning(
                 "This preset (%s) is not enabled (see the configuration)", preset_mode
             )
             return
 
-        elif preset_mode == self.preset_mode == PRESET_EMERGENCY:
+        if preset_mode == PRESET_EMERGENCY and not self._emergency_stop:
+            self._logger.warning(
+                "Preset change '%s' not allowed as no listed errors. REturn to previous mode.",
+                preset_mode,
+            )
             return
 
-        elif preset_mode != PRESET_RESTORE and self.preset_mode == PRESET_EMERGENCY:
+        # already in emergency mode, skip
+        if preset_mode == self.preset_mode == PRESET_EMERGENCY:
+            return
+
+        if preset_mode != PRESET_RESTORE and self.preset_mode == PRESET_EMERGENCY:
             self._logger.warning(
                 "Preset mode change to '%s' not allowed while in emergency mode",
                 preset_mode,
@@ -1799,14 +1806,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_on:
             self._logger.debug("Set preset mode to '%s'", preset_mode)
             self._hvac_on.preset_mode = preset_mode
-            self._preset_mode = self._hvac_on.preset_mode
-        elif preset_mode == PRESET_EMERGENCY:
-            self._preset_mode = PRESET_EMERGENCY
-        elif preset_mode == PRESET_RESTORE:
-            self._preset_mode = PRESET_NONE
 
+        self._preset_mode = preset_mode
+
+        # sync satellites
         if self._hvac_on and self.is_master:
             await self._async_set_satelite_preset(preset_mode)
+
+        # update thermostat controller when thermostat operating on itself
         elif (
             self._hvac_on
             and self.preset_mode != PRESET_EMERGENCY
