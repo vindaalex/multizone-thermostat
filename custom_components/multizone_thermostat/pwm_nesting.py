@@ -443,73 +443,78 @@ class Nesting:
                     # no option thus create new lid to store room pwm
                     self.create_lid(i_r)
 
-    def distribute_nesting(self):
-        """
-        reverse packs to get best distribution
-        """
-        if self.packed:
-            if len(self.packed) > 1:
-                if self.operation_mode == MASTER_CONTINUOUS:
-                    for i, lid_i in enumerate(self.packed):
-                        if i % 2:
-                            for area_segment, _ in enumerate(lid_i):
-                                lid_i[area_segment] = list(
-                                    reversed(lid_i[area_segment])
-                                )
+    def distribute_nesting(self) -> None:
+        """Shuffles packs to get best distribution."""
+        if not self.packed:
+            return
 
-                    # create list of variations
-                    option_list = list(
-                        itertools.product([False, True], repeat=len(self.packed))
-                    )
-                    # remove mirrored options
-                    len_options = len(option_list) - 1
-                    for i_o, opt in enumerate(reversed(option_list)):
-                        if [not elem for elem in opt] in option_list:
-                            option_list.pop(len_options - i_o)
+        if len(self.packed) == 1:
+            return
 
-                    # loop through all options
-                    for i_o, opt in enumerate(option_list):
-                        test_set = copy.deepcopy(self.packed)
-                        for i_p, lid_i in enumerate(test_set):
-                            if opt[i_p]:
-                                for area_segment, _ in enumerate(lid_i):
-                                    lid_i[area_segment] = list(
-                                        reversed(lid_i[area_segment])
-                                    )
-                        balance_result = self.nesting_balance(test_set)
-                        if balance_result is not None:
-                            if abs(balance_result) <= NESTING_BALANCE:
-                                self.packed = test_set
-                                self._logger.debug(
-                                    "finished time %.4f, balance %.4f",
-                                    time.time() - self.start_time,
-                                    balance_result,
-                                )
-                                return
-                else:
-                    balance_result = self.nesting_balance(self.packed)
-                    if balance_result is not None:
-                        if abs(balance_result) <= NESTING_BALANCE:
-                            # self.packed = test_set
-                            # self._logger.debug(
-                            #     "finished time %.4f", time.time() - self.start_time
-                            # )
-                            return
+        if self.operation_mode == NestingMode.MASTER_CONTINUOUS:
+            # shuffle list to mix start and ends
+            for i, lid_i in enumerate(self.packed):
+                if i % 2:
+                    for area_segment, _ in enumerate(lid_i):
+                        lid_i[area_segment] = list(reversed(lid_i[area_segment]))
 
-                    for lid_i in reversed(self.packed):
+            # create list of variations
+            option_list = list(
+                itertools.product([False, True], repeat=len(self.packed))
+            )
+
+            # remove duplicate options
+            len_options = len(option_list) - 1
+            for i_o, opt in enumerate(reversed(option_list)):
+                if [not elem for elem in opt] in option_list:
+                    option_list.pop(len_options - i_o)
+
+            # loop through all options
+            for opt in option_list:
+                test_set = copy.deepcopy(self.packed)
+
+                # loop through lids and check if reverse is required
+                for i_p, lid_i in enumerate(test_set):
+                    if opt[i_p]:
                         for area_segment, _ in enumerate(lid_i):
                             lid_i[area_segment] = list(reversed(lid_i[area_segment]))
 
-                        # determine the equality over pwm
-                        balance_result = self.nesting_balance(self.packed)
+                # check load balance
+                balance_result = self.nesting_balance(test_set)
+
+                # check if balance is small enough
+                if balance_result is not None:
+                    if abs(balance_result) <= NESTING_BALANCE:
+                        self.packed = test_set
                         self._logger.debug(
-                            "nesting balance %.4f",
+                            "finished time %.4f, balance %.4f",
+                            time.time() - self.start_time,
                             balance_result,
                         )
-                        if balance_result is not None:
-                            if abs(balance_result) <= NESTING_BALANCE:
-                                # self.packed = test_set
-                                return
+                        return
+
+        # balanced mode or min pwm
+        else:
+            # check current balance
+            balance_result = self.nesting_balance(self.packed)
+            if balance_result is not None:
+                if abs(balance_result) <= NESTING_BALANCE:
+                    return
+
+            for lid_i in reversed(self.packed):
+                for area_segment, _ in enumerate(lid_i):
+                    lid_i[area_segment] = list(reversed(lid_i[area_segment]))
+
+                # determine the equality over pwm
+                balance_result = self.nesting_balance(self.packed)
+                self._logger.debug(
+                    "nesting balance %.4f",
+                    balance_result,
+                )
+
+                if balance_result is not None:
+                    if abs(balance_result) <= NESTING_BALANCE:
+                        return
 
     def nesting_balance(self, test_set):
         """get balance of areas over pwm signal"""
