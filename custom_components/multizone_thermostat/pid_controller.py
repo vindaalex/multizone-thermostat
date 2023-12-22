@@ -1,43 +1,31 @@
-"""module with PID controller"""
-# import math
+"""module with PID controller.
+
+Based on Arduino PID Library
+See https://github.com/br3ttb/Arduino-PID-Library
+"""
+from datetime import datetime
 import logging
-import numpy as np
 
 from . import DOMAIN
 
-# from time import time
-# from collections import namedtuple
 
-
-# Based on Arduino PID Library
-# See https://github.com/br3ttb/Arduino-PID-Library
-class PIDController(object):
-    """A proportional-integral-derivative controller.
-
-    Args:
-        sampletime (float): The interval between calc() calls.
-        kp (float): Proportional coefficient.
-        ki (float): Integral coefficient.
-        kd (float): Derivative coefficient.
-        out_min (float): Lower output limit.
-        out_max (float): Upper output limit.
-        time (function): A function which returns the current time in seconds.
-    """
+class PIDController:
+    """A proportional-integral-derivative controller."""
 
     def __init__(
         self,
-        name,
-        PID_type,  # pylint: disable=invalid-name
-        master_mode,
-        sampletime,
-        kp,  # pylint: disable=invalid-name
-        ki,  # pylint: disable=invalid-name
-        kd,  # pylint: disable=invalid-name
-        time,
-        out_min=float("-inf"),
-        out_max=float("inf"),
-
-    ):
+        name: str,
+        PID_type: str,  # pylint: disable=invalid-name
+        master_mode: bool,
+        sampletime: float,
+        kp: float | None,  # pylint: disable=invalid-name
+        ki: float | None,  # pylint: disable=invalid-name
+        kd: float | None,  # pylint: disable=invalid-name
+        time: datetime,
+        out_min: float = float("-inf"),
+        out_max: float = float("inf"),
+    ) -> None:
+        """Prepare the pid controller."""
         if kp is None:
             raise ValueError("kp must be specified")
         if ki is None:
@@ -71,16 +59,8 @@ class PIDController(object):
         self._time = time
         self.master_mode = master_mode
 
-    def calc(self, input_val, setpoint, force=False):
-        """Adjusts and holds the given setpoint.
-
-        Args:
-            input_val (float): The input value.
-            setpoint (float): The target value.
-
-        Returns:
-            A value between `out_min` and `out_max`.
-        """
+    def calc(self, input_val: float, setpoint, force: bool = False) -> float:
+        """Calculate pid for given input_val and setpoint."""
         if not setpoint:
             self._logger.warning(
                 "No setpoint specified, return with previous control value %s",
@@ -106,7 +86,7 @@ class PIDController(object):
             self._last_input = input_val
 
         # UKF temp + velocity
-        if isinstance(input_val, (list, tuple, np.ndarray)):
+        if isinstance(input_val, list):
             current_temp, self._differential = input_val
             self._logger.debug(
                 "current temp '%.2f'; velocity %.4f",
@@ -144,17 +124,22 @@ class PIDController(object):
 
         if not self.master_mode:
             # fully open if error is too high
-            if ( # heating
-                (self._Kp > 0 and (
-                    (error > 0 and error > self._out_max / self._Kp) or
-                    (error > 1.5)
-                ))
+            if (  # heating
+                (
+                    self._Kp > 0
+                    and (
+                        (error > 0 and error > self._out_max / self._Kp)
+                        or (error > 1.5)
+                    )
+                )
                 # cooling
-                or
-                (self._Kp < 0 and (
-                    (error < 0 and error < self._out_max / self._Kp) or
-                    (error < -1.5)
-                ))
+                or (
+                    self._Kp < 0
+                    and (
+                        (error < 0 and error < self._out_max / self._Kp)
+                        or (error < -1.5)
+                    )
+                )
             ):
                 # when temp is too low when heating or too high when cooling set fully open
                 # similar as honeywell TPI
@@ -169,7 +154,8 @@ class PIDController(object):
             # fully close if error is too low
             elif (
                 # heating
-                (self._Kp > 0 and error < -1.5) or
+                (self._Kp > 0 and error < -1.5)
+                or
                 # cooling
                 (self._Kp < 0 and error > 1.5)
             ):
@@ -183,16 +169,16 @@ class PIDController(object):
                 )
                 self._last_output = self._out_min
 
-
         # Remember some variables for next time
-        # self._old_setpoint = setpoint
         self._last_input = input_val
         self._last_calc_timestamp = now
         return self._last_output
 
-    def calc_integral(self, error, time_diff):
-        # In order to prevent windup, only integrate if the process is not saturated
-        # if self._last_output < self._out_max and self._last_output > self._out_min:
+    def calc_integral(self, error: float, time_diff: datetime | None) -> float | None:
+        """Calcualte integral.
+
+        In order to prevent windup, only integrate if the process is not saturated
+        """
         if time_diff is None or self._last_calc_timestamp is None:
             return
 
@@ -207,36 +193,32 @@ class PIDController(object):
                 self._out_min / (self._windupguard * abs(self._Ki)),
             )
 
-
-    def reset_time(self):
-        """reset time to void large intergrl buildup"""
+    def reset_time(self) -> None:
+        """Reset time to void large intergrl buildup."""
 
         if self._last_calc_timestamp != 0:
             self._logger.debug("reset PID integral reference time")
             self._last_calc_timestamp = self._time()
 
     @property
-    def integral(self):
-        """return integral"""
+    def integral(self) -> float:
+        """Return integral."""
         return self._integral
 
     @integral.setter
-    def integral(self, integral):
-        """set integral"""
-        self._logger.info("Forcing new integral: {0}".format(integral))
+    def integral(self, integral: float) -> None:
+        """Set integral."""
+        self._logger.info("Forcing new integral: %s", integral)
         self._integral = integral / self._Ki
 
     @property
-    def differential(self):
-        """get differential"""
+    def differential(self) -> float:
+        """Get differential."""
         return self._differential
 
-    # @property
-    # def get_old_setpoint(self):
-    #     """check if a setpoint is present"""
-    #     return self._old_setpoint
-
-    def set_pid_param(self, kp=None, ki=None, kd=None):  # pylint: disable=invalid-name
+    def set_pid_param(
+        self, kp: float | None = None, ki: float | None = None, kd: float | None = None
+    ):  # pylint: disable=invalid-name
         """Set PID parameters."""
         if kp is not None:
             self._Kp = kp
@@ -246,11 +228,6 @@ class PIDController(object):
             self._Kd = kd
 
     @property
-    def get_PID_parts(self):
-        part = {
-            "p": self.p_var,
-            "i": self.i_var,
-            "d": self.d_var
-        }
-
-        return part
+    def get_PID_parts(self) -> dict:
+        """PID component."""
+        return {"p": self.p_var, "i": self.i_var, "d": self.d_var}

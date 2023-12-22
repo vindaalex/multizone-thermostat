@@ -42,7 +42,7 @@ The thermostat can be configured for a wide variation of hardware specifications
 
 ## Thermostat configuration
 * platform (Required): 'multizone_thermostat'
-* name (Required): Name of thermostat.
+* name (Required): Name of thermostat. In case of master the name is overruled to 'master'.
 * unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
 * room_area (Optional): Required when operating in satelite mode. The room area is needed to determine the scale effect of the room to the total heat requirement. Default = 0 (only stand alone mode possible, not allowed for satelite mode)
 
@@ -52,7 +52,7 @@ sensors (at least one sensor needs to be specified):
 * sensor_out (Optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature (float). Only required when running weather mode. No filtering possible.
 
 * initial_hvac_mode (Optional): Set the initial operation mode. Valid values are 'off', 'cool' or 'heat'. Default = off
-* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is any in 'custom_presets'. The 'inital_preset_mode' needs to be present in the 'custom_presets' of the 'initial_hvac_mode'
+* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is any in 'extra_presets'. The 'inital_preset_mode' needs to be present in the 'extra_presets' of the 'initial_hvac_mode'
 
 * precision (Optional): specifiy setpoint precision: 0.1, 0.5 or 1
 * detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
@@ -77,7 +77,7 @@ Generic HVAC mode setting:
 * min_target_temp (Optional): Lower limit temperature setpoint. Default heat=17, cool=20
 * max_target_temp (Optional): Upper limit temperature setpoint. Default for heat=24, cool=35
 * initial_target_temp (Optional): Initial setpoint at start. Default for heat=19, cool=28
-* custom_presets (Optional): A list of custom presets. Needs to be in to form of a list of name and value. Defining 'custom_presets' will make away preset available. default no preset mode available. 
+* extra_presets (Optional): A list of custom presets. Needs to be in to form of a list of name and value. Defining 'extra_presets' will make away preset available. default no preset mode available. 
 
 * passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve. Specify a time period. Default is not activated.
 * passive_switch_opening_time (Optional): specify the minium opening time of valve when running passive switch operation. Specify a time period. Default 1 minute.
