@@ -661,10 +661,75 @@ class Nesting:
 
         self.offset = np.where(self.offset != room, self.offset, None)
 
-    def check_pwm(self, data, dt=0):
-        """
-        check if nesting length is still right for each room
-        """
+    def get_nesting_bounds(self, room: str) -> list:
+        """Find room in nesting."""
+        index_start = None
+        index_end = None
+        free_space = 0
+        # find current area
+        for pack_i, lid in enumerate(self.packed):  # noqa: B007
+            # loop over pwm
+            for area_segment in lid:
+                # find start and end nesting
+                if room in area_segment:
+                    index_start = list(area_segment).index(room)
+                    index_end = len(area_segment) - list(reversed(area_segment)).index(
+                        room
+                    )
+
+                    # check free space
+                    if len(area_segment) > index_end:
+                        if all(
+                            pwm_i is None for pwm_i in area_segment[index_end + 1 :]
+                        ):
+                            free_space = len(area_segment) - index_end
+                        else:
+                            free_space = -1
+                    break
+
+        return pack_i, index_start, index_end, free_space
+
+    def update_nesting(
+        self,
+        lid_index: int,
+        room_index: int,
+        index_start: int,
+        index_end: int,
+        free_space: int,
+    ) -> None:
+        """Udpate room nestign with update."""
+        lid = self.packed[lid_index]
+        old_pwm = index_end - index_start
+
+        # extend when too short
+        if old_pwm < self.pwm[room_index] and free_space > 0:
+            if lid.shape[1] < self.max_nested_pwm():
+                new_length = self.max_nested_pwm() - lid.shape[1]
+                lid = np.lib.pad(
+                    lid,
+                    (
+                        (0, 0),
+                        (0, new_length),
+                    ),
+                    "constant",
+                    constant_values=(None),
+                )
+            # fill new created area
+            for area_segment in lid:
+                max_fill = min(index_start + self.pwm[room_index], len(area_segment))
+                if room_index in area_segment:
+                    area_segment[index_start:max_fill] = room_index
+
+        # when pwm has lowered
+        elif old_pwm > self.pwm[room_index]:
+            for area_segment in lid:
+                if room_index in area_segment:
+                    area_segment[
+                        index_start + self.pwm[room_index] + 1 : len(area_segment)
+                    ] = None
+
+    def check_pwm(self, data: dict, dt: float = 0) -> None:
+        """Check if nesting length is still right for each room."""
         self.satelite_data(data)
 
         time_past = floor(dt * NESTING_MATRIX)
@@ -683,75 +748,25 @@ class Nesting:
                 self.remove_room(room)
 
         # check per room the nesting
-        for i, room_i in enumerate(self.rooms):
-            if self.pwm[i] == 0:
-                self.remove_room(room_i)
+        for room_i, room in enumerate(self.rooms):
+            if self.pwm[room_i] == 0:
+                self.remove_room(room)
+                continue
+
+            if not self.packed:
+                self.create_lid(room_i, dt=time_past)
             else:
-                index_start = None
-                index_end = None
-                if self.packed:
-                    # find current area
-                    for lid in self.packed:
-                        # loop over pwm
-                        if any(room_i in lid_i for lid_i in lid):
-                            # found area in current pack
-                            for area_segment in lid:
-                                # find start and end nesting
-                                if room_i in area_segment:
-                                    index_start = list(area_segment).index(room_i)
-                                    index_end = len(area_segment) - list(
-                                        reversed(area_segment)
-                                    ).index(room_i)
+                # find room
+                pack_i, index_start, index_end, free_space = self.get_nesting_bounds(
+                    room
+                )
 
-                                    free_space = 0
-                                    if len(area_segment) > index_end:
-                                        if all(
-                                            pwm_i is None
-                                            for pwm_i in area_segment[index_end + 1 :]
-                                        ):
-                                            free_space = len(area_segment) - index_end
-                                        else:
-                                            free_space = -1
-                                    break
-
-                            # modify existing nesting
-                            if index_start is not None and index_end is not None:
-                                old_pwm = index_end - index_start
-                                # extend when too short
-                                if old_pwm < self.pwm[i] and free_space > 0:
-                                    if lid.shape[1] < self.max_nested_pwm():
-                                        new_length = (
-                                            self.max_nested_pwm() - lid.shape[1]
-                                        )
-                                        lid = np.lib.pad(
-                                            lid,
-                                            (
-                                                (0, 0),
-                                                (0, new_length),
-                                            ),
-                                            "constant",
-                                            constant_values=(None),
-                                        )
-                                    for area_segment in lid:
-                                        max_fill = min(
-                                            index_start + self.pwm[i], len(area_segment)
-                                        )
-                                        if room_i in area_segment:
-                                            area_segment[
-                                                # index_start : index_end - difference
-                                                index_start:max_fill
-                                            ] = room_i
-                                elif old_pwm > self.pwm[i]:
-                                    if room_i in area_segment:
-                                        area_segment[
-                                            index_start + self.pwm[i] + 1 : len(
-                                                area_segment
-                                            )
-                                        ] = None
-
-                    # when the current room is not found
-                    if index_start is None or index_end is None:
-                        if not self.insert_room(i, dt=time_past):
-                            self.create_lid(i, dt=time_past)
+                # when the current room is not found
+                if index_start is None or index_end is None:
+                    if not self.insert_room(room_i, dt=time_past):
+                        self.create_lid(room_i, dt=time_past)
+                # modify existing nesting
                 else:
-                    self.create_lid(i, dt=time_past)
+                    self.update_nesting(
+                        pack_i, room_i, index_start, index_end, free_space
+                    )
