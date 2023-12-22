@@ -29,6 +29,10 @@ Each configured thermostat has to be configured for that specific room. A thermo
 
 When a master controller is included it will coordinate all enlisted satelites valve opening and closures. When the master is activated to heat or cool it will trigger the satelites to update their controller and from that moment it interacts with the master. A satelite interaction with the master will be updated when the master is activated or switched off. When the master is activated to heat or cool the controller routine is synced to the master controller interval time. When the master is switched off the satelite will return to its stand-alone mode with its own settings. The master itself gets the satelite state (pwm signal) and return the moment the satelite has to open or close valves. The master determines the moment when the satelite valves is opened, the satelite itself still determines the valve opening time.
 
+# Examples
+See the examples folder for examples. 
+The '\examples\multizone thermostat - explanation.yaml' shows an worked-out example including explanation.
+
 # Room thermostat configuration (not for master config)
 This thermostat is used for satelite or stand-alone operation mode. 
 The thermostat can be configured for a wide variation of hardware specifications and options:
@@ -55,7 +59,7 @@ sensors (at least one sensor needs to be specified):
 * initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is any in 'extra_presets'. The 'inital_preset_mode' needs to be present in the 'extra_presets' of the 'initial_hvac_mode'
 
 * precision (Optional): specifiy setpoint precision: 0.1, 0.5 or 1
-* detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
+* detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'True'. Use this option limited for debugging and tuning only as it increases the database size. Default = False
 
 checks for sensor and switch:
 * sensor_stale_duration (Optional): safety routine "emergency mode" to turn switches off when sensor has not updated for a specified time period. Specify time period. Activation of emergency mode is visible via a forced climate preset state. Default is not activated. 
@@ -74,7 +78,7 @@ Generic HVAC mode setting:
 * entity_id (Required): This can be an on-off switch or a proportional valve(input_number, etc)
 * switch_mode (Optional): Specify if switch (valve) is normally closed 'NC' or normally open 'NO'. Default = 'NC'
 
-* min_target_temp (Optional): Lower limit temperature setpoint. Default heat=17, cool=20
+* min_target_temp (Optional): Lower limit temperature setpoint. Default heat=14, cool=20
 * max_target_temp (Optional): Upper limit temperature setpoint. Default for heat=24, cool=35
 * initial_target_temp (Optional): Initial setpoint at start. Default for heat=19, cool=28
 * extra_presets (Optional): A list of custom presets. Needs to be in to form of a list of name and value. Defining 'extra_presets' will make away preset available. default no preset mode available. 
@@ -101,7 +105,7 @@ If no pwm interval is defined, it will set the state of "heater" from 0 to "diff
 
 * control_interval (Required): interval that controller is updated. The satelites should have a control_interval equal to the master or the master control_interval should be dividable by the satelite control_interval. Specify a time period.
 * pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
-* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
+* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Proportional valve might have 99 as upper max, use 99 in such case. Default = 100
 * pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
 * bounded_scale_to_master(Optional): scale proporitional valves with the master's pwm. 'bounded_scale_to_master' defines the scale limit. For example: 
@@ -146,7 +150,7 @@ with the data (as sub):
 # Master configuration
 The configuration scheme is similar as for a satelite only with the following differences.
 
-* name: For master mode no name possible, it will be 'master'
+* name: For master mode the name is overruled by thermostat to 'master'
 * room_area (Required): For master it should be equal to the total heated area. 
 * sensor (optional): For master mode not applicable
 * filter_mode (Optional): For master mode not applicable
@@ -161,7 +165,6 @@ Generic HVAC mode setting:
 * min_target_temp (Optional): For master mode not applicable
 * max_target_temp (Optional): For master mode not applicable
 * initial_target_temp (Optional): For master mode not applicable
-* away_temp (Optional): For master mode not applicable
 ### on-off mode (Optional) (sub of hvac mode)
 For master mode not applicable
 
@@ -205,7 +208,7 @@ Configured under 'PID_valve_mode:'
 * pwm_scale_high (Optional): For master mode not applicable
 
 # Sensor filter (filter_mode):
-An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
+An unscented kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
 The filter intesity is defined by a factor between 0 to 5 (integer).
 0 = no filter
 5 = max smoothing
@@ -258,5 +261,3 @@ Change the ka and kb for the weather controller
 change the UKF filter level for the temperature sensor
 ## detailed_output:
 Control the attribute output for PID-, WC-contributions and control output
-# configuration examples
-see examples folder  
