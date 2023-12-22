@@ -1117,21 +1117,21 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._async_restore_emergency_stop(entity_id)
 
             if self._hvac_mode in [HVACMode.HEAT, HVACMode.COOL]:
+                other_mode = [HVACMode.HEAT, HVACMode.COOL]
+                other_mode.remove(self._hvac_mode)
                 if (
                     entity_id != self._hvac_on.get_hvac_switch
                     and self._is_valve_open()
-                    and self._is_valve_open(hvac_mode=hvac_mode)
+                    and self._is_valve_open(hvac_mode=other_mode)
                 ):
                     self._logger.warning(
-                        "valve of %s is open. Other hvac mode switch changed '%s' changed to %s, keep in closed state",
+                        "valve of %s is open. Other hvac mode switch '%s' changed to %s, keep in closed state",
                         self._hvac_mode,
                         entity_id,
                         new_state.state,
                     )
-                    other_mode = [HVACMode.HEAT, HVACMode.COOL]
-                    other_mode.remove(self._hvac_mode)
+
                     self.hass.async_create_task(
-                        # self._async_switch_idle(hvac_mode=hvac_mode)
                         self._async_switch_turn_off(hvac_mode=other_mode)
                     )
 
