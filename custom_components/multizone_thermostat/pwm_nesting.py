@@ -600,45 +600,32 @@ class Nesting:
             and self.rooms
         ):
             master_offset = None
+            # loop over nesting to find start offset
             for pwm_i, rooms in enumerate(self.cleaned_rooms):
                 if len(rooms) > 0 and master_offset is None:
                     master_offset = pwm_i / self.master_pwm_scale
-                # elif rooms:
-                #     self._logger.warning("Nested satelites include multiple on-off loops in single pwm loop : '%s'", self.cleaned_rooms)
+
             # find max end time
-            end_time = 0
-            if len(self.cleaned_rooms[-1]) > 0:
-                end_time = self.get_pwm_max / self.master_pwm_scale
-            else:
-                for i_r, room in enumerate(self.rooms):
-                    if room in self.offset:
-                        room_end_time = (
-                            self.offset[room] * self.scale_factor[room]
-                            + self.real_pwm[i_r]
-                        ) / self.master_pwm_scale
+            room_end_time = [0]
+            for i_r, room in enumerate(self.rooms):
+                if room in self.offset:
+                    room_end = (
+                        self.offset[room] * self.scale_factor[room] + self.real_pwm[i_r]
+                    ) / self.master_pwm_scale
+                    room_end_time.append(room_end)
 
-                        end_time = max(end_time, room_end_time)
+            end_time = max(room_end_time)
 
-                # end_time = min(end_time, self.get_pwm_max / self.master_pwm_scale)
-                end_time = min(
-                    end_time, len(self.cleaned_rooms) / self.master_pwm_scale
-                )
-
-            if master_offset is None:
-                return {
-                    ATTR_CONTROL_OFFSET: 0,
-                    ATTR_CONTROL_PWM_OUTPUT: 0,
-                }
-            else:
+            if master_offset is not None:
                 return {
                     ATTR_CONTROL_OFFSET: master_offset,
                     ATTR_CONTROL_PWM_OUTPUT: end_time - master_offset,
                 }
-        else:
-            return {
-                ATTR_CONTROL_OFFSET: 0,
-                ATTR_CONTROL_PWM_OUTPUT: 0,
-            }
+
+        return {
+            ATTR_CONTROL_OFFSET: 0,
+            ATTR_CONTROL_PWM_OUTPUT: 0,
+        }
 
     def remove_room(self, room):
         """remove room from nesting when room changed hvac mode"""
