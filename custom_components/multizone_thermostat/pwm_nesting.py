@@ -634,8 +634,14 @@ class Nesting:
         }
 
     def remove_room(self, room: str) -> None:
-        """Remove room from nesting when room changed hvac mode."""
+        """Remove room from nesting when room changed hvac mode.
+
+        room needs to be removed from:
+        - cleaned_rooms, packed, offset
+        """
         self._logger.debug("'%s' removed from nesting", room)
+
+        # update packed
         for i, pack in enumerate(self.packed):
             pack = np.where(pack != room, pack, None)
 
@@ -648,21 +654,22 @@ class Nesting:
             self.packed[i] = copy.copy(pack)
 
         len_pack = len(self.packed) - 1
+
+        # remove items from packed which are empty
         for i, pack in enumerate(reversed(self.packed)):
             if not pack.any():
                 self.packed.pop(len_pack - i)
 
+        # update cleaned rooms
         for i, lid in enumerate(self.cleaned_rooms):
             for ii, room_i in enumerate(lid):
                 if room_i == room:
                     self.cleaned_rooms[i][ii] = ""
+
         self.cleaned_rooms = list(filter(None, self.cleaned_rooms))
 
-        if self.rooms:
-            if room in self.rooms:
-                self.rooms.remove(room)
-
-        self.offset = np.where(self.offset != room, self.offset, None)
+        # update list with offsets
+        _ = self.offset.pop(room, None)
 
     def get_nesting_bounds(self, room: str) -> list:
         """Find room in nesting."""
@@ -745,10 +752,11 @@ class Nesting:
             return
 
         # remove nested rooms when not present
-        current_rooms = list(self.get_nesting().keys())
-        for room in current_rooms:
-            if room not in self.rooms:
-                self.remove_room(room)
+        if self.packed:
+            current_rooms = list(self.offset.keys())
+            for room in current_rooms:
+                if room not in self.rooms:
+                    self.remove_room(room)
 
         # check per room the nesting
         for room_i, room in enumerate(self.rooms):
