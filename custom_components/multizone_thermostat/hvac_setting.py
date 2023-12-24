@@ -69,6 +69,7 @@ from .const import (
     PRESET_EMERGENCY,
     PRESET_RESTORE,
     PWM_UPDATE_CHANGE,
+    OperationMode,
 )
 
 
@@ -833,65 +834,71 @@ class HVACSetting:
         self_controlled = state.attributes.get(ATTR_SELF_CONTROLLED)
         update = False
 
-        if state.state == self._hvac_mode:
-            self._logger.debug("Save update from '%s'", state)
+        if state.state != self._hvac_mode:
+            self._satelites.pop(sat_name, None)
+            update = True
+        else:
+            preset = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
+                ATTR_PRESET_MODE
+            ]
             control_mode = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
                 ATTR_CONTROL_MODE
             ]
-            preset_mode = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
-                ATTR_PRESET_MODE
-            ]
-            pwm_time = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
-                CONF_PWM_DURATION
-            ]
-            pwm_scale = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
-                CONF_PWM_SCALE
-            ]
-            setpoint = state.attributes[ATTR_TEMPERATURE]
-            time_offset, control_value = state.attributes.get(ATTR_HVAC_DEFINITION)[
-                state.state
-            ][ATTR_CONTROL_OUTPUT].values()
 
-            if preset_mode == PRESET_EMERGENCY:
-                control_value = 0
-
-            # check if controller update is needed
-            if sat_name in self._satelites:
-                old_val = self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
-                if control_value == 0:
-                    if old_val != 0:
-                        self.nesting.remove_room(sat_name)
-                        update = True
-                elif old_val == 0:
-                    update = True
-                elif abs((control_value - old_val) / old_val) > PWM_UPDATE_CHANGE:
-                    update = True
-
-                if setpoint != self._satelites[sat_name][ATTR_TEMPERATURE]:
-                    update = True
-
-            elif control_value > 0:
+            if (
+                preset == PRESET_EMERGENCY
+                or self_controlled != OperationMode.MASTER
+                or control_mode != CONF_PROPORTIONAL_MODE
+            ):
+                self._satelites.pop(sat_name, None)
                 update = True
 
-            self._satelites[sat_name] = {
-                ATTR_HVAC_MODE: state.state,
-                ATTR_SELF_CONTROLLED: self_controlled,
-                ATTR_EMERGENCY_MODE: preset_mode,
-                ATTR_CONTROL_MODE: control_mode,
-                CONF_PWM_DURATION: pwm_time,
-                CONF_PWM_SCALE: pwm_scale,
-                ATTR_TEMPERATURE: setpoint,
-                CONF_AREA: area,
-                ATTR_CONTROL_PWM_OUTPUT: control_value,
-                ATTR_CONTROL_OFFSET: time_offset,
-                ATTR_UPDATE_NEEDED: update,
-            }
+            else:
+                self._logger.debug("Save update from '%s'", state)
+                pwm_time = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
+                    CONF_PWM_DURATION
+                ]
+                pwm_scale = state.attributes.get(ATTR_HVAC_DEFINITION)[state.state][
+                    CONF_PWM_SCALE
+                ]
+                setpoint = state.attributes[ATTR_TEMPERATURE]
+                time_offset, control_value = state.attributes.get(ATTR_HVAC_DEFINITION)[
+                    state.state
+                ][ATTR_CONTROL_OUTPUT].values()
 
-        elif sat_name in self._satelites:
-            self.nesting.remove_room(sat_name)
-            self._satelites.pop(sat_name, None)
-            update = True
+                # check if controller update is needed
+                if sat_name in self._satelites:
+                    old_val = self._satelites[sat_name][ATTR_CONTROL_PWM_OUTPUT]
+                    if old_val == 0:
+                        if control_value != 0:
+                            update = True
+                    elif abs((control_value - old_val) / old_val) > PWM_UPDATE_CHANGE:
+                        update = True
 
+                    if setpoint != self._satelites[sat_name][ATTR_TEMPERATURE]:
+                        update = True
+
+                    if self._satelites[sat_name][ATTR_UPDATE_NEEDED]:
+                        update = True
+
+                elif control_value > 0:
+                    update = True
+
+                self._satelites[sat_name] = {
+                    ATTR_HVAC_MODE: state.state,
+                    ATTR_SELF_CONTROLLED: self_controlled,
+                    ATTR_EMERGENCY_MODE: preset,
+                    ATTR_CONTROL_MODE: control_mode,
+                    CONF_PWM_DURATION: pwm_time,
+                    CONF_PWM_SCALE: pwm_scale,
+                    ATTR_TEMPERATURE: setpoint,
+                    CONF_AREA: area,
+                    ATTR_CONTROL_PWM_OUTPUT: control_value,
+                    ATTR_CONTROL_OFFSET: time_offset,
+                    ATTR_UPDATE_NEEDED: update,
+                }
+
+        self._logger.debug("Satellite data requires controller update: %s", update)
         return update
 
     @property

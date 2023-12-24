@@ -588,7 +588,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     ) -> None:
         """Satellite update from master.
 
-        Originates from master to control satelite routines
+        Originates from master to control satellite routines
         control_mode 'no_change' to only update offset.
         """
         pwm_loop = False
@@ -687,8 +687,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         - MASTER_CONTROL_LEAD  # sat control loop before master
                     ),
                 )
-
-                pwm_loop = True
+                # no pwm loop after master change wait for new offsets
+                pwm_loop = False
 
         # update pwm start-stop rountines
         if pwm_loop:
@@ -1155,9 +1155,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             )
             self.hass.async_create_task(self._async_controller(force=True))
 
-        # if master mode is active: do not call operate but let pwm cycle handle it
-        else:
-            self.schedule_update_ha_state(force_refresh=False)
+            # if master mode is active: do not call operate but let pwm cycle handle it
+
+            # self.schedule_update_ha_state(force_refresh=False)
 
     @callback
     def _async_switches_change(self, event: EventType[EventStateChangedData]) -> None:
@@ -1391,6 +1391,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             time_diff > 0
             and time_diff / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM
         ):
+            self._logger.debug("pwm loop starts soon")
             return True
         else:
             self._logger.debug("no pwm loop to start soon")
