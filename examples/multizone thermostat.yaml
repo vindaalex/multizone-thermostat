@@ -13,7 +13,7 @@
       days: 60
     passive_switch_opening_time:
       minutes: 4
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     master_mode:
@@ -59,7 +59,7 @@
     passive_switch_opening_time:
       minutes: 4      
     initial_target_temp: 19
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5    
     proportional_mode:
@@ -104,7 +104,7 @@
     passive_switch_opening_time:
       minutes: 4      
     initial_target_temp: 17.5
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5    
     proportional_mode:
@@ -149,7 +149,7 @@
     passive_switch_opening_time:
       minutes: 4  
     initial_target_temp: 17.5
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     proportional_mode:
@@ -193,7 +193,7 @@
     passive_switch_opening_time:
       minutes: 4  
     initial_target_temp: 17.5
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     proportional_mode:
@@ -237,7 +237,7 @@
     passive_switch_opening_time:
       minutes: 4  
     initial_target_temp: 19.0
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     proportional_mode:
@@ -278,7 +278,7 @@
     passive_switch_opening_time:
       minutes: 4  
     initial_target_temp: 17.5
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     proportional_mode:
@@ -321,7 +321,7 @@
     passive_switch_opening_time:
       minutes: 4  
     initial_target_temp: 17.5
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
     proportional_mode:

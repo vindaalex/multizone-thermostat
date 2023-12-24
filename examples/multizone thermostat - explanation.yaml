@@ -30,7 +30,7 @@
     # user defined presets. each mode needs to be defined per satellite. 
     # temperatures may differ per thermostat.
     # temperatures defined at master are ignored.
-    custom_presets:
+    extra_presets:
       night: 15
       holiday: 5
 
@@ -128,7 +128,7 @@
     max_target_temp: 25
     initial_target_temp: 19 # initial setpoint, overruled by 'restore_parameters: True'
     
-    custom_presets: # user defined presets.
+    extra_presets: # user defined presets.
       night: 15
       holiday: 5    
     
@@ -201,7 +201,8 @@
       days: 60
     passive_switch_opening_time:
       minutes: 4  
-    custom_presets:
+      
+    extra_presets:
       night: 15
       holiday: 5
 
