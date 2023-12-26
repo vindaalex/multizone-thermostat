@@ -417,13 +417,15 @@ class HVACSetting:
         if self.is_hvac_master_mode or self.is_hvac_proportional_mode:
             if control_output > self.pwm_scale:
                 control_output = self.pwm_scale
-            elif control_output < 0:
+            # only open above threshold or 0 (or when not set)
+            elif control_output < self.pwm_threshold:
                 control_output = 0
 
             self._logger.debug("control output before rounding %s", control_output)
             control_output = get_rounded(
                 control_output, self.pwm_scale / self.pwm_resolution
             )
+
         if self.time_offset is None:
             self.time_offset = 0
 
