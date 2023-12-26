@@ -2066,13 +2066,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        if self.is_master:
-            return ClimateEntityFeature.PRESET_MODE
-        else:
-            return (
-                ClimateEntityFeature.PRESET_MODE
-                | ClimateEntityFeature.TARGET_TEMPERATURE
-            )
+        return (
+            ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
+        )
 
     @property
     def precision(self) -> float:
@@ -2178,11 +2174,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        if (
+        if self.is_master:
+            return 0
+        elif (
             self._hvac_mode is HVACMode.OFF
             or self._hvac_mode is None
             or self._hvac_on is None
-            or self.is_master
         ):
             return None
         return self._hvac_on.target_temperature
