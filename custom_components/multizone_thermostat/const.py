@@ -23,6 +23,7 @@ DEFAULT_MIN_LOAD = 0
 # safety routines
 DEFAULT_PASSIVE_SWITCH = False
 DEFAULT_PASSIVE_SWITCH_OPEN_TIME = timedelta(seconds=60)
+DEFAULT_PASSIVE_CHECK_TIME = "02:00"
 
 # restore old states
 DEFAULT_OLD_STATE = False
@@ -83,6 +84,7 @@ CONF_EXTRA_PRESETS = "extra_presets"
 
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
 CONF_PASSIVE_SWITCH_OPEN_TIME = "passive_switch_opening_time"
+CONF_PASSIVE_CHECK_TIME = "passive_switch_check_time"
 
 ATTR_CONTROL_OUTPUT = "control_output"  # offset and pwm_output
 ATTR_CONTROL_PWM_OUTPUT = "pwm_out"

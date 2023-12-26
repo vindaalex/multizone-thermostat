@@ -39,6 +39,7 @@ from .const import (
     CONF_MIN_CYCLE_DURATION,
     CONF_MIN_VALVE,
     CONF_ON_OFF_MODE,
+    CONF_PASSIVE_CHECK_TIME,
     CONF_PASSIVE_SWITCH_CHECK,
     CONF_PASSIVE_SWITCH_DURATION,
     CONF_PASSIVE_SWITCH_OPEN_TIME,
@@ -74,6 +75,7 @@ from .const import (
     DEFAULT_MIN_VALVE_PWM,
     DEFAULT_OLD_STATE,
     DEFAULT_OPERATION,
+    DEFAULT_PASSIVE_CHECK_TIME,
     DEFAULT_PASSIVE_SWITCH,
     DEFAULT_PASSIVE_SWITCH_OPEN_TIME,
     DEFAULT_PWM,
@@ -269,6 +271,9 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(
                 CONF_PASSIVE_SWITCH_CHECK, default=DEFAULT_PASSIVE_SWITCH
             ): cv.boolean,
+            vol.Optional(
+                CONF_PASSIVE_CHECK_TIME, default=DEFAULT_PASSIVE_CHECK_TIME
+            ): vol.Datetime(format="%H:%M"),
             vol.Optional(CONF_ENABLE_OLD_STATE, default=DEFAULT_OLD_STATE): cv.boolean,
             vol.Optional(
                 CONF_ENABLE_OLD_PARAMETERS, default=DEFAULT_RESTORE_PARAMETERS
@@ -280,4 +285,5 @@ PLATFORM_SCHEMA = vol.All(
             vol.Optional(str(HVACMode.COOL)): vol.Schema(hvac_control_cool),
         }
     ),
+    val.validate_stuck_time(),
 )

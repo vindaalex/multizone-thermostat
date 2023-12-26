@@ -5,7 +5,11 @@
   initial_hvac_mode: "off" # or heat | cool
   initial_preset_mode: "none" # or one from 'custom_presets'
   room_area: 142 # sum of all areas
-  passive_switch_check: True # defines for daily check at 2:00 AM
+
+  # be careful for the master stuck switch check
+  # depending the configuration it could trigger the heating or cooling device to start
+  passive_switch_check: False
+
   precision: 0.5 # stepsize of set point
   
   # show detail control output (use only for config 
@@ -18,15 +22,6 @@
     # or relay to gas heater
     entity_id: switch.main_valve
 
-    # check if valve is set to open within specified days. 
-    # if not switch operated within specified duration it will be opened for 1 minute.
-    # only operated when master is not heating or cooling. duration can be 
-    # set via 'passive_switch_opening_time'    
-    passive_switch_duration:
-      days: 60
-    passive_switch_opening_time:
-      minutes: 4
-    
     # user defined presets. each mode needs to be defined per satellite. 
     # temperatures may differ per thermostat.
     # temperatures defined at master are ignored.
@@ -106,7 +101,10 @@
   precision: 0.1
   sensor_stale_duration:
     hours: 12
+  
+  # daily check if the valve has not been idle for too long
   passive_switch_check: True
+  passive_switch_check_time: "14:00"
   
   # configuration for heating mode
   heat:
@@ -118,7 +116,11 @@
     # specify valve is by default closed
     switch_mode: "NC"
 
-    passive_switch_duration: 
+    # check if valve is set to open within specified days. 
+    # if not switch operated within specified duration it will be opened for 1 minute.
+    # only operated when master is not heating or cooling. duration can be 
+    # set via 'passive_switch_opening_time'    
+    passive_switch_duration:
       days: 60
     passive_switch_opening_time:
       minutes: 4
