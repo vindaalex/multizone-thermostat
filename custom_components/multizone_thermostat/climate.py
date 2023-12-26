@@ -73,6 +73,7 @@ from .const import (
     ATTR_FILTER_MODE,
     ATTR_HVAC_DEFINITION,
     ATTR_SELF_CONTROLLED,
+    ATTR_STUCK_LOOP,
     ATTR_VALUE,
     CLOSE_TO_PWM,
     CONF_AREA,
@@ -242,7 +243,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._loop_pwm = None
         self._start_pwm = None
         self._stop_pwm = None
-        self._loop_stuck_switch = None
         self._satelites = None
         self.time_changed = None
         self._pwm_start_time = None
@@ -1132,14 +1132,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             new_state.name,
         )
 
-        # check if mode matches
-        if self._hvac_mode != new_state.state and self._hvac_mode is not None:
-            self._logger.debug(
-                "Update from satelite: '%s' state '%s' not matching to master state '%s', satelite removed",
-                new_state.name,
-                new_state.state,
-                self._hvac_mode,
-            )
+        # check if stuck loop is triggered
+        for hvac_def in new_state.attributes[ATTR_HVAC_DEFINITION].values():
+            if hvac_def.get(ATTR_STUCK_LOOP):
+                self._logger.debug(
+                    "'%s' is in stuck loop, ignore update",
+                    new_state.name,
+                )
+                return
 
         # check if satellite operating in correct mode
         if new_state.state == self.hvac_mode and new_state.attributes.get(
@@ -1150,6 +1150,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 {new_state.name: 0},
                 control_mode=OperationMode.MASTER,
             )
+            return
 
         # updating master controller and check if pwm needs update
         update_required = self._hvac_on.update_satelite(new_state)
@@ -1845,7 +1846,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 context=self._context,
             )
 
-            _hvac_on.stuck_loop = False
+        _hvac_on.stuck_loop = False
 
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id: str) -> None:
         """Toggle the state of a switch temporarily and hereafter set it to 0 or 1."""

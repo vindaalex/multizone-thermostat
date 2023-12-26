@@ -33,6 +33,7 @@ from .const import (
     ATTR_LAST_SWITCH_CHANGE,
     ATTR_SAT_ALLOWED,
     ATTR_SELF_CONTROLLED,
+    ATTR_STUCK_LOOP,
     ATTR_UPDATE_NEEDED,
     CONF_AREA,
     CONF_CONTINUOUS_LOWER_LOAD,
@@ -1026,6 +1027,7 @@ class HVACSetting:
         tmp_dict[ATTR_CONTROL_OUTPUT] = self.get_control_output
         tmp_dict[ATTR_DETAILED_OUTPUT] = self.detailed_output
         tmp_dict[ATTR_LAST_SWITCH_CHANGE] = self.switch_last_change
+        tmp_dict[ATTR_STUCK_LOOP] = self.stuck_loop
         tmp_dict["Open_window"] = open_window
 
         if self.is_hvac_master_mode:
