@@ -1507,12 +1507,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # check if pwm loop needs update
             if (
-                force
-                or self._hvac_on.is_hvac_on_off_mode
+                force  # forced run
+                or self._hvac_on.is_hvac_on_off_mode  # hysteris
                 or (
                     (self._hvac_on.is_hvac_proportional_mode or self.is_master)
-                    and not self._hvac_on.get_pwm_time  # only when a proportional valve
+                    and not self._hvac_on.get_pwm_time  # proportional valve
                 )
+                or (routine and self.is_master)  # master routine cycle
             ):
                 self._logger.debug(
                     "Running pwm controller from control loop with 'force=%s'", force
