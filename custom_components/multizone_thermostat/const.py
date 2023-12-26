@@ -64,6 +64,7 @@ ATTR_DETAILED_OUTPUT = "detailed_output"
 ATTR_EMERGENCY_MODE = "emergency mode"
 ATTR_UPDATE_NEEDED = "update satelite"
 ATTR_LAST_SWITCH_CHANGE = "switch_last_change"
+ATTR_STUCK_LOOP = "stuck_loop"
 
 PRESET_EMERGENCY = "emergency"
 PRESET_RESTORE = "restore"
