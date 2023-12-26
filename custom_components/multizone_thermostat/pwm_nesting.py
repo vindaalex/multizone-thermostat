@@ -26,6 +26,7 @@ from .const import (
     MIN_MASTER_LOAD,
     NESTING_BALANCE,
     NESTING_DOMINANCE,
+    NESTING_MARGIN,
     NESTING_MATRIX,
     NestingMode,
 )
@@ -53,7 +54,7 @@ class Nesting:
 
         self.master_pwm = master_pwm
         self.master_pwm_scale = NESTING_MATRIX / self.master_pwm
-        self.min_load = min_load / self.master_pwm * NESTING_MATRIX
+        self.min_load = min_load * NESTING_MATRIX
         self.pwm_limit = pwm_threshold / self.master_pwm * NESTING_MATRIX
 
         self.area_scale = NESTING_MATRIX / tot_area
@@ -73,8 +74,11 @@ class Nesting:
         """Determine size of pwm for nesting."""
         # max pwm of rooms
         pwm_max = max(self.pwm)
+
+        # no heat required
         if pwm_max == 0:
             return 0
+
         load_area = sum([a * b for a, b in zip(self.area, self.pwm)])
 
         if self.operation_mode == NestingMode.MASTER_CONTINUOUS:
@@ -131,7 +135,7 @@ class Nesting:
             # in case nesting could result in continous opening
             # and sufficient other than the 'load_area_pwm_max' rooms
             # require heat (enough options for nesting)
-            if NESTING_MATRIX - pwm_low_load < self.pwm_limit:
+            if NESTING_MATRIX * NESTING_MARGIN < pwm_low_load:
                 # full pwm size can be used
                 return_value = NESTING_MATRIX
             else:
@@ -741,6 +745,7 @@ class Nesting:
     def check_pwm(self, data: dict, dt: float = 0) -> None:
         """Check if nesting length is still right for each room."""
         self.satelite_data(data)
+        self._logger.debug("check nesting @ %s of pwm loop", round(dt, 2))
 
         time_past = floor(dt * NESTING_MATRIX)
 

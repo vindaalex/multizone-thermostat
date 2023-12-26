@@ -174,6 +174,8 @@ CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
 DEFAULT_MIN_VALVE_PWM = 0  # factor of master pwm
 MIN_MASTER_LOAD = 0.25  # min load for nesting
 NESTING_DOMINANCE = 0.75  # limit dominant room in nesting
+
+NESTING_MARGIN = 1.1  # margin for continuous opening
 START_MISALINGMENT = (
     30  # seconds , skip switch off when in near future switch in turned on
 )
