@@ -81,6 +81,11 @@ class Nesting:
 
         load_area = sum([a * b for a, b in zip(self.area, self.pwm)])
 
+        # check if load requirement is too low
+        if self.pwm_limit > 0 and self.min_load > 0:
+            if self.pwm_limit * self.min_load > load_area:
+                return 0
+
         if self.operation_mode == NestingMode.MASTER_CONTINUOUS:
             # check if load is above minimum
             if self.min_load > 0:
