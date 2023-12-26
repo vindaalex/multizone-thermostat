@@ -85,6 +85,7 @@ from .const import (
     CONF_INITIAL_HVAC_MODE,
     CONF_INITIAL_PRESET_MODE,
     CONF_MASTER_MODE,
+    CONF_PASSIVE_CHECK_TIME,
     CONF_PASSIVE_SWITCH_CHECK,
     CONF_PRECISION,
     CONF_PWM_SCALE,
@@ -130,6 +131,7 @@ async def async_setup_platform(
     area = config.get(CONF_AREA)
     sensor_stale_duration = config.get(CONF_STALE_DURATION)
     passive_switch = config.get(CONF_PASSIVE_SWITCH_CHECK)
+    passive_switch_time = config.get(CONF_PASSIVE_CHECK_TIME)
     detailed_output = config.get(CONF_DETAILED_OUTPUT)
     enable_old_state = config.get(CONF_ENABLE_OLD_STATE)
     enable_old_parameters = config.get(CONF_ENABLE_OLD_PARAMETERS)
@@ -176,6 +178,7 @@ async def async_setup_platform(
                 enable_old_integral,
                 sensor_stale_duration,
                 passive_switch,
+                passive_switch_time,
             )
         ]
     )
@@ -206,6 +209,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         enable_old_integral,
         sensor_stale_duration,
         passive_switch,
+        passive_switch_time,
     ) -> None:
         """Initialize the thermostat."""
         self._temp_lock = asyncio.Lock()
@@ -227,6 +231,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._restore_integral = enable_old_integral
         self._sensor_stale_duration = sensor_stale_duration
         self._passive_switch = passive_switch
+        self._passive_switch_time = passive_switch_time
         self._area = area
         self._emergency_stop = []
         self._current_temperature = None
@@ -329,9 +334,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             async_track_time_change(
                 self.hass,
                 self._async_stuck_switch_check,
-                hour=2,
-                minute=0,
-                second=0,
+                hour=self._passive_switch_time.hour,
+                minute=self._passive_switch_time.minute,
+                second=self._passive_switch_time.second,
             )
 
         async def _async_startup(*_) -> None:

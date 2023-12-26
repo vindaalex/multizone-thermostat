@@ -1,11 +1,29 @@
 from collections.abc import Callable
+from datetime import datetime, timedelta
 from typing import Any
 from datetime import timedelta
 import voluptuous as vol
 
 from homeassistant.components.climate import HVACMode
 
-from .const import *
+from .const import (
+    CONF_CONTROL_REFRESH_INTERVAL,
+    CONF_EXTRA_PRESETS,
+    CONF_FILTER_MODE,
+    CONF_INITIAL_HVAC_MODE,
+    CONF_INITIAL_PRESET_MODE,
+    CONF_MASTER_MODE,
+    CONF_ON_OFF_MODE,
+    CONF_PASSIVE_CHECK_TIME,
+    CONF_PID_MODE,
+    CONF_PROPORTIONAL_MODE,
+    CONF_PWM_DURATION,
+    CONF_SATELITES,
+    CONF_SENSOR,
+    CONF_SENSOR_OUT,
+    CONF_WC_MODE,
+    CONF_WINDOW_OPEN_TEMPDROP,
+)
 
 
 def validate_initial_control_mode(*keys: str) -> Callable:
@@ -181,3 +199,23 @@ def validate_initial_hvac_mode(*keys: str) -> Callable:
 
     return validate
 
+
+# datetime.strptime(passive_switch_time, "%H:%M:%S")
+def validate_stuck_time(*keys: str) -> Callable:
+    """Convert the time string to a datetime."""
+
+    def validate(obj: dict[str, Any]) -> dict[str, Any]:
+        """Check this condition."""
+        try:
+            obj[CONF_PASSIVE_CHECK_TIME] = datetime.strptime(
+                obj[CONF_PASSIVE_CHECK_TIME], "%H:%M"
+            )
+            return obj
+
+        except ValueError:
+            raise vol.Invalid(
+                "Stuck switch check provided time %s not valid",
+                obj[CONF_PASSIVE_CHECK_TIME],
+            )
+
+    return validate

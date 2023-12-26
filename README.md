@@ -85,6 +85,7 @@ Generic HVAC mode setting:
 
 * passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve. Specify a time period. Default is not activated.
 * passive_switch_opening_time (Optional): specify the minium opening time of valve when running passive switch operation. Specify a time period. Default 1 minute.
+* passive_switch_check_time (Optional): specify the time to perform the check. Default 02:00 AM. Input format HH:MM'
 
 #### on-off mode (Optional) (sub of hvac mode)
 The thermostat will switch on or off depending the setpoint and specified hysteris. Configured under 'on_off_mode:' 
