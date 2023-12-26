@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
-from datetime import timedelta
+
 import voluptuous as vol
 
 from homeassistant.components.climate import HVACMode
@@ -152,30 +152,30 @@ def validate_initial_preset_mode(*keys: str) -> Callable:
                 return obj
             elif CONF_INITIAL_HVAC_MODE not in obj:
                 raise vol.Invalid(
-                            "no initial hvac mode while specifying initial preset '{}'".format(
-                                obj[CONF_INITIAL_PRESET_MODE]
-                            )
-                        )
+                    "no initial hvac mode while specifying initial preset '{}'".format(
+                        obj[CONF_INITIAL_PRESET_MODE]
+                    )
+                )
             elif obj[CONF_INITIAL_HVAC_MODE] not in [HVACMode.HEAT, HVACMode.COOL]:
                 raise vol.Invalid(
-                            "initial hvac mode 'off' not valid while specifying initial preset '{}'".format(
-                                obj[CONF_INITIAL_PRESET_MODE]
-                            )
-                        )
-            elif obj[CONF_INITIAL_PRESET_MODE] not in obj[CONF_INITIAL_HVAC_MODE][CONF_EXTRA_PRESETS]:
+                    "initial hvac mode 'off' not valid while specifying initial preset '{}'".format(
+                        obj[CONF_INITIAL_PRESET_MODE]
+                    )
+                )
+            elif (
+                obj[CONF_INITIAL_PRESET_MODE]
+                not in obj[CONF_INITIAL_HVAC_MODE][CONF_EXTRA_PRESETS]
+            ):
                 raise vol.Invalid(
-                            "initial preset '{}' not valid for hvac mode {} mode".format(
-                                obj[CONF_INITIAL_PRESET_MODE],
-                                obj[CONF_INITIAL_HVAC_MODE]
-
-                            )
-                        )
+                    "initial preset '{}' not valid for hvac mode {} mode".format(
+                        obj[CONF_INITIAL_PRESET_MODE], obj[CONF_INITIAL_HVAC_MODE]
+                    )
+                )
 
             else:
                 return obj
         else:
             return obj
-
 
     return validate
 
