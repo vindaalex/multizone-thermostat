@@ -1440,8 +1440,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # routine should not be called when thermostat is off
             if not self._hvac_on:
-                self._logger.error(
-                    "Control update should not be activate in preset off-mode, exit routine"
+                self._logger.warning(
+                    "Control update should not be activate when hvac  mode is 'off', exit routine"
                 )
                 return
 
