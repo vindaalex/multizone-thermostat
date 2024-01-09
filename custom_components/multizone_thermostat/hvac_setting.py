@@ -767,7 +767,7 @@ class HVACSetting:
         return self._pid.PID[PID_CONTROLLER].integral
 
     @property
-    def get_velicity(self) -> float:
+    def get_velocity(self) -> float:
         """Get pid velocity value."""
         return self._pid.PID[PID_CONTROLLER].differential
 
