@@ -1715,6 +1715,40 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         return async_turn_on_switch
 
+    def _prop_valve_position(self, hvac_on, control_val: float | None = None):
+        """Determine master utilisation for proportional valve scale factor."""
+        master_util = 1
+        # valve mode
+        if not control_val:
+            valve_pos = self.control_output[ATTR_CONTROL_PWM_OUTPUT]
+        else:
+            valve_pos = control_val
+
+        if self._self_controlled == OperationMode.MASTER:
+            master_mode = state_attr(
+                self.hass, "climate." + self._self_controlled, ATTR_HVAC_DEFINITION
+            )
+            if self.hvac_mode in master_mode and hvac_on.master_scaled_bound > 1:
+                master_control_val = master_mode[self.hvac_mode][ATTR_CONTROL_OUTPUT][
+                    ATTR_CONTROL_PWM_OUTPUT
+                ]
+                master_pwm_scale = master_mode[self.hvac_mode][CONF_PWM_SCALE]
+                if master_pwm_scale > 0:
+                    master_util = max(
+                        1 / hvac_on.master_scaled_bound,
+                        master_control_val / master_pwm_scale,
+                    )
+
+        # scale valve opening with master pwm
+        valve_pos /= master_util
+        valve_pos = round(max(0, min(valve_pos, hvac_on.pwm_scale)), 0)
+
+        # NC-NO conversion
+        if hvac_on.get_hvac_switch_mode == NO_SWITCH_MODE:
+            valve_pos = hvac_on.pwm_scale - valve_pos
+
+        return valve_pos
+
     async def _async_switch_turn_on(
         self, hvac_mode: HVACMode | None = None, control_val: float | None = None
     ) -> None:
@@ -1753,35 +1787,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # change valve position
         else:
-            # valve mode
-            if not control_val:
-                valve_pos = self.control_output[ATTR_CONTROL_PWM_OUTPUT]
-            else:
-                valve_pos = control_val
-
-            # scale valve opening with master pwm
-            if self._self_controlled == OperationMode.MASTER:
-                master_mode = state_attr(
-                    self.hass, "climate." + self._self_controlled, ATTR_HVAC_DEFINITION
-                )
-                # check if scaling is specified
-                if self.hvac_mode in master_mode and _hvac_on.master_scaled_bound > 1:
-                    master_control_val = master_mode[self.hvac_mode][
-                        ATTR_CONTROL_OUTPUT
-                    ][ATTR_CONTROL_PWM_OUTPUT]
-                    master_pwm_scale = master_mode[self.hvac_mode][CONF_PWM_SCALE]
-                    if master_pwm_scale > 0:
-                        master_util = max(
-                            1 / _hvac_on.master_scaled_bound,
-                            master_control_val / master_pwm_scale,
-                        )
-                        valve_pos /= master_util
-                        valve_pos = round(max(0, min(valve_pos, _hvac_on.pwm_scale)), 0)
-
-            # NC-NO conversion
-            if _hvac_on.get_hvac_switch_mode == NO_SWITCH_MODE:
-                valve_pos = _hvac_on.pwm_scale - valve_pos
-
+            valve_pos = self._prop_valve_position(_hvac_on, control_val)
             self._logger.debug(
                 "Change state of heater '%s' to '%s'",
                 entity_id,
