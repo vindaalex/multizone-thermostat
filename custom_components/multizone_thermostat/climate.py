@@ -1108,6 +1108,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             if master_mode in [HVACAction.HEATING, HVACAction.COOLING]:
                 return
 
+        # check if thermostat is in operation
+        if self._hvac_on and self._is_valve_open():
+            return
+
         # get data of all switches
         entity_list = {}
         for hvac_mode, mode_config in self._hvac_def.items():
