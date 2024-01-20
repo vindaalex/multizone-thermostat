@@ -129,6 +129,9 @@ satelite_mode:
     pwm_timer:
       description: reference start time
       example: 1161611
+    master_delay:
+      description: master valve opening delay
+      example: 60
 
 detailed_output:
   description: Include detailed output (PID, control output) in attributes

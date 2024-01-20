@@ -12,6 +12,7 @@ DEFAULT_MIN_TEMP_COOL = 20
 DEFAULT_DETAILED_OUTPUT = False
 DEFAULT_SENSOR_FILTER = 0
 DEFAULT_AREA = 0
+DEFAULT_INCLUDE_VALVE_LAG = timedelta(seconds=0)
 
 # on_off switch type
 NC_SWITCH_MODE = "NC"
@@ -86,6 +87,7 @@ CONF_EXTRA_PRESETS = "extra_presets"
 CONF_PASSIVE_SWITCH_DURATION = "passive_switch_duration"
 CONF_PASSIVE_SWITCH_OPEN_TIME = "passive_switch_opening_time"
 CONF_PASSIVE_CHECK_TIME = "passive_switch_check_time"
+CONF_INCLUDE_VALVE_LAG = "compensate_valve_lag"
 
 ATTR_CONTROL_OUTPUT = "control_output"  # offset and pwm_output
 ATTR_CONTROL_PWM_OUTPUT = "pwm_out"

@@ -26,6 +26,7 @@ from .const import (
     CONF_GOAL,
     CONF_HYSTERESIS_TOLERANCE_OFF,
     CONF_HYSTERESIS_TOLERANCE_ON,
+    CONF_INCLUDE_VALVE_LAG,
     CONF_INITIAL_HVAC_MODE,
     CONF_INITIAL_PRESET_MODE,
     CONF_KA,
@@ -65,6 +66,7 @@ from .const import (
     CONF_WINDOW_OPEN_TEMPDROP,
     DEFAULT_AREA,
     DEFAULT_DETAILED_OUTPUT,
+    DEFAULT_INCLUDE_VALVE_LAG,
     DEFAULT_MASTER_SCALE_BOUND,
     DEFAULT_MAX_TEMP_COOL,
     DEFAULT_MAX_TEMP_HEAT,
@@ -210,6 +212,9 @@ master = {
                     NestingMode.MASTER_CONTINUOUS,
                 ]
             ),
+            vol.Optional(
+                CONF_INCLUDE_VALVE_LAG, default=DEFAULT_INCLUDE_VALVE_LAG
+            ): vol.All(cv.time_period, cv.positive_timedelta),
             **controller_config,
             vol.Optional(
                 CONF_CONTINUOUS_LOWER_LOAD, default=DEFAULT_MIN_LOAD

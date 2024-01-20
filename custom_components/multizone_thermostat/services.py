@@ -98,6 +98,7 @@ def register_services(custom_presets):
             vol.Optional(ATTR_CONTROL_OFFSET): vol.Coerce(float),
             vol.Optional("sat_id"): vol.Coerce(int),
             vol.Optional("pwm_start_time"): vol.Coerce(float),
+            vol.Optional("master_delay"): vol.Coerce(float),
         },
         "async_set_satelite_mode",
     )

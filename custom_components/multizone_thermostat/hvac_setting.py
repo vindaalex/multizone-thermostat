@@ -41,6 +41,7 @@ from .const import (
     CONF_EXTRA_PRESETS,
     CONF_HYSTERESIS_TOLERANCE_OFF,
     CONF_HYSTERESIS_TOLERANCE_ON,
+    CONF_INCLUDE_VALVE_LAG,
     CONF_MASTER_MODE,
     CONF_MASTER_OPERATION_MODE,
     CONF_MASTER_SCALE_BOUND,
@@ -98,6 +99,7 @@ class HVACSetting:
         self.area = area
         self.detailed_output = detailed_output
         self._store_integral = False
+        self._master_delay = 0
 
         self._last_change = datetime.datetime.now(datetime.UTC)
 
@@ -421,6 +423,15 @@ class HVACSetting:
             elif control_output < self.pwm_threshold:
                 control_output = 0
 
+            elif (
+                not self.is_hvac_master_mode
+                and self.time_offset == 0
+                and self.get_pwm_time.seconds
+            ):
+                control_output += (
+                    self.master_delay / self.get_pwm_time.seconds * self.pwm_scale
+                )
+
             self._logger.debug("control output before rounding %s", control_output)
             control_output = get_rounded(
                 control_output, self.pwm_scale / self.pwm_resolution
@@ -558,6 +569,26 @@ class HVACSetting:
             return self._proportional.get(CONF_MASTER_SCALE_BOUND)
 
         return 1
+
+    @property
+    def compensate_valve_lag(self):
+        """Delay master valve opening."""
+        if self.is_hvac_master_mode:
+            return self._master[CONF_INCLUDE_VALVE_LAG].seconds
+        return 0
+
+    @property
+    def master_delay(self):
+        """Master valve delay."""
+        return self._master_delay
+
+    @master_delay.setter
+    def master_delay(self, delay_time):
+        """Master valve delay.
+
+        The delay is added to the control output when offset = 0
+        """
+        self._master_delay = delay_time
 
     @property
     def get_hvac_switch_mode(self) -> str:

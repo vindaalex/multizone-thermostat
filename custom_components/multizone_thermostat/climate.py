@@ -614,6 +614,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         offset: float | None = None,
         sat_id: int = 0,
         pwm_start_time: float = 0,
+        master_delay: float = 0,
     ) -> None:
         """Satellite update from master.
 
@@ -658,6 +659,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         ):
             self._logger.debug("sat update to self-controlled state")
             self._self_controlled = OperationMode.SELF
+            self._hvac_on.master_delay = 0
             self._sat_id = 0
             # stop and reset current controller
             self._async_routine_controller()
@@ -692,6 +694,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._pwm_start_time = pwm_start_time
                 self._sat_id = sat_id
                 self._self_controlled = OperationMode.MASTER
+                self._hvac_on.master_delay = master_delay
 
                 # stop controller/pwm routines
                 if self._loop_controller:
@@ -1322,8 +1325,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 # +1 to account for master
                 if control_mode == OperationMode.MASTER:
                     sat_id = self._hvac_on.get_satelites.index(satelite) + 1
+                    delay = self._hvac_on.compensate_valve_lag
                 else:
                     sat_id = 0
+                    delay = 0
 
                 # create tasks to update
                 self.hass.async_create_task(
@@ -1333,6 +1338,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         control_mode=control_mode,
                         sat_id=sat_id,
                         pwm_start_time=self._pwm_start_time,
+                        master_delay=delay,
                     )
                 )
 
@@ -1346,6 +1352,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         control_mode: OperationMode = OperationMode.NO_CHANGE,
         sat_id: int = 0,
         pwm_start_time: int = 0,
+        master_delay: float = 0,
     ) -> None:
         """Actual sending of control update to a satelite."""
         self._logger.debug(
@@ -1362,6 +1369,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 ATTR_CONTROL_OFFSET: offset,
                 "sat_id": sat_id,
                 "pwm_start_time": pwm_start_time,
+                "master_delay": master_delay,
             },
             context=self._context,
             # blocking=False,
@@ -1593,6 +1601,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     + min(sum(self.control_output.values()), self._hvac_on.pwm_scale)
                     * scale_factor
                 )
+
+                if self._hvac_on.is_hvac_master_mode:
+                    start_time += self._hvac_on.compensate_valve_lag
 
                 # stop current schedules
                 if self._start_pwm is not None:
