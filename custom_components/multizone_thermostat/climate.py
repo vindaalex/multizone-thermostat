@@ -1978,16 +1978,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._preset_mode = preset_mode
 
         # sync satellites
-        if self._hvac_on and self.is_master:
-            await self._async_set_satelite_preset(preset_mode)
+        if self._hvac_on:
+            if self.is_master:
+                await self._async_set_satelite_preset(preset_mode)
 
-        # update thermostat controller when thermostat operating on itself
-        elif (
-            self._hvac_on
-            and self.preset_mode != PRESET_EMERGENCY
-            and self._self_controlled == OperationMode.SELF
-        ):
-            await self._async_controller(force=True)
+            # update thermostat controller when thermostat operating on itself
+            elif (
+                self.preset_mode != PRESET_EMERGENCY
+                and self._self_controlled == OperationMode.SELF
+            ):
+                await self._async_controller(force=True)
 
         self.async_write_ha_state()
 
