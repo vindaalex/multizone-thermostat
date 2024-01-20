@@ -231,6 +231,7 @@ class HVACSetting:
             tot_area=self.area,
             min_load=self.get_min_load,
             pwm_threshold=self.pwm_threshold,
+            min_prop_valve_opening=self.get_min_valve_opening,
         )
 
     def start_pid(self) -> None:
@@ -347,43 +348,6 @@ class HVACSetting:
         return max_pwm
 
     @property
-    def valve_pos_pwm_prop(self) -> float:
-        """Sum of proportional valves scaled to total building area."""
-        sum_pwm = 0
-        max_pwm = 0
-        max_area = 0
-        for _, data in self._satelites.items():
-            if (
-                data[ATTR_HVAC_MODE] == self._hvac_mode
-                and data[ATTR_CONTROL_PWM_OUTPUT] is not None
-            ):
-                if data[CONF_PWM_DURATION] == 0:
-                    # self.area in master mode is total building area
-                    # pwm as percentage to satelite pwm_scale
-                    sum_pwm += (
-                        data[ATTR_CONTROL_PWM_OUTPUT]
-                        / data[CONF_PWM_SCALE]
-                        * data[CONF_AREA]
-                    )
-
-                    if data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE] > max_pwm:
-                        max_pwm = data[ATTR_CONTROL_PWM_OUTPUT] / data[CONF_PWM_SCALE]
-                        max_area = data[CONF_AREA]
-
-        # assure minimum opening and flow towards prop valves
-        if sum_pwm > 0:
-            sum_pwm = max(self.get_min_valve_opening * self.area, sum_pwm)
-
-            if self._pid:
-                # adjust pwm from prop valves to target valve position
-                sum_pwm += self._pid[ATTR_CONTROL_PWM_OUTPUT] * max_area
-
-            sum_pwm /= self.area
-
-        # scale to master pwm_scale
-        return sum_pwm * self.pwm_scale
-
-    @property
     def valve_pos_pwm_on_off(self) -> float:
         """Master pwm based on nesting of satelites for pwm controlled on-off valves."""
         return self.nesting.get_master_output()[ATTR_CONTROL_PWM_OUTPUT]
@@ -391,6 +355,9 @@ class HVACSetting:
     @property
     def get_control_output(self) -> dict:
         """Return the control output (offset and valve pos) of the thermostat."""
+        if self.time_offset is None:
+            self.time_offset = 0
+
         if self.is_hvac_on_off_mode:
             control_output = self._on_off[ATTR_CONTROL_PWM_OUTPUT]
 
@@ -404,17 +371,7 @@ class HVACSetting:
         elif self.is_hvac_master_mode:
             # Determine valve opening for master valve based on satelites running in
             # proportional hvac mode
-            # - get maximal valve opening of satelites with propotional valves
-            # - get max opening time from pwm (on/off) valves
-            # - take maximum from both
-            prop_control = self.valve_pos_pwm_prop
-            pwm_on_off = self.valve_pos_pwm_on_off
-            self._logger.debug(
-                "master control contributions; prop:%s, pwm on_off:%s",
-                prop_control,
-                pwm_on_off,
-            )
-            control_output = max(prop_control, pwm_on_off)
+            control_output = self.valve_pos_pwm_on_off
 
         if self.is_hvac_master_mode or self.is_hvac_proportional_mode:
             if control_output > self.pwm_scale:
@@ -436,9 +393,6 @@ class HVACSetting:
             control_output = get_rounded(
                 control_output, self.pwm_scale / self.pwm_resolution
             )
-
-        if self.time_offset is None:
-            self.time_offset = 0
 
         if self.is_hvac_master_mode:
             if self.time_offset + control_output > self.pwm_scale:
