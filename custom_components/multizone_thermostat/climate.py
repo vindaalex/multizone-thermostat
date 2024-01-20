@@ -1636,18 +1636,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
             # convert pwm to proportional switch and close
             else:
-                switch_pos = self.switch_position
-                if switch_pos is None:
-                    return
+                valve_open = self._is_valve_open()
 
                 if (
                     self._hvac_on.pwm_threshold
                     > self.control_output[ATTR_CONTROL_PWM_OUTPUT]
-                    and switch_pos > 0
+                    and valve_open
                 ):
                     await self._async_switch_turn_off()
                 # convert pwm to proportional switch and change position
-                elif switch_pos != self.control_output[ATTR_CONTROL_PWM_OUTPUT]:
+                else:
                     await self._async_switch_turn_on()
 
     @callback
