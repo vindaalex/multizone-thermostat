@@ -560,6 +560,30 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     cycle_time,
                 )
 
+    def get_hvac_data(self, hvac_mode: HVACMode) -> list:
+        """Retrieve hvac config and entitiy for hvac mode."""
+        found_mode = True
+        hvac_on = None
+        entity_id = None
+
+        if hvac_mode is None:
+            hvac_on = self._hvac_on
+            hvac_mode = self._hvac_mode
+        elif hvac_mode == HVACMode.OFF:
+            pass
+        elif hvac_mode not in self.hvac_modes:
+            found_mode = False
+            # self._logger.error(
+            #     "Unrecognized hvac mode when retrieving data: '%s'", hvac_mode
+            # )
+        elif hvac_mode in [HVACMode.HEAT, HVACMode.COOL]:
+            hvac_on = self._hvac_def[hvac_mode]
+
+        if hvac_on:
+            entity_id = hvac_on.get_hvac_switch
+
+        return [found_mode, hvac_on, entity_id]
+
     @callback
     def async_set_integral(self, hvac_mode: HVACMode, integral: float) -> None:
         """Set new PID Controller integral value."""
@@ -745,9 +769,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == hvac_mode:
             return
 
-        if hvac_mode not in self.hvac_modes:
-            self._logger.error("Unrecognized hvac mode: '%s'", hvac_mode)
+        found_mode, _hvac_on, _ = self.get_hvac_data(hvac_mode)
+
+        if not found_mode:
             return
+
         self._logger.info("HVAC mode changed to '%s'", hvac_mode)
 
         # cancel active routines
@@ -788,8 +814,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_write_ha_state()
             return
 
-        # load current config
-        _hvac_on = self._hvac_def[self._hvac_mode]
+        # # load current config
+        # _hvac_on = self._hvac_def[self._hvac_mode]
 
         # check and sync preset mode
         if self.preset_mode != _hvac_on.preset_mode:
@@ -1686,18 +1712,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         NC/NO aware: NC conversion to NO
         """
         self._logger.debug("Turn ON")
-        if hvac_mode:
-            _hvac_on = self._hvac_def[hvac_mode]
-        else:
-            _hvac_on = self._hvac_on
-            hvac_mode = self._hvac_mode
+        found_mode, _hvac_on, entity_id = self.get_hvac_data(hvac_mode)
 
-        if _hvac_on:
-            entity_id = _hvac_on.get_hvac_switch
-        else:
-            entity_id = None
-
-        if not entity_id:
+        if not entity_id or not found_mode:
             self._logger.debug("No switch defined for %s", hvac_mode)
             return
 
@@ -1791,17 +1808,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         NC/NO aware: NC converted to NO
         """
         self._logger.debug("Turn OFF called")
-        if hvac_mode:
-            _hvac_on = self._hvac_def[hvac_mode]
-        else:
-            hvac_mode = self._hvac_mode
-            _hvac_on = self._hvac_on
-        if _hvac_on:
-            entity_id = _hvac_on.get_hvac_switch
-        else:
-            entity_id = None
+        found_mode, _hvac_on, entity_id = self.get_hvac_data(hvac_mode)
 
-        if not entity_id:
+        if not entity_id or not found_mode:
             self._logger.debug("No switch defined for %s", hvac_mode)
             return
 
@@ -1851,35 +1860,31 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_toggle_switch(self, hvac_mode: HVACMode, entity_id: str) -> None:
         """Toggle the state of a switch temporarily and hereafter set it to 0 or 1."""
-        DURATION = self._hvac_def[hvac_mode].get_switch_stale_open_time
-        if self._hvac_on is None or (
-            self._hvac_on
-            and not self._is_valve_open()  # current hvacmode switch is closed
-        ):
-            self._hvac_def[hvac_mode].stuck_loop = True
 
-            self._logger.info(
-                "switch '%s' toggle state temporarily to ON for %s sec",
-                entity_id,
-                DURATION,
-            )
+        _, _hvac_on, _ = self.get_hvac_data(hvac_mode)
+        duration = _hvac_on.get_switch_stale_open_time
+        _hvac_on.stuck_loop = True
 
-            # NO-NC conversion
-            if self._hvac_def[hvac_mode].get_hvac_switch_mode == NC_SWITCH_MODE:
-                control_val = 0
-            else:
-                control_val = self._hvac_def[hvac_mode].pwm_scale
+        self._logger.info(
+            "switch '%s' toggle state temporarily to ON for %s sec",
+            entity_id,
+            duration,
+        )
 
-            await self._async_switch_turn_on(
-                hvac_mode=hvac_mode, control_val=control_val
-            )
+        # NO-NC conversion
+        if _hvac_on.get_hvac_switch_mode == NC_SWITCH_MODE:
+            control_val = 0
+        else:
+            control_val = _hvac_on.pwm_scale
 
-            # schedule toggle
-            async_track_point_in_utc_time(
-                self.hass,
-                self.async_turn_switch_off_factory(hvac_mode=hvac_mode),
-                datetime.datetime.fromtimestamp(time.time() + DURATION.total_seconds()),
-            )
+        await self._async_switch_turn_on(hvac_mode=hvac_mode, control_val=control_val)
+
+        # schedule toggle
+        async_track_point_in_utc_time(
+            self.hass,
+            self.async_turn_switch_off_factory(hvac_mode=hvac_mode),
+            datetime.datetime.fromtimestamp(time.time() + duration.total_seconds()),
+        )
 
     @callback
     def _async_activate_emergency_stop(self, source: str, sensor: str) -> None:
@@ -1986,20 +1991,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         NC/NO aware: NO converted to NC
         """
-        if hvac_mode == HVACMode.OFF:
-            return False
-        elif hvac_mode:
-            _hvac_on = self._hvac_def[hvac_mode]
-        else:
-            _hvac_on = self._hvac_on
-            hvac_mode = self._hvac_mode
+        found_mode, _hvac_on, entity_id = self.get_hvac_data(hvac_mode)
 
-        if _hvac_on:
-            entity_id = _hvac_on.get_hvac_switch
-        else:
-            entity_id = None
-
-        if not entity_id:
+        if not entity_id or not found_mode:
             self._logger.debug("no found entity for %s", hvac_mode)
             return False
 
@@ -2201,18 +2195,13 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     def valid_presets(self, hvac_mode: HVACMode | None = None):
         """Return a list of available preset modes."""
-        if hvac_mode == HVACMode.OFF:
-            _hvac_on = None
-        elif hvac_mode:
-            _hvac_on = self._hvac_def[hvac_mode]
-        else:
-            _hvac_on = self._hvac_on
-            hvac_mode = self._hvac_mode
+
+        _, _hvac_on, _ = self.get_hvac_data(hvac_mode)
 
         modes = [PRESET_NONE, PRESET_EMERGENCY]
-        if self._hvac_on:
-            if self._hvac_on.custom_presets or self.is_master:
-                modes = modes + list(self._hvac_on.custom_presets.keys())
+        if _hvac_on is not None:
+            if _hvac_on.custom_presets or self.is_master:
+                modes = modes + list(_hvac_on.custom_presets.keys())
 
         return modes
 
