@@ -16,6 +16,7 @@ import asyncio
 import datetime
 import logging
 import time
+import traceback
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
