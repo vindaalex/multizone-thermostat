@@ -627,6 +627,17 @@ class HVACSetting:
             raise ValueError("min diff cannot be set for on-off controller")
         self._pwm_threshold = new_threshold
 
+    def close_to_routine(self, offset):
+        """Check if offset is close to routine or when there is not enough time to open."""
+        close_to = True
+        if offset < 1:
+            time_left = (1 - offset) * self.get_pwm_time
+            threshold = self.pwm_threshold / self.pwm_scale * self.get_pwm_time
+            if time_left - self.compensate_valve_lag > threshold:
+                close_to = False
+
+        return close_to
+
     @property
     def get_operate_cycle_time(self) -> datetime.datetime:
         """Return interval for recalculate (control value)."""

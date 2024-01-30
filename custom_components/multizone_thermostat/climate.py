@@ -1536,6 +1536,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             else:
                 offset = 0
 
+            if (
+                self.is_master
+                and routine is None
+                and self._hvac_on.close_to_routine(offset)
+            ):
+                # too close to routine, do not include satellite changes
+                return
+
             # calculate actual pwm
             self._hvac_on.calculate(routine=routine, force=force, current_offset=offset)
 
