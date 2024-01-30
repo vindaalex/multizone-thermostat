@@ -19,7 +19,8 @@ NC_SWITCH_MODE = "NC"
 NO_SWITCH_MODE = "NO"
 
 # MASTER
-DEFAULT_MIN_LOAD = 0
+DEFAULT_MIN_LOAD = 0.15 # min heat load % room area
+DEFAULT_MIN_VALVE_PWM = 0  # factor of master pwm
 
 # safety routines
 DEFAULT_PASSIVE_SWITCH = False
@@ -174,7 +175,7 @@ NESTING_DOMINANCE = 0.75  # limit dominant room in nesting
 
 NESTING_MARGIN = 1.1  # margin for continuous opening
 START_MISALINGMENT = (
-    30  # seconds , skip switch off when in near future switch in turned on
+    30  # seconds , skip switch toggle when in near future switch operated
 )
 
 NESTING_MATRIX = 20
