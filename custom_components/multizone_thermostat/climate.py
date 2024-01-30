@@ -1960,6 +1960,16 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         else:
             self._logger.debug("Emergency OFF recall send from %s", source)
 
+    async def _async_check_emergency(self) -> None:
+        """Check if emergency mode is valid."""
+        # restore preset when empty
+        state = True
+        if not self._emergency_stop:
+            await self.async_set_preset_mode(PRESET_RESTORE)
+            state = False
+
+        return state
+
     @callback
     def _async_restore_emergency_stop(self, entity_id: str) -> None:
         """Update emergency list."""
