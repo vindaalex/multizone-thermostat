@@ -1626,7 +1626,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     if self._stop_pwm is not None:
                         await self._async_stop_pwm()
 
-                    if end_time <= start_time:
+                    # negative duration of valve 
+                    if (
+                        # control time is too short
+                        end_time <= start_time 
+                        # valve should be closed
+                        or end_time < now
+                        # opening time shorter than threshold
+                        or end_time - now < max(self._hvac_on.pwm_threshold / pwm_scale * pwm_duration,START_MISALINGMENT) 
+                    ):
                         if self._is_valve_open():
                             await self._async_switch_turn_off()
                         return
