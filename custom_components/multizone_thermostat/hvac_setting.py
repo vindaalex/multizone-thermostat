@@ -162,7 +162,7 @@ class HVACSetting:
         if self.is_hvac_master_mode:
             self._logger.debug("Setup control mode 'master'")
             self._pwm_threshold = self._master[CONF_PWM_THRESHOLD]
-            self.start_master()
+            self.start_master(reset=True)
 
     def calculate(
         self, routine: bool = False, force: bool = False, current_offset: float = 0
@@ -212,9 +212,10 @@ class HVACSetting:
                 "Control calculation dt %.4f sec", time.time() - start_time
             )
 
-    def start_master(self) -> None:
+    def start_master(self, reset: bool = False) -> None:
         """Init the master mode."""
-        self._satelites = {}
+        if reset:
+            self._satelites = {}
         self.nesting = pwm_nesting.Nesting(
             self._name,
             operation_mode=self._operation_mode,
