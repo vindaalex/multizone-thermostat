@@ -714,8 +714,9 @@ class Nesting:
             else:
                 end_time = 1
 
-            end_time /= self.master_pwm_scale / NESTING_MATRIX
-        else:
+            end_time /= self.master_pwm_scale
+        
+        if master_offset is None:
             master_offset = 0
 
         return {
