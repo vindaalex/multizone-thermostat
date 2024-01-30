@@ -583,12 +583,13 @@ class HVACSetting:
         """Get minimum active_control_data pwm range."""
         return self._pwm_threshold
 
-    @pwm_threshold.setter
-    def pwm_threshold(self, new_threshold: float) -> None:
+    def set_pwm_threshold(self, new_threshold: float) -> None:
         """Set minimum pwm."""
         if self.is_hvac_on_off_mode:
             raise ValueError("min diff cannot be set for on-off controller")
         self._pwm_threshold = new_threshold
+        if self.is_hvac_master_mode:
+            self.start_master()
 
     def close_to_routine(self, offset):
         """Check if offset is close to routine or when there is not enough time to open."""

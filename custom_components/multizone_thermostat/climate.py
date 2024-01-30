@@ -505,7 +505,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self._logger.info(
             "new minimum for pwm scale for '%s' to: '%s'", hvac_mode, new_threshold
         )
-        self._hvac_def[hvac_mode].pwm_threshold(new_threshold)
+        self._hvac_def[hvac_mode].set_pwm_threshold(new_threshold)
         self.schedule_update_ha_state()
 
     @callback
