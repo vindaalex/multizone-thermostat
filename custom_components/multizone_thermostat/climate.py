@@ -1572,14 +1572,15 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     (self._hvac_on.is_hvac_proportional_mode or self.is_master)
                     and not self._hvac_on.get_pwm_time  # proportional valve
                 )
-                or (routine and self.is_master)  # master routine cycle
+                # or (routine and self.is_master)  # master routine cycle
             ):
                 self._logger.debug(
                     "Running pwm controller from control loop with 'force=%s'", force
                 )
-                await self._async_controller_pwm(force=force)
+                self.hass.async_create_task(self._async_controller_pwm(force=force))
 
-            self.async_write_ha_state()
+            if self._hvac_on.is_hvac_switch_on_off:
+                self.async_write_ha_state()
 
     async def _async_controller_pwm(
         self, now: datetime.datetime | None = None, force: bool = False
