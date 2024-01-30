@@ -23,7 +23,6 @@ from .const import (
     CONF_ENABLE_OLD_STATE,
     CONF_EXTRA_PRESETS,
     CONF_FILTER_MODE,
-    CONF_GOAL,
     CONF_HYSTERESIS_TOLERANCE_OFF,
     CONF_HYSTERESIS_TOLERANCE_ON,
     CONF_INCLUDE_VALVE_LAG,
@@ -61,7 +60,6 @@ from .const import (
     CONF_TARGET_TEMP_INIT,
     CONF_TARGET_TEMP_MAX,
     CONF_TARGET_TEMP_MIN,
-    CONF_VALVE_MODE,
     CONF_WC_MODE,
     CONF_WINDOW_OPEN_TEMPDROP,
     DEFAULT_AREA,
@@ -145,13 +143,6 @@ WC_control_options = {
     vol.Optional(CONF_PWM_SCALE_HIGH): vol.Coerce(float),
 }
 
-VALVE_control_options_req = {
-    vol.Required(CONF_GOAL): vol.Coerce(float),
-    vol.Required(CONF_KP): vol.Coerce(float),
-    vol.Required(CONF_KI): vol.Coerce(float),
-    vol.Required(CONF_KD): vol.Coerce(float),
-}
-
 # on_off
 on_off = {
     vol.Required(CONF_HYSTERESIS_TOLERANCE_ON): vol.Coerce(float),
@@ -222,7 +213,6 @@ master = {
             vol.Optional(CONF_MIN_VALVE, default=DEFAULT_MIN_VALVE_PWM): vol.Coerce(
                 float
             ),
-            vol.Optional(CONF_VALVE_MODE): vol.Schema(VALVE_control_options_req),
         }
     )
 }

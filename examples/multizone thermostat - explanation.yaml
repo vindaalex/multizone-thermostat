@@ -71,15 +71,6 @@
       # avoids for proportional valves too short opening of master valve
       min_opening_for_propvalve: 0.15
 
-      # experimental, not advised to use 
-      # try to achieve for the proportional valves a 
-      # max opening to 80% of max
-      PID_valve_mode:
-        goal: .8
-        kp: -0.5
-        ki: -0.0003
-        kd: 0
-
   restore_from_old_state: True # restore changes made via service calls
   restore_parameters: False # yaml config is overrulled by services modified settings 
   restore_integral: True # PID integral restored to continue with previous pid setpoint

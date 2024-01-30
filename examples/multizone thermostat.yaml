@@ -26,13 +26,6 @@
         minutes: 30
       pwm_scale: 100
       pwm_resolution: 50
-      # try to achieve for the proportional valves a 
-      # max opening to 80% of max
-      PID_valve_mode:
-        goal: .8
-        kp: -0.5
-        ki: -0.0003
-        kd: 0
 
   restore_from_old_state: False
   restore_parameters: False

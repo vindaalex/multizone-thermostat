@@ -36,11 +36,7 @@ climate:
           minutes: 30
         pwm_scale: 100
         pwm_resolution: 20
-        PID_valve_mode:
-          goal: .8
-          kp: -0.5
-          ki: -0.001
-          kd: 0
+
 
     restore_from_old_state: True
     restore_parameters: True

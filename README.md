@@ -197,16 +197,6 @@ with the data (as sub):
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
 * min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0.1 (* pwm_scale)
 
-#### Valve controller (Optional) (sub of master mode)
-Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
-
-Configured under 'PID_valve_mode:'
-* goal (Optional): Wanted precentage opening of valve (between 0 and 1)
-* kp (Required): Set PID parameter, p control value.
-* ki (Required): Set PID parameter, i control value.
-* kd (Required): Set PID parameter, d control value.
-* pwm_scale_low (Optional): For master mode not applicable
-* pwm_scale_high (Optional): For master mode not applicable
 
 # Sensor filter (filter_mode):
 An unscented kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
@@ -254,8 +244,6 @@ Change the 'preset'
 Change the current kp, ki, kd values of the PID or Valve PID controller
 ## set_integral:
 Change the PID integral value contribution
-## set_goal:
-Change the target valve opening for proportional valves
 ## set_ka_kb:
 Change the ka and kb for the weather controller
 ## set_filter_mode:

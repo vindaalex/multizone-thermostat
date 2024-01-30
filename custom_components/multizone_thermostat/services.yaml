@@ -68,20 +68,6 @@ set_integral:
       description: integral value of PID controller
       example: 5
 
-#VALVE_PID
-set_goal:
-  description: Set a new goal value
-  fields:
-    entity_id:
-      description: Thermostat entity_id
-      example: climate.study
-    hvac_mode:
-      description: hvac mode
-      example: heat or cool
-    goal:
-      description: goal value of valve mode controller
-      example: 60
-
 #weather mode
 set_ka_kb:
   description: Set a new KA value

@@ -596,13 +596,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self.schedule_update_ha_state()
 
     @callback
-    def async_set_goal(self, hvac_mode: HVACMode, goal: float) -> None:
-        """Set new valve Controller goal value."""
-        self._logger.info("new PID valve goal for '%s' to: '%s'", hvac_mode, goal)
-        self._hvac_def[hvac_mode].goal = goal
-        self.schedule_update_ha_state()
-
-    @callback
     def async_set_ka_kb(
         self, hvac_mode: HVACMode, ka: float | None = None, kb: float | None = None
     ) -> None:  # pylint: disable=invalid-name

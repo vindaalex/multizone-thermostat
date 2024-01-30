@@ -122,7 +122,6 @@ CONF_PROPORTIONAL_MODE = "proportional_mode"
 
 # PID controller
 CONF_PID_MODE = "PID_mode"
-CONF_VALVE_MODE = "PID_valve_mode"
 
 PID_CONTROLLER = "PID_controller"
 CONF_KP = "kp"
@@ -149,9 +148,6 @@ CONF_SATELITES = "satelites"
 CONF_MIN_VALVE = "min_opening_for_propvalve"
 CONF_CONTINUOUS_LOWER_LOAD = "lower_load_scale"
 
-CONF_GOAL = "goal"  # pid valve mode
-ATTR_GOAL = "goal"  # pid valve mode
-
 # nesting
 ATTR_ROOMS = "rooms"
 ATTR_SCALED_PWM = "scaled_pwm"
@@ -173,7 +169,6 @@ SAT_CONTROL_LEAD = 0.5  # 0.15  # seconds, time between control loop sats
 PWM_LAG = 0.5  # 0.05  # seconds
 PWM_UPDATE_CHANGE = 0.05  # percentage, pwm difference above which an update is needed
 CLOSE_TO_PWM = 0.1  # percentage, if time is close to next pwm loop
-DEFAULT_MIN_VALVE_PWM = 0  # factor of master pwm
 MIN_MASTER_LOAD = 0.25  # min load for nesting
 NESTING_DOMINANCE = 0.75  # limit dominant room in nesting
 

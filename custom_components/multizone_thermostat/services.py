@@ -73,14 +73,7 @@ def register_services(custom_presets):
         },
         "async_set_integral",
     )
-    platform.async_register_entity_service(  # type: ignore
-        "set_goal",
-        {
-            vol.Required(ATTR_HVAC_MODE): vol.In(SUPPORTED_HVAC_MODES),
-            vol.Required("goal"): vol.Coerce(float),
-        },
-        "async_set_goal",
-    )
+
     platform.async_register_entity_service(  # type: ignore
         "set_ka_kb",
         {

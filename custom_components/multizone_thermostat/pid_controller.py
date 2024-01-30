@@ -16,7 +16,6 @@ class PIDController:
         self,
         name: str,
         PID_type: str,  # pylint: disable=invalid-name
-        master_mode: bool,
         sampletime: float,
         kp: float | None,  # pylint: disable=invalid-name
         ki: float | None,  # pylint: disable=invalid-name
@@ -57,7 +56,6 @@ class PIDController:
         self._last_output = 0
         self._last_calc_timestamp = None
         self._time = time
-        self.master_mode = master_mode
 
     def calc(self, input_val: float, setpoint, force: bool = False) -> float:
         """Calculate pid for given input_val and setpoint."""
@@ -122,52 +120,51 @@ class PIDController:
             self._last_output,
         )
 
-        if not self.master_mode:
-            # fully open if error is too high
-            if (  # heating
-                (
-                    self._Kp > 0
-                    and (
-                        (error > 0 and error > self._out_max / self._Kp)
-                        or (error > 1.5)
-                    )
+        # fully open if error is too high
+        if (  # heating
+            (
+                self._Kp > 0
+                and (
+                    (error > 0 and error > self._out_max / self._Kp)
+                    or (error > 1.5)
                 )
-                # cooling
-                or (
-                    self._Kp < 0
-                    and (
-                        (error < 0 and error < self._out_max / self._Kp)
-                        or (error < -1.5)
-                    )
+            )
+            # cooling
+            or (
+                self._Kp < 0
+                and (
+                    (error < 0 and error < self._out_max / self._Kp)
+                    or (error < -1.5)
                 )
-            ):
-                # when temp is too low when heating or too high when cooling set fully open
-                # similar as honeywell TPI
-                self._logger.debug(
-                    "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
-                    setpoint,
-                    current_temp,
-                    self._out_max,
-                )
-                self._last_output = self._out_max
+            )
+        ):
+            # when temp is too low when heating or too high when cooling set fully open
+            # similar as honeywell TPI
+            self._logger.debug(
+                "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
+                setpoint,
+                current_temp,
+                self._out_max,
+            )
+            self._last_output = self._out_max
 
-            # fully close if error is too low
-            elif (
-                # heating
-                (self._Kp > 0 and error < -1.5)
-                or
-                # cooling
-                (self._Kp < 0 and error > 1.5)
-            ):
-                # when temp is too low when heating or too high when cooling set fully open
-                # similar as honeywell TPI
-                self._logger.debug(
-                    "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
-                    setpoint,
-                    current_temp,
-                    self._out_max,
-                )
-                self._last_output = self._out_min
+        # fully close if error is too low
+        elif (
+            # heating
+            (self._Kp > 0 and error < -1.5)
+            or
+            # cooling
+            (self._Kp < 0 and error > 1.5)
+        ):
+            # when temp is too low when heating or too high when cooling set fully open
+            # similar as honeywell TPI
+            self._logger.debug(
+                "setpoint %.2f, current temp %.2f: too low temp open to max: %.2f",
+                setpoint,
+                current_temp,
+                self._out_max,
+            )
+            self._last_output = self._out_min
 
         # Remember some variables for next time
         self._last_input = input_val
