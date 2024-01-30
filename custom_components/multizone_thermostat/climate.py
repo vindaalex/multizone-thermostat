@@ -1478,7 +1478,8 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # do not run when not in sync with master
             if self._self_controlled == OperationMode.PENDING:
                 self._logger.debug("Controller cancelled due to 'pending mode'")
-                return
+                if await self._async_check_emergency():
+                    return
 
             # check emergency mode
             if self.preset_mode == PRESET_EMERGENCY:
