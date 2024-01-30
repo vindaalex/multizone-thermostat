@@ -1430,16 +1430,26 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         """Check if pwm loop is to be started soon."""
         next_pwm_loop = self._pwm_start_time
         now = time.time()
-        time_diff = next_pwm_loop - now
+        time_diff = now - next_pwm_loop
 
-        if (
-            time_diff > 0
-            and time_diff / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM
+        if time_diff > 0 and time_diff < 1:
+            self._logger.debug(
+                "pwm loop starts soon, time since pwm routine %.2f", time_diff
+            )
+            return True
+        elif (
+            time_diff < 0
+            and abs(time_diff) / self._hvac_on.get_pwm_time.seconds < CLOSE_TO_PWM
         ):
-            self._logger.debug("pwm loop starts soon")
+            self._logger.debug(
+                "master hvac init, time since pwm routine %.2f",
+                time_diff,
+            )
             return True
         else:
-            self._logger.debug("no pwm loop to start soon")
+            self._logger.debug(
+                "no pwm loop to start soon, time since pwm routine %.2f", time_diff
+            )
             return False
 
     @callback
