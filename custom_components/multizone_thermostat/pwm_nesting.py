@@ -104,7 +104,10 @@ class Nesting:
     @property
     def max_all_pwm(self):
         """Max pwm of all rooms."""
-        return max(*self.pwm, *self.prop_pwm)
+        if self.pwm or self.pwm_prop:
+            return max(*self.pwm, *self.prop_pwm)
+        else:
+            return 0
 
     @property
     def min_heating_load_by_on_off(self):
