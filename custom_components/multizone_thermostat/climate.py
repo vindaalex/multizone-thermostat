@@ -1988,19 +1988,14 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self, preset_mode: str, hvac_mode: HVACMode | None = None
     ) -> None:
         """Set new preset mode."""
+        self._logger.debug("Preset update to %s", preset_mode)
+
         if (
             preset_mode not in self.valid_presets(hvac_mode)
             and preset_mode != PRESET_RESTORE
         ):
             self._logger.warning(
                 "This preset (%s) is not enabled (see the configuration)", preset_mode
-            )
-            return
-
-        if preset_mode == PRESET_EMERGENCY and not self._emergency_stop:
-            self._logger.warning(
-                "Preset change '%s' not allowed as no listed errors. REturn to previous mode.",
-                preset_mode,
             )
             return
 
@@ -2016,23 +2011,40 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_write_ha_state()
             return
 
+        if preset_mode == PRESET_EMERGENCY and not self._emergency_stop:
+            self._logger.warning(
+                "Preset change '%s' not allowed as no listed errors. Return to previous mode.",
+                preset_mode,
+            )
+            return
+
+        if preset_mode == PRESET_RESTORE and self._emergency_stop:
+            self._logger.warning(
+                "Preset restore '%s' not allowed as listed errors present.",
+                preset_mode,
+            )
+            return
+
         if self._hvac_on:
             self._logger.debug("Set preset mode to '%s'", preset_mode)
             self._hvac_on.preset_mode = preset_mode
-
-        self._preset_mode = preset_mode
-
-        # sync satellites
-        if self._hvac_on:
+            self._preset_mode = self._hvac_on.preset_mode
+            # update satellites
             if self.is_master:
                 await self._async_set_satelite_preset(preset_mode)
-
             # update thermostat controller when thermostat operating on itself
             elif (
                 self.preset_mode != PRESET_EMERGENCY
                 and self._self_controlled == OperationMode.SELF
             ):
                 await self._async_controller(force=True)
+
+        elif self._old_mode != HVACMode.OFF:
+            self._logger.debug(
+                "Set old hvac mode %s preset mode to '%s'", self._old_mode, preset_mode
+            )
+            self._hvac_def[self._old_mode].preset_mode = preset_mode
+            self._preset_mode = PRESET_NONE
 
         self.async_write_ha_state()
 
