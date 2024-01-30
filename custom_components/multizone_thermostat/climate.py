@@ -445,21 +445,25 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                         self._restore_integral,
                     )
 
-                # Restore the target temperature
-                min_temp, max_temp = self._hvac_def[
-                    old_hvac_mode
-                ].get_target_temp_limits
+                # Restore the target temperature`
+                if old_hvac_mode != HVACMode.OFF:
+                    min_temp, max_temp = self._hvac_def[
+                        old_hvac_mode
+                    ].get_target_temp_limits
 
-                # restore old temp when within range
-                if (
-                    old_temperature is not None
-                    and min_temp <= old_temperature <= max_temp
-                ):
-                    self._hvac_def[old_hvac_mode].target_temperature = old_temperature
+                    # restore old temp when within range
+                    if (
+                        old_temperature is not None
+                        and min_temp <= old_temperature <= max_temp
+                    ):
+                        self._hvac_def[
+                            old_hvac_mode
+                        ].target_temperature = old_temperature
 
         except Exception as e:
             self._hvac_mode_init = HVACMode.OFF
             self._logger.warning("restoring old state failed:%s", str(e))
+            self._logger.debug(traceback.format_exc())
             return
 
     @property
