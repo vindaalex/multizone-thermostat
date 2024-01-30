@@ -10,7 +10,7 @@ from homeassistant.components.climate import (
 
 from .const import *
 
-SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_EMERGENCY,PRESET_RESTORE]
+SUPPORTED_PRESET_MODES = [PRESET_NONE, PRESET_EMERGENCY, PRESET_RESTORE]
 SUPPORTED_HVAC_MODES = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
 
 
@@ -21,8 +21,10 @@ def register_services(custom_presets):
     platform.async_register_entity_service(  # type: ignore
         "set_preset_mode",
         {
-            vol.Required(ATTR_PRESET_MODE): vol.In(custom_presets + SUPPORTED_PRESET_MODES),
-            vol.Required(ATTR_HVAC_MODE): vol.In(SUPPORTED_HVAC_MODES)
+            vol.Required(ATTR_PRESET_MODE): vol.In(
+                custom_presets + SUPPORTED_PRESET_MODES
+            ),
+            vol.Required(ATTR_HVAC_MODE): vol.In(SUPPORTED_HVAC_MODES),
         },
         "async_set_preset_mode",
     )
