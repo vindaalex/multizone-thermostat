@@ -284,6 +284,10 @@ class HVACSetting:
             self._wc[ATTR_CONTROL_PWM_OUTPUT] = min(
                 max(lower_pwm_scale, temp_diff * KA + KB), upper_pwm_scale
             )
+            self._logger.debug(
+                "weather control contribution %.2f", self._wc[ATTR_CONTROL_PWM_OUTPUT]
+            )
+
         else:
             self._logger.warning("no outdoor temperature; continue with previous data")
 
