@@ -1554,6 +1554,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 self._async_change_satelite_modes(satelite_info)
 
             # get controller output
+            self._hvac_on.calc_control_output()
             self.control_output = self._hvac_on.get_control_output
             self._logger.debug(
                 "Obtained current control output: '%s'", self.control_output

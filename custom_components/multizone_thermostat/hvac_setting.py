@@ -103,6 +103,11 @@ class HVACSetting:
 
         self._last_change = datetime.datetime.now(datetime.UTC)
 
+        self._control_output = {
+            ATTR_CONTROL_OFFSET: 0,
+            ATTR_CONTROL_PWM_OUTPUT: 0,
+        }
+
         self._target_temp = None
         self._current_state = None
         self._current_temperature = None
@@ -352,8 +357,7 @@ class HVACSetting:
         """Master pwm based on nesting of satelites for pwm controlled on-off valves."""
         return self.nesting.get_master_output()[ATTR_CONTROL_PWM_OUTPUT]
 
-    @property
-    def get_control_output(self) -> dict:
+    def calc_control_output(self) -> dict:
         """Return the control output (offset and valve pos) of the thermostat."""
         if self.time_offset is None:
             self.time_offset = 0
@@ -400,10 +404,15 @@ class HVACSetting:
                     0, self.pwm_scale - (self.time_offset + control_output)
                 )
 
-        return {
+        self._control_output = {
             ATTR_CONTROL_OFFSET: round(self.time_offset, 3),
             ATTR_CONTROL_PWM_OUTPUT: round(control_output, 3),
         }
+
+    @property
+    def get_control_output(self) -> dict:
+        """Return the control output (offset and valve pos) of the thermostat."""
+        return self._control_output
 
     @property
     def time_offset(self) -> float:
