@@ -25,16 +25,21 @@ The multizone thermostat can operate in two modes:
 - thermostats can operate stand-alone, thus without interaction with others
 - thermostats can operate under the control of a master controller scheduling and balancing the heat request
 
-Each configured thermostat has to be configured for that specific room. A thermostat can operate by either hyesteric (on-off mode) or proportional mode (weather compensation and PID mode). The PID and weather compensation can be combined or one of both can be used. Only a satelite operating in proportional mode can be used as satelite as hysteric operation (on-off by a dT) cannot run in synchronised mode with other satelites and the master.
+Per room a thermostat needs to be configured. A thermostat can operate by either hyesteris (on-off mode) or proportional mode (weather compensation and PID mode). The PID and weather compensation can be combined or one of both can be used. Only a satellite operating in proportional mode can be used as satellite as hysteris operation (on-off by a dT) cannot run in synchronised mode with other satellites and the master.
 
-When a master controller is included it will coordinate all enlisted satelites valve opening and closures. When the master is activated to heat or cool it will trigger the satelites to update their controller and from that moment it interacts with the master. A satelite interaction with the master will be updated when the master is activated or switched off. When the master is activated to heat or cool the controller routine is synced to the master controller interval time. When the master is switched off the satelite will return to its stand-alone mode with its own settings. The master itself gets the satelite state (pwm signal) and return the moment the satelite has to open or close valves. The master determines the moment when the satelite valves is opened, the satelite itself still determines the valve opening time.
+When a master controller is included it will coordinate for all enlisted satellites the valve opening and closures. When the master hvac mode is heat or cool it will trigger the satellites to update their controller and from that moment it interacts with the master. A satellite interaction with the master will be updated when the master is activated or switched off. When the master is activated to heat or cool, the controller routines of all satellites are synced to the master controller. When the master is switched off the satellite will return to their stand-alone mode with individual settings. The master itself receives the satellite state (pwm signal) and return the moment the satellite has to open or close valves. The master determines the moment when the satellite valves is opened, the satellite itself still determines the valve opening time.
+
+# Examples
+See the examples folder for examples. 
+The '\examples\multizone thermostat - explained.yaml' shows an worked-out multizone example including explanation.
+The '\examples\single thermostat - on_off.yaml' shows an worked-out single operating hysteris thermostat with explanation.
 
 # Room thermostat configuration (not for master config)
-This thermostat is used for satelite or stand-alone operation mode. 
+This thermostat is used for satellite or stand-alone operation mode. 
 The thermostat can be configured for a wide variation of hardware specifications and options:
+- Operation for heating and cool are specified indiviually
 - The switch can be a on-off switch or proportional (0-100) valve
 - The switch can be of the type normally closed (NC) or normally opened (NO)
-- Operation for heating and cool are specified indiviually
 - For sensors with irregular update intervals such as battery operated sensors an optional uncented kalman filter is included
 - Window open detection can be included
 - Valve stuck prevention 
@@ -42,9 +47,9 @@ The thermostat can be configured for a wide variation of hardware specifications
 
 ## Thermostat configuration
 * platform (Required): 'multizone_thermostat'
-* name (Required): Name of thermostat.
+* name (Required): Name of thermostat. In case of master the name is overruled to 'master'.
 * unique_id (Optional): specify name for entity in registry else unique name is based on specified sensors and switches
-* room_area (Optional): Required when operating in satelite mode. The room area is needed to determine the scale effect of the room to the total heat requirement. Default = 0 (only stand alone mode possible, not allowed for satelite mode)
+* room_area (Optional): Required when operating in satellite mode. The room area is needed to determine the scale effect of the room to the total heat requirement. Default = 0 (only stand alone mode possible, not allowed for satellite mode)
 
 sensors (at least one sensor needs to be specified):
 * sensor (Optional): entity_id of the temperature sensor, sensor.state must be temperature (float). Not required when running in weather compensation only.
@@ -52,14 +57,15 @@ sensors (at least one sensor needs to be specified):
 * sensor_out (Optional): entity_id for a outdoor temperature sensor, sensor_out.state must be temperature (float). Only required when running weather mode. No filtering possible.
 
 * initial_hvac_mode (Optional): Set the initial operation mode. Valid values are 'off', 'cool' or 'heat'. Default = off
-* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is 'away'
+* initial_preset_mode (Optional): Set the default mode. Default is normal operational mode. Allowed alternative is any in 'extra_presets'. The 'inital_preset_mode' needs to be present in the 'extra_presets' of the 'initial_hvac_mode'
 
 * precision (Optional): specifiy setpoint precision: 0.1, 0.5 or 1
-* detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'on'. Use this option limited for debugging and tuning only as it increases the database size. Default = off
+* detailed_output (Optional): include detailed control output including PID contributions and sub-control (pwm) output. To include detailed output use 'True'. Use this option limited for debugging and tuning only as it increases the database size. Default = False
 
 checks for sensor and switch:
 * sensor_stale_duration (Optional): safety routine "emergency mode" to turn switches off when sensor has not updated for a specified time period. Specify time period. Activation of emergency mode is visible via a forced climate preset state. Default is not activated. 
-* passive_switch_check (Optional): check at night (02:00) if switch hasn't been operated for a secified time (passive_switch_duration per hvac_mode defined) to avoid stuck/jammed valve. Per hvac_mode the duration (where switch is specified) is specified. During satelite mode only activated when master is idle or off. Specify 'True' to activate. Default is not activated Default is False.
+* passive_switch_check (Optional): Include check of the switch to time it was operated for a secified time ('passive_switch_duration' per hvac_mode defined) to avoid stuck/jammed valve. Per hvac_mode the duration (where switch is specified) is specified and optionally the time when to check. When in master-satellite mode the switch is only activated when master is idle or off. Specify 'True' to activate. Default is False (not activated).
+* passive_switch_check_time (Optional): specify the time to perform the check. Default 02:00 AM. Input format HH:MM'
 
 recovery of settings
 * restore_from_old_state (Optional): restore certain old configuration and modes after restart. Specify 'True' to activate. (setpoints, KP,KI,PD values, modes). Default = False
@@ -74,12 +80,14 @@ Generic HVAC mode setting:
 * entity_id (Required): This can be an on-off switch or a proportional valve(input_number, etc)
 * switch_mode (Optional): Specify if switch (valve) is normally closed 'NC' or normally open 'NO'. Default = 'NC'
 
-* min_target_temp (Optional): Lower limit temperature setpoint. Default heat=17, cool=20
+* min_target_temp (Optional): Lower limit temperature setpoint. Default heat=14, cool=20
 * max_target_temp (Optional): Upper limit temperature setpoint. Default for heat=24, cool=35
 * initial_target_temp (Optional): Initial setpoint at start. Default for heat=19, cool=28
-* away_temp (Optional): Setpoint when away preset is activated. Defining an away setpoint will make away preset available. default no away preset mode available. 
+* extra_presets (Optional): A list of custom presets. Needs to be in to form of a list of name and value. Defining 'extra_presets' will make away preset available. default no preset mode available. 
 
 * passive_switch_duration (Optional): specifiy per switch the maximum time before forcing toggle to avoid jammed valve. Specify a time period. Default is not activated.
+* passive_switch_opening_time (Optional): specify the minium opening time of valve when running passive switch operation. Specify a time period. Default 1 minute.
+
 
 #### on-off mode (Optional) (sub of hvac mode)
 The thermostat will switch on or off depending the setpoint and specified hysteris. Configured under 'on_off_mode:' 
@@ -96,13 +104,21 @@ Two control modes are included to control the proportional thermostat. A single 
 - Weather compensating: control by room- and outdoor temperature
 
 The proportional controller is called periodically and specified by control_interval.
-If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
+If no pwm interval is defined, it will set the state of "heater" from 0 to "pwm_scale" value as for a proportional valve. Else, when "pwm_duration" is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
 
-* control_interval (Required): interval that controller is updated. The satelites should have a control_interval equal to the master or the master control_interval should be dividable by the satelite control_interval. Specify a time period.
-* pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
-* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
-* pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
+* control_interval (Required): interval that controller is updated. The satellites should have a control_interval equal to the master or the master control_interval should be dividable by the satellite control_interval. Specify a time period.
+* pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. For a on-off valve the control_interval should be equal or multiplication of the "control_interval". Default = 0 (proportional valve)
+* pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Proportional valve might have 99 as upper max, use 99 in such case. Default = 100
+* pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and pwm_scale)
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
+* bounded_scale_to_master(Optional): scale proporitional valves with the master's pwm. 'bounded_scale_to_master' defines the scale limit. For example: 
+  - bounded scale = 3
+  - prop valve pwm = 15
+  - master pwm = 25
+  - master pwm scale = 100 
+  - valve pwm output = 15 / min( 25/100, 3)
+
+  Default = 1 (no scaling)
 
 ##### PID controller (Optional) (sub of proportional mode)
 PID controller. Configured under 'PID_mode:'
@@ -135,24 +151,27 @@ with the data (as sub):
 * pwm_scale_high (Optional): Overide upper bound pwm scale for this mode. Default = 'pwm_scale'
 
 # Master configuration
-The configuration scheme is similar as for a satelite only with the following differences.
+The configuration scheme is similar as for a satellite only with the following differences.
 
-* name: For master mode no name possible, it will be 'master'
+* name: Specify 'master'. For master mode the user defined name is overruled by thermostat to 'master'
 * room_area (Required): For master it should be equal to the total heated area. 
-* sensor (optional): For master mode not applicable
-* filter_mode (Optional): For master mode not applicable
-* sensor_out (optional): For master mode not applicable
-* precision (Optional): For master mode not applicable
+For master mode not applicable
+* sensor
+* filter_mode
+* sensor_out
+* precision
+* sensor_stale_duration
 
 ## HVAC modes: heat or cool (sub entity config)
 The control is specified per hvac mode (heat, cool). At least 1 to be included.
 EAch HVAC mode should include one of the control modes: on-off, proportional or master.
 
 Generic HVAC mode setting:
-* min_target_temp (Optional): For master mode not applicable
-* max_target_temp (Optional): For master mode not applicable
-* initial_target_temp (Optional): For master mode not applicable
-* away_temp (Optional): For master mode not applicable
+For master mode not applicable:
+* min_target_temp
+* max_target_temp
+* initial_target_temp
+
 ### on-off mode (Optional) (sub of hvac mode)
 For master mode not applicable
 
@@ -160,43 +179,34 @@ For master mode not applicable
 For master mode not applicable
 
 ### Master configuration (Required) (sub of hvac mode)
-Specify the control of the satelites. Configured under 'master_mode:'
+Specify the control of the satellites. Configured under 'master_mode:'
 
-Referenced thermostats (satelites) will be linked to this controller. The heat or cool requirement will be read from the satelites and are processed to determine master valve opening and adjust timing of satelite openings. 
+Referenced thermostats (satellites) will be linked to this controller. The heat or cool requirement will be read from the satellites and are processed to determine master valve opening and adjust timing of satellite openings. 
 
-The master will check satelite states and group them in on-off and proportional valves. The govering group will define the opening time of the master valve.  
+The master will check satellite states and group them in on-off and proportional valves. The govering group will define the opening time of the master valve.  
 
-The preset mode changes on the master will be synced to the satelites.
+The preset mode changes on the master will be synced to the satellites.
 
-The master can operate in 'minimal_on', 'balanced' or 'continuous' mode. This will determine the satelite timing scheduling. For the minimal_on mode the master valve is opened as short as possible, for balanced mode the opening time is balanced between heating power and duration and for continuous mode the valve opening time is extended as long as possible. All satelite valves operating as on-off switch are used for the nesting are scheduled in time to get a balanced heat requirement. In 'continuous' mode the satelite timing is scheduled aimed such that a continuous heat requirement is created. The master valve will be opened continuous when sufficient heat is needed. In low demand conditions an on-off mode is maintained. 
+The master can operate in 'minimal_on', 'balanced' or 'continuous' mode. This will determine the satellite timing scheduling. For the minimal_on mode the master valve is opened as short as possible, for balanced mode the opening time is balanced between heating power and duration and for continuous mode the valve opening time is extended as long as possible. All satellite valves operating as on-off switch are used for the nesting are scheduled in time to get a balanced heat requirement. In 'continuous' mode the satellite timing is scheduled aimed such that a continuous heat requirement is created. The master valve will be opened continuous when sufficient heat is needed. In low demand conditions an on-off mode is maintained. 
 
 The controller is called periodically and specified by control_interval.
-If no pwm interval is defined, it will set the state of "heater" from 0 to "difference" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
+If no pwm interval is defined, it will set the state of "heater" from 0 to "pwm_scale" value as for a proportional valve. Else, when pwm is specified it will operate in on-off mode and will switch proportionally with the pwm signal.
 
 with the data (as sub):
 * satelites (Required): between square brackets defined list of thermostats by their name 
-* operation_mode (Optional): satelite nesting method: "minimal_on", "balanced" or "continuous". Default = "balanced"
-* lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.2. (a minimum heating capacity of 20%  assumed based on 100% when all rooms required heat)
-* control_interval (Required): interval that controller is updated. The satelites should have a control_interval equal to the master or the master control_interval should be dividable by the satelite control_interval. Specify a time period.
+* operation_mode (Optional): satellite nesting method: "minimal_on", "balanced" or "continuous". Default = "balanced"
+* lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.15. (a minimum heating capacity of 15%  assumed based on 100% when all rooms required heat)
+* control_interval (Required): interval that controller is updated. The satellites should have a control_interval equal to the master or the master control_interval should be dividable by the satellite control_interval. Specify a time period.
 * pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
 * pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
 * pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
-* min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0.1 (* pwm_scale)
+* min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0 (* pwm_scale)
+* compensate_valve_lag (optional): Delay the opening of the master valve to assure that flow is guaranteed. Specify a time period. Default no delay.
 
-#### Valve controller (Optional) (sub of master mode)
-Adjust the master control output for satelites with proportional valves to a goal control value. For instance: when the satelites with proportional valve has a maximum opening of 10% in can lower the control output for the master and thereby forces an increased opening of the satelite valve. Assumed that a large valve opening is equal to better heat transfer.
-
-Configured under 'PID_valve_mode:'
-* goal (Optional): Wanted precentage opening of valve (between 0 and 1)
-* kp (Required): Set PID parameter, p control value.
-* ki (Required): Set PID parameter, i control value.
-* kd (Required): Set PID parameter, d control value.
-* pwm_scale_low (Optional): For master mode not applicable
-* pwm_scale_high (Optional): For master mode not applicable
 
 # Sensor filter (filter_mode):
-An unscneted kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
+An unscented kalman filter is present to smoothen the temperature readings in case of of irregular updates. This could be the case for battery operated temperature sensors such as zigbee devices. This can be usefull in case of PID controller where derivative is controlled (speed of temperature change).
 The filter intesity is defined by a factor between 0 to 5 (integer).
 0 = no filter
 5 = max smoothing
@@ -232,7 +242,7 @@ logger:
     multizone_thermostat: debug
 ```    
 # Services callable from HA:
-Several services are included to change the active configuration of a satelite or master. 
+Several services are included to change the active configuration of a satellite or master. 
 ## set_mid_diff:
 Change the 'minimal_diff'
 ## set_preset_mode:
@@ -241,13 +251,9 @@ Change the 'preset'
 Change the current kp, ki, kd values of the PID or Valve PID controller
 ## set_integral:
 Change the PID integral value contribution
-## set_goal:
-Change the target valve opening for proportional valves
 ## set_ka_kb:
 Change the ka and kb for the weather controller
 ## set_filter_mode:
 change the UKF filter level for the temperature sensor
 ## detailed_output:
 Control the attribute output for PID-, WC-contributions and control output
-# configuration examples
-see examples folder  

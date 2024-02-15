@@ -1,11 +1,29 @@
 from collections.abc import Callable
+from datetime import datetime, timedelta
 from typing import Any
-from datetime import timedelta
+
 import voluptuous as vol
 
-from homeassistant.components.climate import HVACMode, PRESET_AWAY
+from homeassistant.components.climate import HVACMode
 
-from .const import *
+from .const import (
+    CONF_CONTROL_REFRESH_INTERVAL,
+    CONF_EXTRA_PRESETS,
+    CONF_FILTER_MODE,
+    CONF_INITIAL_HVAC_MODE,
+    CONF_INITIAL_PRESET_MODE,
+    CONF_MASTER_MODE,
+    CONF_ON_OFF_MODE,
+    CONF_PASSIVE_CHECK_TIME,
+    CONF_PID_MODE,
+    CONF_PROPORTIONAL_MODE,
+    CONF_PWM_DURATION,
+    CONF_SATELITES,
+    CONF_SENSOR,
+    CONF_SENSOR_OUT,
+    CONF_WC_MODE,
+    CONF_WINDOW_OPEN_TEMPDROP,
+)
 
 
 def validate_initial_control_mode(*keys: str) -> Callable:
@@ -125,29 +143,39 @@ def validate_initial_sensors(*keys: str) -> Callable:
 
 
 def validate_initial_preset_mode(*keys: str) -> Callable:
-    """If an initial preset mode has been set, check if the values are set in both modes."""
-
-    def validate_by_mode(obj: dict[str, Any], preset: str, config_preset: str):
-        """Use a helper to validate mode by mode."""
-        if HVACMode.HEAT in obj.keys() and config_preset not in obj[HVACMode.HEAT]:
-            raise vol.Invalid(
-                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
-                    preset, config_preset, HVACMode.HEAT
-                )
-            )
-        if HVACMode.COOL in obj.keys() and config_preset not in obj[HVACMode.COOL]:
-            raise vol.Invalid(
-                "The preset {} has been set as initial preset but the {} is not present on {} mode".format(
-                    preset, config_preset, HVACMode.COOL
-                )
-            )
+    """If an initial preset mode has been set, check if it is defined in the hvac mode."""
 
     def validate(obj: dict[str, Any]) -> dict[str, Any]:
         """Check this condition."""
-        if CONF_INITIAL_PRESET_MODE in obj and obj[CONF_INITIAL_PRESET_MODE] != "none":
-            if obj[CONF_INITIAL_PRESET_MODE] == PRESET_AWAY:
-                validate_by_mode(obj, PRESET_AWAY, CONF_TARGET_TEMP_AWAY)
-        return obj
+        if CONF_INITIAL_PRESET_MODE in obj:
+            if obj[CONF_INITIAL_PRESET_MODE] == "none":
+                return obj
+            elif CONF_INITIAL_HVAC_MODE not in obj:
+                raise vol.Invalid(
+                    "no initial hvac mode while specifying initial preset '{}'".format(
+                        obj[CONF_INITIAL_PRESET_MODE]
+                    )
+                )
+            elif obj[CONF_INITIAL_HVAC_MODE] not in [HVACMode.HEAT, HVACMode.COOL]:
+                raise vol.Invalid(
+                    "initial hvac mode 'off' not valid while specifying initial preset '{}'".format(
+                        obj[CONF_INITIAL_PRESET_MODE]
+                    )
+                )
+            elif (
+                obj[CONF_INITIAL_PRESET_MODE]
+                not in obj[CONF_INITIAL_HVAC_MODE][CONF_EXTRA_PRESETS]
+            ):
+                raise vol.Invalid(
+                    "initial preset '{}' not valid for hvac mode {} mode".format(
+                        obj[CONF_INITIAL_PRESET_MODE], obj[CONF_INITIAL_HVAC_MODE]
+                    )
+                )
+
+            else:
+                return obj
+        else:
+            return obj
 
     return validate
 
@@ -172,27 +200,22 @@ def validate_initial_hvac_mode(*keys: str) -> Callable:
     return validate
 
 
-def check_presets_in_both_modes(*keys: str) -> Callable:
-    """If one preset is set on one mode, then this preset is enabled and check it on the other modes."""
-
-    def validate_by_preset(obj: dict[str, Any], conf: str):
-        """Check this condition."""
-        if conf in obj[HVACMode.HEAT] and conf not in obj[HVACMode.COOL]:
-            raise vol.Invalid(
-                "{} is set for {} but not for {}".format(
-                    conf, HVACMode.HEAT, HVACMode.COOL
-                )
-            )
-        if conf in obj[HVACMode.COOL] and conf not in obj[HVACMode.HEAT]:
-            raise vol.Invalid(
-                "{} is set for {} but not for {}".format(
-                    conf, HVACMode.COOL, HVACMode.HEAT
-                )
-            )
+# datetime.strptime(passive_switch_time, "%H:%M:%S")
+def validate_stuck_time(*keys: str) -> Callable:
+    """Convert the time string to a datetime."""
 
     def validate(obj: dict[str, Any]) -> dict[str, Any]:
-        if HVACMode.HEAT in obj.keys() and HVACMode.COOL in obj.keys():
-            validate_by_preset(obj, CONF_TARGET_TEMP_AWAY)
-        return obj
+        """Check this condition."""
+        try:
+            obj[CONF_PASSIVE_CHECK_TIME] = datetime.strptime(
+                obj[CONF_PASSIVE_CHECK_TIME], "%H:%M"
+            )
+            return obj
+
+        except ValueError:
+            raise vol.Invalid(
+                "Stuck switch check provided time %s not valid",
+                obj[CONF_PASSIVE_CHECK_TIME],
+            )
 
     return validate

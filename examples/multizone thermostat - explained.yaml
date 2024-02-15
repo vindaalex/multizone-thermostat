@@ -1,0 +1,769 @@
+input_boolean:
+  mz_heater_master:
+    name: mz heater master
+    initial: off
+  mz_heater_input1:
+    name: mz heater1 input
+    initial: off
+  mz_heater_input2:
+    name: mz heater2 input
+    initial: off
+  mz_heater_input3:
+    name: mz heater3 input
+    initial: off
+  mz_heater_input4:
+    name: mz heater4 input
+    initial: off
+  mz_heater_input5:
+    name: mz heater5 input
+    initial: off
+  mz_heater_input6:
+    name: mz heater6 input
+    initial: off
+
+input_number:
+  # room temperature sensors
+  mz_sensor_temperature_1:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_temperature_2:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_temperature_3:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_temperature_4:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_temperature_5:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_temperature_6:
+    initial: 20
+    min: -20
+    max: 35
+    step: 0.01
+  mz_sensor_outdoor_temperature_1:
+    initial: 0
+    min: -20
+    max: 35
+    step: 0.5
+
+
+  # proportional valves
+  mz_pwm_master:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat1:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat2:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat3:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat4:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat5:
+    initial: 0
+    min: 0
+    max: 100
+  mz_pwm_heat6:
+    initial: 0
+    min: 0
+    max: 100
+
+sensor:
+  - platform: template
+    sensors:
+      mz_sensor_1:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_1') | float(0) }}"
+      mz_sensor_2:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_2') | float(0) }}"
+      mz_sensor_3:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_3') | float(0) }}"
+      mz_sensor_4:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_4') | float(0) }}"
+      mz_sensor_5:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_5') | float(0) }}"
+      mz_sensor_6:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_temperature_6') | float(0) }}"
+      mz_sensor_out_1:
+        unit_of_measurement: "degrees"
+        value_template: "{{ states('input_number.mz_sensor_outdoor_temperature_1') | float(0) }}"
+
+      filt_sensor1:
+        friendly_name: "filt pid temp1"
+        value_template: "{{ state_attr('climate.pid1', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+      filt_sensor2:
+        friendly_name: "filt pid temp2"
+        value_template: "{{ state_attr('climate.pid2', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+      filt_sensor3:
+        friendly_name: "filt pid temp3"
+        value_template: "{{ state_attr('climate.pid3', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+      filt_sensor4:
+        friendly_name: "filt pid temp4"
+        value_template: "{{ state_attr('climate.pid4', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+      filt_sensor5:
+        friendly_name: "filt pid temp5"
+        value_template: "{{ state_attr('climate.pid5', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+      filt_sensor6:
+        friendly_name: "filt pid temp6"
+        value_template: "{{ state_attr('climate.pid6', 'current_temp_filt') | float(0) }}"
+        unit_of_measurement: "°C"
+
+      master_pwm:
+        value_template: "{{ state_attr('climate.master','hvac_def')['heat']['control_output']['pwm_out'] | float(0)}}"
+      pid1_pwm:
+        value_template: "{{ state_attr('climate.pid1','hvac_def')['heat']['control_output']['pwm_out']}}"
+      pid2_pwm:
+        value_template: "{{ state_attr('climate.pid2','hvac_def')['heat']['control_output']['pwm_out']}}"
+      pid3_pwm:
+        value_template: "{{ state_attr('climate.pid3','hvac_def')['heat']['control_output']['pwm_out']}}"
+      pid4_pwm:
+        value_template: "{{ state_attr('climate.pid4','hvac_def')['heat']['control_output']['pwm_out']}}"
+      pid5_pwm:
+        value_template: "{{ state_attr('climate.pid5','hvac_def')['heat']['control_output']['pwm_out']}}"
+      pid6_pwm:
+        value_template: "{{ state_attr('climate.pid6','hvac_def')['heat']['control_output']['pwm_out']}}"
+
+switch:
+  - platform: template
+    switches:
+      mz_heater_master:
+        value_template: "{{ is_state('input_boolean.mz_heater_master', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_master
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_master
+      mz_heater_switch1:
+        value_template: "{{ is_state('input_boolean.mz_heater_input1', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input1
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input1
+      mz_heater_switch2:
+        value_template: "{{ is_state('input_boolean.mz_heater_input2', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input2
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input2
+      mz_heater_switch3:
+        value_template: "{{ is_state('input_boolean.mz_heater_input3', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input3
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input3
+      mz_heater_switch4:
+        value_template: "{{ is_state('input_boolean.mz_heater_input4', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input4
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input4
+      mz_heater_switch5:
+        value_template: "{{ is_state('input_boolean.mz_heater_input5', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input5
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input5
+      mz_heater_switch6:
+        value_template: "{{ is_state('input_boolean.mz_heater_input6', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.mz_heater_input6
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.mz_heater_input6
+
+
+# The presented options are only a selection of the possible configurations. See the README for more
+# more options and additional explanation.
+# Some settings use a default when not included in the configuration. In below examples
+# several parameters are shown with the default which would not have been necessary. These are
+# included for explanatory use only.
+climate:
+
+  # MASTER - SATELLITE WORKING EXAMPLE
+  # this thermostat synchronizes and coordinates the satellites valve opening
+  # only one master is allowed
+  - platform: multizone_thermostat
+    name: master # used name is overruled to master to assure satellites can find i
+    unique_id: mz_master
+    initial_hvac_mode: "off" # or heat or cool
+    initial_preset_mode: "none" # or one from 'custom_presets'
+    room_area: 165 # sum of all areas
+
+    # be careful for the master stuck switch check
+    # depending the configuration and connction to heater/cooling device
+    # it could trigger the heating or cooling device to start
+    passive_switch_check: False
+
+    # show detail control output (use only for config
+    # or debug to avoid log size issues)
+    detailed_output: False
+
+    restore_from_old_state: True # restore changes made via service calls
+    restore_parameters: False # yaml config is overrulled by services modified settings
+    restore_integral: True # PID integral restored to continue with previous pid setpoint
+
+    heat:
+
+      # a main valve supplying heat or cooling
+      # or relay to start heater/cooling
+      entity_id: switch.mz_heater_master
+
+      # specify valve is by default closed
+      switch_mode: "NC"
+
+      # not advised for master
+      # passive_switch_duration:
+      #   days: 5
+
+      # user defined presets. each mode needs to be defined per satellite.
+      # temperatures may differ per thermostat.
+      # temperatures defined at master are ignored.
+      extra_presets:
+        test: 10
+        tes: 20
+
+      master_mode: # configuration required for master
+
+        # list of satellites to control
+        satelites: [pid1, pid2, pid3, pid4, pid5, pid6]
+
+        # nesting routine.
+        # "continuous": tries to create a continuous master valve opening when sufficient heat is required
+        # "minimal_on": opens the master valve as short as possible
+        # "balanced": schedules satellites such that a continuous minumum heat requirement is achieved,
+        #    then increases pwm duration. When continuous master valve opening is possible
+        #    control_val = pwm_scale it then start to open satellites at teh same time whereby
+        #    heating power rises. Scheduling of satellites is such that in time heating power is balanced.
+        operation_mode: "balanced"
+
+        # delayed opening to assure that sattelites have opened first
+        compensate_valve_lag:
+          seconds: 30
+
+        # time interval where pwm control output is calculated
+        # advised to set for master equal to 'pwm_duration'
+        control_interval:
+          # minutes: 30
+          minutes: 5
+
+        # interval time for pwm. within this example the valve is openened
+        # each 30 minutes whne heat is required
+        # equal with 'control_interval'
+        pwm_duration:
+          # minutes: 30
+          minutes: 5
+
+        # scale wherein pwm operates. Normally 100, it will operate between 0-100 where
+        # 0 is valve closed and 100 valve open during whole pwm duration
+        pwm_scale: 100
+
+        # number of steps in pwm scale. a resolution of 50
+        # and pwm scale 100 results in stepsize 2
+        pwm_resolution: 50
+
+        # minimum pwm before opening
+        pwm_threshold: 5
+
+        # For nesting assumed minimum required load heater. Percentage of total rooms
+        # relative to total area that request heat should be more than 'lower_load_scale'
+        lower_load_scale: 0.15
+
+        # percentage of pwm_scale to open when a proportional valve requires heat.
+        # avoids for proportional valves short opening of master valve whereby no heat is
+        # arriving at require room
+        min_opening_for_propvalve: 0.1
+
+
+  # slow responding water under floor heating
+  # PID start point settings
+  # on-off valve (thermostatic wax valve actuator)
+  # room not influenced by outdoor temperature
+  - platform: multizone_thermostat
+    name: pid1
+    unique_id: mz_pid1
+    room_area: 60 # floor area of room
+    initial_hvac_mode: "off"
+    precision: 0.1 # stepsize for setpoint
+
+    sensor: sensor.mz_sensor_1 # room sensor
+
+    # in case of sensors with irregular updates or inaccurate sensors (for instance sensors with a battery) the filter wll
+    # average and smoothen the output. this improves the derative term for the pid controller
+    # advised to start with filter_mode 1
+    filter_mode: 1
+
+    # activate emergency mode (pause thermostat operation) when sensor did not provide update
+    sensor_stale_duration:
+      hours: 3
+
+    # daily check if the valve has not been idle for too long
+    passive_switch_check: True
+
+    # choose the time to perform check
+    passive_switch_check_time: "20:50"
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      # setpoint limits
+      min_target_temp: 5
+      max_target_temp: 25
+      initial_target_temp: 18 # initial setpoint, overruled by 'restore_parameters: True'
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 5
+
+      # on-off switch
+      entity_id: switch.mz_heater_switch1
+
+      # specify valve is by default closed
+      switch_mode: "NC"
+
+      # check if valve is set to open within specified days.
+      # if switch not operated within specified duration it will be opened shortly.
+      # only operated when master is not heating or cooling.
+      passive_switch_duration:
+        days: 30
+
+      # specify how long switch should be opened
+      passive_switch_opening_time:
+        minutes: 4
+
+      # controller definition required for satellite
+      proportional_mode:
+
+        # time duration. pwm_duration should be divideable by control_interval
+        control_interval:
+          # minutes: 15
+          minutes: 2.5
+
+        pwm_duration:
+          # minutes: 30 # on-off switch = equal to master
+          minutes: 5 # on-off switch = equal to master
+
+        pwm_scale: 100
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # pid controller config (optional)
+        PID_mode:
+          kp: 35
+          ki: 0.004
+          kd: -250000
+
+          # check for sudden temperature drop, for instance by open window
+          # -3.6 degrees celcius per hour is good start point
+          window_open_tempdrop: -3.6
+
+
+  # well isolated room with slow responding water under floor heating
+  # PID and weather compensation start point settings
+  # on-off valve (thermostatic wax valve actuator)
+  - platform: multizone_thermostat
+    name: pid2
+    unique_id: mz_pid2
+    room_area: 30
+    initial_hvac_mode: "off"
+    precision: 0.1
+
+    sensor: sensor.mz_sensor_2
+    filter_mode: 1
+
+    # entity with outdoor temperature. used by weather compensation controller
+    sensor_out: sensor.mz_sensor_out_1
+
+    sensor_stale_duration:
+      hours: 3
+
+    passive_switch_check: True
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 5
+
+      # on-off switch
+      entity_id: switch.mz_heater_switch2
+
+      # specify valve is by default closed
+      switch_mode: "NC"
+
+      passive_switch_duration:
+        hours: 30
+
+      proportional_mode:
+
+        # time duration. pwm_duration should be divideable by control_interval
+        control_interval:
+          # minutes: 15
+          minutes: 2.5
+
+        pwm_duration:
+          # minutes: 30 # on-off switch = equal to master
+          minutes: 5 # on-off switch = equal to master
+
+        pwm_scale: 100
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # pid controller config (optional)
+        PID_mode:
+          kp: 35
+          ki: 0.0004
+          kd: -250000
+
+          # check for sudden temperature drop, for instance by open window
+          # -3.6 degrees celcius per hour is good start point
+          window_open_tempdrop: -3.6
+
+        # weather compensation controller
+        # well isolated house
+        weather_mode:
+          ka: 2
+          kb: -10
+
+  # exmaple to show nesting behaviour
+  # PID and weather compensation start point settings
+  # on-off valve (thermostatic wax valve actuator)
+  - platform: multizone_thermostat
+    name: pid3
+    unique_id: mz_pid3
+    room_area: 15
+    initial_hvac_mode: "off"
+    precision: 0.1
+
+    sensor: sensor.mz_sensor_3
+    filter_mode: 1
+
+    # entity with outdoor temperature. used by weather compensation controller
+    sensor_out: sensor.mz_sensor_out_1
+
+    sensor_stale_duration:
+      hours: 3
+
+    passive_switch_check: True
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 5
+
+      # on-off switch
+      entity_id: switch.mz_heater_switch3
+
+      # specify valve is by default closed
+      switch_mode: "NO"
+
+      passive_switch_duration:
+        hours: 30
+
+      proportional_mode:
+
+        # time duration. pwm_duration should be divideable by control_interval
+        control_interval:
+          # minutes: 15
+          minutes: 2.5
+
+        pwm_duration:
+          # minutes: 30 # on-off switch = equal to master
+          minutes: 5 # on-off switch = equal to master
+
+        pwm_scale: 100
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # pid controller config (optional)
+        PID_mode:
+          kp: 25
+          ki: 0.0004
+          kd: -250000
+
+          # check for sudden temperature drop, for instance by open window
+          # -3.6 degrees celcius per hour is good start point
+          window_open_tempdrop: -3.6
+
+        # weather compensation controller
+        # well isolated house
+        weather_mode:
+          ka: 1.75
+          kb: -10
+
+  # example to show nesting behaviour
+  # PID and weather compensation start point settings
+  # on-off valve (thermostatic wax valve actuator)
+  - platform: multizone_thermostat
+    name: pid4
+    unique_id: mz_pid4
+    room_area: 20
+    initial_hvac_mode: "off"
+    precision: 0.1
+
+    sensor: sensor.mz_sensor_4
+    filter_mode: 1
+
+    # entity with outdoor temperature. used by weather compensation controller
+    sensor_out: sensor.mz_sensor_out_1
+
+    sensor_stale_duration:
+      hours: 3
+
+    passive_switch_check: True
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 5
+
+      # on-off switch
+      entity_id: switch.mz_heater_switch4
+
+      # specify valve is by default closed
+      switch_mode: "NC"
+
+      passive_switch_duration:
+        hours: 30
+
+      proportional_mode:
+
+        # time duration. pwm_duration should be divideable by control_interval
+        control_interval:
+          # minutes: 15
+          minutes: 2.5
+
+        pwm_duration:
+          # minutes: 30 # on-off switch = equal to master
+          minutes: 5 # on-off switch = equal to master
+
+        pwm_scale: 100
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # pid controller config (optional)
+        PID_mode:
+          kp: 35
+          ki: 0.0004
+          kd: -250000
+
+          # check for sudden temperature drop, for instance by open window
+          # -3.6 degrees celcius per hour is good start point
+          window_open_tempdrop: -3.6
+
+        # weather compensation controller
+        # well isolated house
+        weather_mode:
+          ka: 2
+          kb: -10
+
+  # high temperature water radiator/convector
+  # quite well isolated room
+  # proportional valve (opening varies between closed and fully open, eurotronic spirit)
+  - platform: multizone_thermostat
+    name: pid5
+    unique_id: mz_pid5
+    room_area: 30
+    initial_hvac_mode: "off"
+    precision: 0.1
+
+    sensor: sensor.mz_sensor_5
+    filter_mode: 1
+    sensor_out: sensor.mz_sensor_out_1
+    sensor_stale_duration:
+      hours: 3
+
+    passive_switch_check: True
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      # setpoint limits
+      min_target_temp: 5
+      max_target_temp: 25
+      initial_target_temp: 15 # initial setpoint, overruled by 'restore_parameters: True'
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 10
+
+      # proportional valve
+      entity_id: input_number.mz_pwm_heat5
+
+      passive_switch_duration:
+        days: 15
+      passive_switch_opening_time:
+        minutes: 1
+
+      proportional_mode:
+        # this valve can be updated more frequently as
+        # it is not (or limited) affecting nesting routine.
+        # advised to choose that master control_interval is dividable
+        # by control_interval
+        control_interval:
+          minutes: 15 # 30min=master
+
+        # no pwm thus pwm=0 for proportional valve 0-100
+        # some valves have a upper scale limit of 99
+        pwm_scale: 99
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # scale proporitional valves with the master's pwm.
+        # for low master opening time the room valve will be opened proportional
+        # with the master valve opening. 'bounded_scale_to_master' defines scale limit
+        bounded_scale_to_master: 4
+
+        PID_mode:
+          kp: 2
+          ki: 0.0003
+          kd: -30000
+          window_open_tempdrop: -3.6
+
+        # example of room with slightly more heat loss than pid2
+        weather_mode:
+          ka: 1.5
+          kb: -15
+
+  # low temperature water radiator/convector
+  # quite well isolated room
+  # proportional valve (opening varies between closed and fully open, eurotronic spirit)
+  - platform: multizone_thermostat
+    name: pid6
+    unique_id: mz_pid6
+    room_area: 10
+    initial_hvac_mode: "off"
+    precision: 0.1
+
+    sensor: sensor.mz_sensor_6
+    filter_mode: 1
+    sensor_out: sensor.mz_sensor_out_1
+    sensor_stale_duration:
+      hours: 3
+
+    passive_switch_check: True
+
+    restore_from_old_state: True
+    restore_parameters: False
+    restore_integral: True
+
+    # configuration for heating mode
+    heat:
+
+      # setpoint limits
+      min_target_temp: 5
+      max_target_temp: 25
+      initial_target_temp: 15 # initial setpoint, overruled by 'restore_parameters: True'
+
+      extra_presets: # user defined presets.
+        night: 15
+        holiday: 10
+
+      # proportional valve
+      entity_id: input_number.mz_pwm_heat6
+
+      passive_switch_duration:
+        days: 15
+      passive_switch_opening_time:
+        minutes: 1
+
+      proportional_mode:
+        # this valve can be updated more frequently as
+        # it is not (or limited) affecting nesting routine.
+        # advised to choose that master control_interval is dividable
+        # by control_interval
+        control_interval:
+          minutes: 15 # 30min=master
+
+        # no pwm thus pwm=0 for proportional valve 0-100
+        # some valves have a upper scale limit of 99
+        pwm_scale: 99
+        pwm_resolution: 50
+        pwm_threshold: 5
+
+        # scale proporitional valves with the master's pwm.
+        # for low master opening time the room valve will be opened proportional
+        # with the master valve opening. 'bounded_scale_to_master' defines scale limit
+        bounded_scale_to_master: 4
+
+        # no PID example valves known
+        # not tested values
+        PID_mode:
+          kp: 20
+          ki: 0.001
+          kd: -100000
+          window_open_tempdrop: -3.6
+
+        # example of room with slightly more heat loss than pid2
+        weather_mode:
+          ka: 1.75
+          kb: -15
+

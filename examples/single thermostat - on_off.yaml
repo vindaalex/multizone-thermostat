@@ -1,13 +1,18 @@
+# This on-off thermostat cannot be used for the multizone operation
+
 input_boolean:
-  fake_heater_input:
-    name: Fake heater input
+  oo_heater_bool_simpl:
+    name: Fake heater input simpl
     initial: off
-  fake_ac_input:
+  oo_heater_bool_det:
+    name: Fake heater input det
+    initial: off
+  oo_ac_bool_det:
     name: Fake ac input
     initial: off
 
 input_number:
-  fake_sensor_temperature_1:
+  oo_sensor_temperature_1:
     initial: 20
     min: -20
     max: 35
@@ -16,82 +21,123 @@ input_number:
 sensor:
   - platform: template
     sensors:
-      fake_sensor_1:
+      oo_sensor_1:
         unit_of_measurement: "degrees"
-        value_template: "{{ states('input_number.fake_sensor_temperature_1') | float }}"
-      temperature_therm:
-        friendly_name: "temperature regelaar"
-        value_template: "{{ state_attr('climate.on_off', 'current_temp_filt') | float}}"
-        unit_of_measurement: "°C"
+        value_template: "{{ states('input_number.oo_sensor_temperature_1') | float(0) }}"
 
 switch:
   - platform: template
     switches:
-      fake_heater_switch:
-        value_template: "{{ is_state('input_boolean.fake_heater_input', 'on') }}"
+      oo_heater_switch_simpl:
+        value_template: "{{ is_state('input_boolean.oo_heater_bool_simpl', 'on') }}"
         turn_on:
           service: input_boolean.turn_on
-          entity_id: input_boolean.fake_heater_input
+          entity_id: input_boolean.oo_heater_bool_simpl
         turn_off:
           service: input_boolean.turn_off
-          entity_id: input_boolean.fake_heater_input
-      fake_ac_switch:
-        value_template: "{{ is_state('input_boolean.fake_ac_input', 'on') }}"
+          entity_id: input_boolean.oo_heater_bool_simpl
+      oo_heater_switch_det:
+        value_template: "{{ is_state('input_boolean.oo_heater_bool_det', 'on') }}"
         turn_on:
           service: input_boolean.turn_on
-          entity_id: input_boolean.fake_ac_input
+          entity_id: input_boolean.oo_heater_bool_det
         turn_off:
           service: input_boolean.turn_off
-          entity_id: input_boolean.fake_ac_input
+          entity_id: input_boolean.oo_heater_bool_det
+      oo_ac_switch_det:
+        value_template: "{{ is_state('input_boolean.oo_ac_bool_det', 'on') }}"
+        turn_on:
+          service: input_boolean.turn_on
+          entity_id: input_boolean.oo_ac_bool_det
+        turn_off:
+          service: input_boolean.turn_off
+          entity_id: input_boolean.oo_ac_bool_det
+
+
 
 climate:
-## on-off mode stand-alone - heat only - minimum definition
+# on-off mode stand-alone - heat only - minimum definition
   - platform: multizone_thermostat
     name: simple_hysteric_heat_only
     unique_id: hysteric_heat_only
-    sensor: sensor.fake_sensor_1
+    sensor: sensor.oo_sensor_1 # sensor for room temperature
+
+    # configuration for heating
     heat:
-      entity_id: switch.fake_heater_switch
+      entity_id: switch.oo_heater_switch_simpl
       on_off_mode:
         hysteresis_on: 0.5
         hysteresis_off: 1
 
-## on-off mode stand-alone - heat only - detailed example
+# on-off mode stand-alone - heat only - detailed example
   - platform: multizone_thermostat
     name: detailed_hysteric_heat_only
-    unique_id: hysteric_heat_only
-    sensor: sensor.fake_sensor_1
-    filter_mode: 1
+    unique_id: hysteric_detailed
+    precision: 1
+    initial_hvac_mode: "heat"
+
+    sensor: sensor.oo_sensor_1 # sensor for room temperature
+
+    # in case of sensors with irregular updates or inaccurate sensors (for instance sensors with a battery) the filter wll
+    # average and smoothen the output. For thermostat with hysteris advised to try first without filter
+    # and only use in case of inaccurate measurements
+    filter_mode: 0
+
+    # activate emergency mode (pause thermostat operation)
+    # when sensor did not provide update
     sensor_stale_duration:
       hours: 4
-    initial_hvac_mode: heat
-    initial_preset_mode: away
-    precision: 1
+
+    restore_from_old_state: True
+    restore_parameters: False
+
+    # configuration for heating
     heat:
-      entity_id: switch.fake_heater_switch
-      min_target_temp: 15
+      entity_id: switch.oo_heater_switch_det
+
+      # setpoint limits
+      min_target_temp: 5
       max_target_temp: 25
       initial_target_temp: 19
-      away_temp: 15
+
+      # hysteris controller
       on_off_mode:
+
+        # switches on when temp is 'hysteresis_on' below setpoint
         hysteresis_on: 0.5
+        # switches off when temp is 'hysteresis_off' below setpoint
         hysteresis_off: 1
+
+        # avoid short valve opening and quick on-off changes
         min_cycle_duration:
           minutes: 5
-        control_interval:
-          minutes: 3
-    cool:
-      entity_id: switch.fake_ac_switch
-      min_target_temp: 15
-      max_target_temp: 30
-      initial_target_temp: 23
-      away_temp: 28
-      on_off_mode:
-        hysteresis_on: 0.5
-        hysteresis_off: 1
-        min_cycle_duration:
-          minutes: 5
+
+        # check each interval if valve needs to opened or closed
         control_interval:
           minutes: 3
 
-    restore_from_old_state: True
+    # configuration for heating
+    cool:
+      entity_id: switch.oo_ac_switch_det
+
+      # setpoint limits
+      min_target_temp: 15
+      max_target_temp: 40
+      initial_target_temp: 30
+
+      # hysteris controller
+      on_off_mode:
+        # switches on when temp is 'hysteresis_on' above (cooling) setpoint
+        hysteresis_on: 0.5
+        # switches off when temp is 'hysteresis_off' above (cooling) setpoint
+        hysteresis_off: 1
+
+        # avoid short valve opening and quick on-off changes
+        min_cycle_duration:
+          minutes: 3
+
+        # check each interval if valve needs to opened or closed
+        control_interval:
+          minutes: 15
+
+

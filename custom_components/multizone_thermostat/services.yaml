@@ -21,10 +21,13 @@ set_preset_mode:
   fields:
     entity_id:
       description: Thermostat entity_id
-      example: climate.study
+      example: climate.master
+    hvac_mode:
+      description: hvac mode
+      example: heat or cool
     preset_mode:
       description: New value of preset mode
-      example: "away"
+      example: "holiday"
 
 
 # Describes the format for available PIDThermostat services
@@ -64,20 +67,6 @@ set_integral:
     integral:
       description: integral value of PID controller
       example: 5
-
-#VALVE_PID
-set_goal:
-  description: Set a new goal value
-  fields:
-    entity_id:
-      description: Thermostat entity_id
-      example: climate.study
-    hvac_mode:
-      description: hvac mode
-      example: heat or cool
-    goal:
-      description: goal value of valve mode controller
-      example: 60
 
 #weather mode
 set_ka_kb:
@@ -126,6 +115,9 @@ satelite_mode:
     pwm_timer:
       description: reference start time
       example: 1161611
+    master_delay:
+      description: master valve opening delay
+      example: 60
 
 detailed_output:
   description: Include detailed output (PID, control output) in attributes
