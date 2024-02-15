@@ -1033,10 +1033,6 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         self.hass.async_create_task(self._async_update_current_temp(new_state.state))
 
-        # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
-        if self._hvac_on is not None and self._hvac_on.is_hvac_on_off_mode:
-            self.hass.async_create_task(self._async_controller())
-
     @callback
     def _async_outdoor_temp_change(
         self, event: EventType[EventStateChangedData]
@@ -1293,6 +1289,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self._logger.debug(
                 "filtered sensor update temp '%.2f'", self._kf_temp.get_temp
             )
+
+        # if pid/pwm mode is active: do not call operate but let pid/pwm cycle handle it
+        if self._hvac_on is not None and self._hvac_on.is_hvac_on_off_mode:
+            self.hass.async_create_task(self._async_controller())
+
         if current_temp:
             self.async_write_ha_state()  # called from controller thus not needed here
 
