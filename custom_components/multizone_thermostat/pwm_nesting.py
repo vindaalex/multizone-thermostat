@@ -663,6 +663,7 @@ class Nesting:
     def get_master_output(self) -> dict:
         """Control ouput (offset and pwm) for master."""
         end_time = 0
+        end_time_prop = 0
         master_offset = None
         # nested rooms present
         if (
@@ -672,54 +673,54 @@ class Nesting:
             # loop over nesting to find start offset
             for pwm_i, rooms in enumerate(self.cleaned_rooms):
                 if len(rooms) > 0 and master_offset is None:
-                    master_offset = pwm_i / self.master_pwm_scale
+                    master_offset = pwm_i
 
             # find max end time
             room_end_time = [0]
             for i_r, room in enumerate(self.rooms):
                 if room in self.offset:
+                    # take actual pwm into account and not rounded
+                    # scale offsets back to NESTING_MATRIX domain
                     room_end = (
                         self.offset[room] * self.scale_factor[room] + self.real_pwm[i_r]
-                    ) / self.master_pwm_scale
+                    )
                     room_end_time.append(room_end)
 
             end_time = max(room_end_time)
+            self._logger.debug("pwm on-off '%s'", end_time / self.master_pwm_scale)
 
-            # continuous operation possible due to prop valves
-            if self.min_load > 0 and self.heating_load_prop > self.min_load:
-                end_time = NESTING_MATRIX / self.master_pwm_scale
-
-        # only proportional valves require heat
-        elif self.heating_request_prop > 0:
-            master_offset = 0
-            # check if prop valves request enough heat
-            if self.min_load > 0:
-                end_time = min(
-                    1,
-                    max(
-                        self.heating_load_prop / self.min_load,
-                        self.pwm_threshold,
-                        self.min_prop_valve_opening,
-                    ),
-                )
-            # otherwise shorten pwm
-            elif self.operation_mode in [
-                NestingMode.MASTER_MIN_ON,
-                NestingMode.MASTER_BALANCED,
-            ]:
-                end_time = max(
-                    self.pwm_threshold,
-                    self.min_prop_valve_opening,
-                    self.heating_load_prop**0.5,
-                )
-            else:
-                end_time = 1
-
-            end_time /= self.master_pwm_scale
-        
         if master_offset is None:
             master_offset = 0
 
+        # proportional valves require heat
+        if self.load_prop > 0:
+            # prop valves are full cycle open
+            
+            # too much load
+            if self.load_total / NESTING_MATRIX > end_time - master_offset:
+                end_time_prop = self.load_total / NESTING_MATRIX
+
+            # continuous operation possible due to prop valves
+            if (
+                self.operation_mode
+                in [NestingMode.MASTER_BALANCED, NestingMode.MASTER_CONTINUOUS]
+                and self.area_avg_prop > self.min_area > 0
+            ):
+                end_time_prop = NESTING_MATRIX
+
+            self._logger.debug(
+                "pwm proportional '%s'", end_time_prop / self.master_pwm_scale
+            )
+            # assure sufficient opening
+            end_time_prop = max(
+                end_time_prop,
+                self.pwm_threshold,
+                self.min_prop_valve_opening,
+            )
+
+        end_time = max(end_time, end_time_prop) / self.master_pwm_scale
+        master_offset /= self.master_pwm_scale
+        self._logger.debug("master start '%s'; end '%s", master_offset, end_time)
         return {
             ATTR_CONTROL_OFFSET: master_offset,
             ATTR_CONTROL_PWM_OUTPUT: end_time - master_offset,
