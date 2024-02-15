@@ -54,7 +54,7 @@ class Nesting:
 
         self.master_pwm = master_pwm
         self.master_pwm_scale = NESTING_MATRIX / self.master_pwm
-        self.min_load = min_load * NESTING_MATRIX
+        self.min_area = min_load * NESTING_MATRIX
         self.pwm_threshold = pwm_threshold / self.master_pwm * NESTING_MATRIX
         self.min_prop_valve_opening = min_prop_valve_opening * NESTING_MATRIX
         self.area_scale = NESTING_MATRIX / tot_area
