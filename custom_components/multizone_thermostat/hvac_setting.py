@@ -252,24 +252,29 @@ class HVACSetting:
         """Determine switch state for hvac on_off."""
         tolerance_on, tolerance_off = self.get_hysteris
         target_temp = self.target_temperature
-        target_temp_min = target_temp - tolerance_on
-        target_temp_max = target_temp + tolerance_off
         current_temp = self.current_temperature
 
         self._logger.debug(
-            "on-off - target %s, bandwidth (%s - %s), current %.2f",
+            "on-off - target %s, on %s, off %s, current %.2f",
             target_temp,
-            target_temp_min,
-            target_temp_max,
+            tolerance_on,
+            tolerance_off,
             current_temp,
         )
 
         if self._hvac_mode == HVACMode.HEAT:
+            target_temp_min = target_temp - tolerance_on
+            target_temp_max = target_temp + tolerance_off
+
             if current_temp >= target_temp_max:
                 self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 0
             elif current_temp <= target_temp_min:
                 self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 100
+
         elif self._hvac_mode == HVACMode.COOL:
+            target_temp_min = target_temp - tolerance_off
+            target_temp_max = target_temp + tolerance_on
+
             if current_temp <= target_temp_min:
                 self._on_off[ATTR_CONTROL_PWM_OUTPUT] = 0
             elif current_temp >= target_temp_max:
