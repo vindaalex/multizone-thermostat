@@ -616,7 +616,7 @@ class Nesting:
         )
 
     def get_nesting(self) -> dict:
-        """Get offset per room with offset in satelite pwm scale."""
+        """Get offset per room with offset in satellite pwm scale."""
         len_pwm = self.max_nested_pwm()
         if len_pwm == 0:
             return {}
@@ -627,10 +627,9 @@ class Nesting:
             # loop over pwm
             # first check if some are at end
             # extract unique rooms by fromkeys method
-            if (
-                self.operation_mode == NestingMode.MASTER_CONTINUOUS
-                and self.pwm_for_nesting == NESTING_MATRIX
-            ):
+            if len_pwm == NESTING_MATRIX:
+                # self.operation_mode == NestingMode.MASTER_CONTINUOUS
+                # and self.pwm_for_nesting == NESTING_MATRIX
                 rooms = list(dict.fromkeys(lid[:, -1]))
                 rooms = [r_i for r_i in rooms if r_i is not None]
                 if not rooms:
@@ -639,10 +638,12 @@ class Nesting:
                     self.cleaned_rooms[len_pwm - 1].append(room)
                     if room not in self.offset:
                         room_pwm = self.real_pwm[self.rooms.index(room)]
-                        self.offset[room] = (len_pwm - room_pwm) / self.scale_factor[
-                            room
-                        ]
+                        # offset in satellite pwm scale
+                        self.offset[room] = (
+                            NESTING_MATRIX - room_pwm
+                        ) / self.scale_factor[room]
 
+            # define offsets others
             for i_2 in range(lid.shape[1]):
                 # last one already done
                 if i_2 < len_pwm - 1:
