@@ -317,10 +317,9 @@ class HVACSetting:
                 current, setpoint, force=force
             )
 
-    @property
-    def valve_pos_pwm_on_off(self) -> float:
+    def get_control_master(self) -> float:
         """Master pwm based on nesting of satelites for pwm controlled on-off valves."""
-        return self.nesting.get_master_output()[ATTR_CONTROL_PWM_OUTPUT]
+        return self.nesting.get_master_output()
 
     def calc_control_output(self) -> dict:
         """Return the control output (offset and valve pos) of the thermostat."""
@@ -340,7 +339,9 @@ class HVACSetting:
         elif self.is_hvac_master_mode:
             # Determine valve opening for master valve based on satelites running in
             # proportional hvac mode
-            control_output = self.valve_pos_pwm_on_off
+            master_output = self.get_control_master()
+            self.time_offset = master_output[ATTR_CONTROL_OFFSET]
+            control_output = master_output[ATTR_CONTROL_PWM_OUTPUT]
 
         if self.is_hvac_master_mode or self.is_hvac_proportional_mode:
             if control_output > self.pwm_scale:
@@ -349,11 +350,7 @@ class HVACSetting:
             elif control_output < self.pwm_threshold:
                 control_output = 0
 
-            elif (
-                not self.is_hvac_master_mode
-                and self.time_offset == 0
-                and self.get_pwm_time.seconds
-            ):
+            elif not self.is_hvac_master_mode and self.get_pwm_time.seconds:
                 control_output += (
                     self.master_delay / self.get_pwm_time.seconds * self.pwm_scale
                 )
