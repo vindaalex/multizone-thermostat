@@ -74,7 +74,7 @@ class Nesting:
         self.prop_area = []
 
     @property
-    def heating_request_on_off(self):
+    def load_on_off(self):
         """Nesting sum product of room area and pwm."""
         if len(self.pwm) == 0:
             return 0
@@ -82,7 +82,7 @@ class Nesting:
             return sum([pwm_i * area_i for pwm_i, area_i in zip(self.area, self.pwm)])
 
     @property
-    def heating_request_prop(self):
+    def load_prop(self):
         """Nesting proportional valves,sum product of room area and pwm."""
         if len(self.prop_pwm) == 0:
             return 0
@@ -92,14 +92,14 @@ class Nesting:
             )
 
     @property
-    def total_heating_request(self):
+    def load_total(self):
         """Nesting all rooms, sum product of room area and pwm."""
-        return self.heating_request_on_off + self.heating_request_prop
+        return self.load_on_off + self.load_prop
 
     @property
-    def heating_load_prop(self):
+    def area_avg_prop(self):
         """Continuous heat request from rooms with prop valves."""
-        return self.heating_request_prop / NESTING_MATRIX
+        return self.load_prop / NESTING_MATRIX
 
     @property
     def max_all_pwm(self):
@@ -110,115 +110,163 @@ class Nesting:
             return 0
 
     @property
-    def min_heating_load_by_on_off(self):
+    def min_pwm_on_off(self):
+        """Min pwm value of on-off valves."""
+        if len(self.pwm) == 0:
+            return 0
+
+        none_zero_pwm = [i for i in self.pwm if i != 0]
+        if len(none_zero_pwm) == 1:
+            return 0
+
+        return min(none_zero_pwm)
+
+    @property
+    def max_pwm_on_off(self):
+        """Maxmimum pwm for on-off valves."""
+        return max(self.pwm)
+
+    @property
+    def sum_pwm_on_off(self):
+        """Sum pwm for on-off valves."""
+        return sum(self.pwm)
+
+    @property
+    def min_area_on_off(self):
         """Minimum loading required by on-off valves."""
-        return max(0, self.min_load - self.heating_load_prop)
+        return max(0, self.min_area - self.area_avg_prop)
+
+    def pwm_for_continuous_mode(self):
+        """Calculate nesting pwm for continous mode."""
+        if self.min_area_on_off > 0:
+            sum_pwm = 0
+            load_area_rest = 0
+            for i, a_i in enumerate(self.area):
+                if a_i >= self.min_area_on_off:
+                    sum_pwm += self.pwm[i]
+                else:
+                    load_area_rest = sum(
+                        [a * b for a, b in zip(self.area[i:], self.pwm[i:])]
+                    )
+                    break
+
+            # calc pwm duration for rest based on min_load compensated by prop valves
+            pwm_rest = load_area_rest / self.min_area_on_off
+            return_value = sum_pwm + pwm_rest
+
+        # no minimum defined thus check if continuous is possible
+        # when sum is less than pwm scale
+        # use reduced pwm scale instead
+        else:
+            # no prop valves
+            return_value = self.sum_pwm_on_off
+
+        return return_value
+
+    def pwm_for_balanced_mode(self):
+        """Calculate nesting pwm for balanced mode."""
+        # max area with pwm > 0
+        max_area = max([a_i for i, a_i in enumerate(self.area) if self.pwm[i] != 0])
+
+        # min domain nesting due to max area and max pwm
+        load_envelope = max_area * self.max_pwm_on_off
+
+        # shortest possible nesting
+        min_pwm_nesting = self.max_pwm_on_off + self.min_pwm_on_off
+
+        # pwm in case heat requirement with lowest continuous load
+        # no nesting options
+        if self.min_pwm_on_off == 0:
+            return self.max_pwm_on_off
+
+        # largest room is dominant: too little freedom for nesting
+        # max area = peak load; max pwm is duration; if load_area is less nesting in pwm_max
+        if load_envelope / self.load_on_off > NESTING_DOMINANCE:
+            return self.max_pwm_on_off
+
+        # min pwm extension would result in too low load
+        if self.load_on_off / min_pwm_nesting < self.min_area_on_off > 0:
+            return self.max_pwm_on_off
+
+        # on-off needs nesting above minimum limit
+        if self.min_area_on_off > 0:
+            area_on_off = min(self.min_area_on_off, max_area)
+            return_value = max(self.max_pwm_on_off, self.load_on_off / area_on_off)
+        else:
+            return_value = self.load_on_off / max_area
+
+        return max(min_pwm_nesting, return_value)
+
+    def pwm_for_minimum_mode(self):
+        """Calculate nesting pwm for minimal on mode."""
+        nested_pwm = self.load_on_off / NESTING_MATRIX
+        return_value = max(self.max_pwm_on_off, nested_pwm)
+
+        # pwm is lower than threshold without lower load
+        if return_value < self.pwm_threshold and self.min_area_on_off == 0:
+            return_value = self.pwm_threshold
+
+        # pwm is lower than threshold with lower load
+        elif return_value < self.pwm_threshold and self.min_area_on_off > 0:
+            if (
+                min(self.load_on_off / self.min_area_on_off, self.sum_pwm_on_off)
+                > self.pwm_threshold
+            ):
+                return_value = self.pwm_threshold
+            else:
+                return_value = 0
+
+        return return_value
 
     @property
     def pwm_for_nesting(self) -> int:
         """Determine size of pwm for nesting."""
         return_value = 0
-        # max pwm of rooms
-        pwm_max = self.max_all_pwm
 
         # no heat required
-        if pwm_max == 0:
+        if self.max_pwm_on_off == 0:
             return 0
 
         # # check if load requirement is too low
-        if self.pwm_threshold > 0 and self.min_load > 0:
-            if self.pwm_threshold * self.min_load > self.total_heating_request:
+        if self.pwm_threshold > 0 and self.min_area_on_off > 0:
+            if self.pwm_threshold * self.min_area > self.load_total:
                 return 0
 
         # continuous operation possible due to prop valves
         if (
             self.operation_mode
             in [NestingMode.MASTER_CONTINUOUS, NestingMode.MASTER_BALANCED]
-            and self.min_load > 0
-            and self.heating_load_prop > self.min_load
+            and self.area_avg_prop > self.min_area > 0
         ):
-            return_value = NESTING_MATRIX
-        elif self.operation_mode == NestingMode.MASTER_CONTINUOUS:
-            # check if load is above minimum
-            if self.min_load > 0:
-                sum_pwm = 0
-                load_area_rest = 0
-                for i, a_i in enumerate(self.area):
-                    if a_i >= self.min_heating_load_by_on_off:
-                        sum_pwm += self.pwm[i]
-                    else:
-                        load_area_rest = sum(
-                            [a * b for a, b in zip(self.area[i:], self.pwm[i:])]
-                        )
-                        break
+            return NESTING_MATRIX
 
-                # calc pwm duration for rest based on min_load compensated by prop valves
-                pwm_rest = load_area_rest / self.min_heating_load_by_on_off
-                return_value = min(NESTING_MATRIX, sum_pwm + pwm_rest)
-
-            # no minimum defined thus check if continuous is possible
-            # when sum is less than pwm scale
-            # use reduced pwm scale instead
-            else:
-                # no prop valves
-                return_value = min(NESTING_MATRIX, sum(self.pwm))
+        # pwm as high as possible
+        if self.operation_mode == NestingMode.MASTER_CONTINUOUS:
+            return_value = self.pwm_for_continuous_mode()
 
         # balanced pwm duration versus heat requirement
         elif self.operation_mode == NestingMode.MASTER_BALANCED:
-            index_min_pwm = self.pwm.index(min([i for i in self.pwm if i != 0]))
-            index_max_area = self.area.index(
-                max([a_i for i, a_i in enumerate(self.area) if self.pwm[i] != 0])
-            )
-
-            max_pwm_on_off = max(self.pwm)
-            max_area = self.area[index_max_area]
-            # heat_request of largest room
-            load_max_area = max_area * self.pwm[index_max_area]
-            # min domain nesting due to max area and max pwm
-            min_domain_nesting = max_area * max_pwm_on_off
-            # shortest possible nesting
-            min_pwm_nesting = max_pwm_on_off + self.pwm[index_min_pwm]
-
-            # pwm in case heat requirement with lowest continuous load
-            if self.min_load > 0:
-                load_for_on_off = min(self.min_heating_load_by_on_off, max_area)
-            else:
-                load_for_on_off = max_area
-            # lowest continous pwm but not less than largest pwm
-            pwm_low_load = max(
-                self.heating_request_on_off / load_for_on_off, max_pwm_on_off
-            )
-
-            # in case nesting could result in continous opening
-            # and sufficient other than the 'load_area_pwm_max' rooms
-            # require heat (enough options for nesting)
-            if NESTING_MATRIX * NESTING_MARGIN < pwm_low_load:
-                # full pwm size can be used
-                return_value = NESTING_MATRIX
-            elif (
-                # largest room is dominant: too little freedom for nesting
-                # max area = peak load; max pwm is duration; if load_area is less nesting in pwm_max
-                max(load_max_area, min_domain_nesting)
-                > self.heating_request_on_off * NESTING_DOMINANCE
-                # min pwm extension would result in too low load
-                or (
-                    self.min_load > 0
-                    and self.heating_request_on_off / min_pwm_nesting < self.min_load
-                )
-            ):
-                return_value = max_pwm_on_off
-            elif min_pwm_nesting > pwm_low_load:
-                return_value = min_pwm_nesting
-            else:
-                return_value = pwm_low_load
+            return_value = self.pwm_for_balanced_mode()
 
         # max of pwm signals
         elif self.operation_mode == NestingMode.MASTER_MIN_ON:
-            nested_pwm = self.heating_request_on_off / NESTING_MATRIX
-            return_value = max(pwm_max, nested_pwm)
+            return_value = self.pwm_for_minimum_mode()
+
+        # pwm below threshold
+        if self.min_area_on_off > 0 and return_value < self.pwm_threshold > 0:
+            return_value = 0
 
         # bound output minimal to max pwm and nesting matrix
-        return_value = min(max(pwm_max, return_value), NESTING_MATRIX)
+        return_value = min(return_value, NESTING_MATRIX)
+
+        # avoid too short off period when pwm threshold is specified
+        if (
+            self.pwm_threshold > 0
+            and return_value != NESTING_MATRIX
+            and return_value + self.pwm_threshold > NESTING_MATRIX
+        ):
+            return_value = NESTING_MATRIX - self.pwm_threshold
+
         return int(ceil(return_value))
 
     def max_nested_pwm(
