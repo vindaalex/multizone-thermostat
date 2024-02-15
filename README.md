@@ -31,7 +31,8 @@ When a master controller is included it will coordinate for all enlisted satelli
 
 # Examples
 See the examples folder for examples. 
-The '\examples\multizone thermostat - explanation.yaml' shows an worked-out example including explanation.
+The '\examples\multizone thermostat - explained.yaml' shows an worked-out multizone example including explanation.
+The '\examples\single thermostat - on_off.yaml' shows an worked-out single operating hysteris thermostat with explanation.
 
 # Room thermostat configuration (not for master config)
 This thermostat is used for satellite or stand-alone operation mode. 
