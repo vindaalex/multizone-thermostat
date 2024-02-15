@@ -279,11 +279,13 @@ class Nesting:
             max_packed = 0
 
         if forced_room is not None:
+            # check new room heat requirement to stretch pwm
             if (
                 max_packed < dt + self.pwm[forced_room]
                 and self.area[forced_room] < 0.15 * NESTING_MATRIX
             ):
                 return max_packed
+            # lengthen nested pwm when new room requires sufficient heat
             else:
                 return dt + self.pwm[forced_room]
         else:

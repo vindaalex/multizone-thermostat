@@ -1239,6 +1239,11 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     self.hass.async_create_task(
                         self._async_switch_turn_off(hvac_mode=other_mode)
                     )
+                # elif (
+                #         entity_id == self._hvac_on.get_hvac_switch
+                #         and self._is_valve_open()
+                #         and self._is_valve_open(hvac_mode=other_mode)
+                #     ):
 
             else:
                 # not a current active thermostat thus switch state change should not be triggered
@@ -1642,19 +1647,23 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                     if self._stop_pwm is not None:
                         await self._async_stop_pwm()
 
-                    # negative duration of valve 
+                    # negative duration of valve
                     if (
                         # control time is too short
-                        end_time <= start_time 
+                        end_time <= start_time
                         # valve should be closed
                         or end_time < now
                         # opening time shorter than threshold
-                        or end_time - now < max(self._hvac_on.pwm_threshold / pwm_scale * pwm_duration,START_MISALINGMENT) 
+                        or end_time - now
+                        < max(
+                            self._hvac_on.pwm_threshold / pwm_scale * pwm_duration,
+                            START_MISALINGMENT,
+                        )
                     ):
                         if self._is_valve_open():
                             await self._async_switch_turn_off()
                         return
-                    
+
                     # check if current switch state is matching
                     # if self.control_output[ATTR_CONTROL_PWM_OUTPUT] == pwm_scale:
                     #     await self._async_switch_turn_on()

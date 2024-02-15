@@ -216,6 +216,7 @@ class HVACSetting:
         """Init the master mode."""
         if reset:
             self._satelites = {}
+            
         self.nesting = pwm_nesting.Nesting(
             self._name,
             operation_mode=self._operation_mode,
