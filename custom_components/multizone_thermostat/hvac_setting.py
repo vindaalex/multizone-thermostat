@@ -750,8 +750,14 @@ class HVACSetting:
 
     @property
     def get_min_valve_opening(self) -> float:
-        """Initial minimum opening of master when prop valves are present."""
-        return self._master[CONF_MIN_VALVE]
+        """Initial minimum opening of master when prop valves are present.
+
+        Including master delay.
+        """
+        delay_in_pwm = 0
+        if self.get_pwm_time.total_seconds() > 0 and self.compensate_valve_lag > 0:
+            delay_in_pwm = self.compensate_valve_lag / self.get_pwm_time.total_seconds()
+        return self._master[CONF_MIN_VALVE] + delay_in_pwm
 
     @property
     def get_wc_sensor(self) -> str | None:
