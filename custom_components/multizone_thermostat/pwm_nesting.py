@@ -313,7 +313,8 @@ class Nesting:
         for room, data in sat_data.items():
             # scale room pwm to master
             scale_factor = (
-                self.master_pwm / data[CONF_PWM_SCALE] * self.master_pwm_scale
+                # self.master_pwm / data[CONF_PWM_SCALE] * self.master_pwm_scale
+                NESTING_MATRIX / data[CONF_PWM_SCALE]
             )
             self.scale_factor[room] = scale_factor
 
