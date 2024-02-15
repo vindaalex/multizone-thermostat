@@ -965,7 +965,10 @@ class HVACSetting:
     def get_variable_attr(self) -> ConfigType:
         """Return attributes for climate entity."""
         open_window = None
-        if isinstance(self.current_state, (list, tuple, np.ndarray)):
+        if (
+            isinstance(self.current_state, (list, tuple, np.ndarray))
+            and self.is_hvac_proportional_mode
+        ):
             current = self.current_state
             open_window = self.check_window_open(current[1])
         tmp_dict = {}
