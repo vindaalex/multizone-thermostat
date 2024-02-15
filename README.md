@@ -195,13 +195,14 @@ If no pwm interval is defined, it will set the state of "heater" from 0 to "pwm_
 with the data (as sub):
 * satelites (Required): between square brackets defined list of thermostats by their name 
 * operation_mode (Optional): satellite nesting method: "minimal_on", "balanced" or "continuous". Default = "balanced"
-* lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.2. (a minimum heating capacity of 20%  assumed based on 100% when all rooms required heat)
+* lower_load_scale (Optional): For nesting assumed minimum required load heater. Default = 0.15. (a minimum heating capacity of 15%  assumed based on 100% when all rooms required heat)
 * control_interval (Required): interval that controller is updated. The satellites should have a control_interval equal to the master or the master control_interval should be dividable by the satellite control_interval. Specify a time period.
 * pwm_duration (Optional): Set period time for pwm signal. If it's not set, pwm is sending proportional value to switch. Specify a time period. Default = 0
 * pwm_scale (Optional): Set analog output offset to 0. Example: If it's 500 the output value can be between 0 and 500. Default = 100
 * pwm_resolution (optional): Set the resolution of the pwm_scale between min and max difference. Default = 50 (50 steps between 0 and 100)
 * pwm_threshold (Optional): Set the minimal difference before activating switch. To avoid very short off-on-off or on-off-on changes. Default is not acitvated
-* min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0.1 (* pwm_scale)
+* min_opening_for_propvalve (optional): Set the minimal percentage (between 0 and 1) active pwm when a proportional valve requires heat. Default 0 (* pwm_scale)
+* compensate_valve_lag (optional): Delay the opening of the master valve to assure that flow is guaranteed. Specify a time period. Default no delay.
 
 
 # Sensor filter (filter_mode):
