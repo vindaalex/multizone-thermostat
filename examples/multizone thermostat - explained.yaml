@@ -94,25 +94,25 @@ sensor:
   - platform: template
     sensors:
       mz_sensor_1:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_1') | float(0) }}"
       mz_sensor_2:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_2') | float(0) }}"
       mz_sensor_3:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_3') | float(0) }}"
       mz_sensor_4:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_4') | float(0) }}"
       mz_sensor_5:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_5') | float(0) }}"
       mz_sensor_6:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_temperature_6') | float(0) }}"
       mz_sensor_out_1:
-        unit_of_measurement: "degrees"
+        unit_of_measurement: "°C"
         value_template: "{{ states('input_number.mz_sensor_outdoor_temperature_1') | float(0) }}"
 
       filt_sensor1:

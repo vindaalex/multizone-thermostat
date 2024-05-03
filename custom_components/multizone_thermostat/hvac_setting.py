@@ -179,7 +179,7 @@ class HVACSetting:
                 self.run_pid(force)
                 if self._wc and self._pid:
                     # avoid integral run-off when sum is negative
-                    pid = self._pid.PID[PID_CONTROLLER].get_PID_parts
+                    pid = self._pid_cntrl.get_PID_parts
                     if (
                         pid["p"] < 0  # too warm
                         and pid["i"] < -self._wc[ATTR_CONTROL_PWM_OUTPUT]
@@ -216,7 +216,7 @@ class HVACSetting:
         """Init the master mode."""
         if reset:
             self._satelites = {}
-            
+
         self.nesting = pwm_nesting.Nesting(
             self._name,
             operation_mode=self._operation_mode,
@@ -230,12 +230,11 @@ class HVACSetting:
     def start_pid(self) -> None:
         """Init the PID controller."""
         self._logger.debug("Init pid settings")
-        self._pid.PID = {}
         lower_pwm_scale, upper_pwm_scale = self.pwm_scale_limits(self._pid)
 
         kp, ki, kd = self.get_pid_param(self._pid)  # pylint: disable=invalid-name
 
-        self._pid.PID[PID_CONTROLLER] = pid_controller.PIDController(
+        self._pid_cntrl = pid_controller.PIDController(
             self._name,
             CONF_PID_MODE,
             self.get_operate_cycle_time.seconds,
@@ -314,7 +313,7 @@ class HVACSetting:
         if self.is_hvac_master_mode and current == 0:
             self._pid[ATTR_CONTROL_PWM_OUTPUT] = 0
         else:
-            self._pid[ATTR_CONTROL_PWM_OUTPUT] = self._pid.PID[PID_CONTROLLER].calc(
+            self._pid[ATTR_CONTROL_PWM_OUTPUT] = self._pid_cntrl.calc(
                 current, setpoint, force=force
             )
 
@@ -719,25 +718,25 @@ class HVACSetting:
             self._pid[ATTR_KD] = kd
 
         if update:
-            self._pid.PID[PID_CONTROLLER].set_pid_param(kp=kp, ki=ki, kd=kd)
+            self._pid_cntrl.set_pid_param(kp=kp, ki=ki, kd=kd)
 
     def pid_reset_time(self) -> None:
         """Reset the current time for PID to avoid overflow of the intergral part when switching between hvac modes."""
-        self._pid.PID[PID_CONTROLLER].reset_time()
+        self._pid_cntrl.reset_time()
 
     def set_integral(self, integral: float) -> None:
         """Overwrite integral value."""
-        self._pid.PID[PID_CONTROLLER].integral = integral
+        self._pid_cntrl.integral = integral
 
     @property
     def get_integral(self) -> float:
         """Get pid integral value."""
-        return self._pid.PID[PID_CONTROLLER].integral
+        return self._pid_cntrl.integral
 
     @property
     def get_velocity(self) -> float:
         """Get pid velocity value."""
-        return self._pid.PID[PID_CONTROLLER].differential
+        return self._pid_cntrl.differential
 
     @property
     def get_ka_kb_param(self) -> list:
@@ -997,7 +996,7 @@ class HVACSetting:
             if self.is_prop_pid_mode:
                 tmp_dict["PID_values"] = self.get_pid_param(self._pid)
                 if self.is_prop_pid_mode:
-                    PID_parts = self._pid.PID[PID_CONTROLLER].get_PID_parts
+                    PID_parts = self._pid_cntrl.get_PID_parts
                     if self.detailed_output:
                         tmp_dict["PID_P"] = round(PID_parts["p"], 3)
                         tmp_dict["PID_I"] = round(PID_parts["i"], 3)

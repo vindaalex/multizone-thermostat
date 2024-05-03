@@ -46,7 +46,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN, CoreState, HomeAssistant, callback
+from homeassistant.core import DOMAIN as HA_DOMAIN, CoreState, HomeAssistant, callback, Event
 from homeassistant.exceptions import ConditionError
 from homeassistant.helpers import condition
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -60,7 +60,7 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.template import state_attr
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, EventType
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting, services
 from .const import (
@@ -190,6 +190,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     """Representation of a MultiZone Thermostat device."""
 
     _attr_should_poll = False
+    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
         self,
@@ -997,7 +998,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     @callback
     def _async_indoor_temp_change(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle temperature change.
 
@@ -1035,7 +1036,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
     @callback
     def _async_outdoor_temp_change(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle outdoor temperature changes.
 
@@ -1152,7 +1153,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
                 )
 
     @callback
-    def _async_satelite_change(self, event: EventType[EventStateChangedData]) -> None:
+    def _async_satelite_change(self, event: Event[EventStateChangedData]) -> None:
         """Handle satelite thermostat changes."""
         new_state = event.data.get("new_state")
         if not new_state:
@@ -1197,7 +1198,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             # self.schedule_update_ha_state(force_refresh=False)
 
     @callback
-    def _async_switches_change(self, event: EventType[EventStateChangedData]) -> None:
+    def _async_switches_change(self, event: Event[EventStateChangedData]) -> None:
         """Handle device switch state changes."""
         new_state = event.data.get("new_state")
         entity_id = event.data.get(ATTR_ENTITY_ID)
@@ -2128,7 +2129,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def supported_features(self):
         """Return the list of supported features."""
         return (
-            ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
+            ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
         )
 
     @property
