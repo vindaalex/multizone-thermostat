@@ -37,7 +37,6 @@ from homeassistant.const import (
     SERVICE_TURN_ON,
     STATE_CLOSED,
     STATE_CLOSING,
-    STATE_JAMMED,
     STATE_OFF,
     STATE_ON,
     STATE_OPEN,
@@ -46,7 +45,13 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN, CoreState, HomeAssistant, callback, Event
+from homeassistant.core import (
+    DOMAIN as HA_DOMAIN,
+    CoreState,
+    HomeAssistant,
+    callback,
+    Event,
+)
 from homeassistant.exceptions import ConditionError
 from homeassistant.helpers import condition
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -108,7 +113,7 @@ from .const import (
 )
 from .platform_schema import PLATFORM_SCHEMA  # noqa: F401
 
-ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_JAMMED, STATE_PROBLEM]
+ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_PROBLEM]
 NOT_SUPPORTED_SWITCH_STATES = [STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING]
 HVAC_ACTIVE = [HVACMode.HEAT, HVACMode.COOL]
 
@@ -691,6 +696,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             ]:
                 # new hvac mode thus all switches off
                 self._pwm_start_time = pwm_start_time
+                # self.update_pwm_time()
                 self._sat_id = sat_id
                 self._self_controlled = OperationMode.MASTER
                 self._hvac_on.master_delay = master_delay
@@ -997,9 +1003,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             self.async_on_remove(self._satelites)
 
     @callback
-    def _async_indoor_temp_change(
-        self, event: Event[EventStateChangedData]
-    ) -> None:
+    def _async_indoor_temp_change(self, event: Event[EventStateChangedData]) -> None:
         """Handle temperature change.
 
         Only call emergency stop due to stale sensor, ignore invalid values
@@ -1035,9 +1039,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         self.hass.async_create_task(self._async_update_current_temp(new_state.state))
 
     @callback
-    def _async_outdoor_temp_change(
-        self, event: Event[EventStateChangedData]
-    ) -> None:
+    def _async_outdoor_temp_change(self, event: Event[EventStateChangedData]) -> None:
         """Handle outdoor temperature changes.
 
         Only call emergency stop due to stale sensor, ignore invalid values
@@ -2129,7 +2131,10 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     def supported_features(self):
         """Return the list of supported features."""
         return (
-            ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
+            ClimateEntityFeature.TURN_OFF
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.PRESET_MODE
+            | ClimateEntityFeature.TARGET_TEMPERATURE
         )
 
     @property
