@@ -1187,7 +1187,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         ) in [True, OperationMode.PENDING]:
             # force satellite to master mode
             self._async_change_satelite_modes(
-                {new_state.name: 0},
+                {new_state.entity_id.split(".", 1)[1]: 0},
                 control_mode=OperationMode.MASTER,
             )
             return

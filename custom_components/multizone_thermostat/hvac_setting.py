@@ -795,7 +795,7 @@ class HVACSetting:
 
     def update_satelite(self, state: State) -> bool:
         """Set and check new state of satelite."""
-        sat_name = state.name
+        sat_name = state.entity_id.split(".", 1)[1]
         area = state.attributes.get(CONF_AREA)
         self_controlled = state.attributes.get(ATTR_SELF_CONTROLLED)
         update = False
