@@ -201,7 +201,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     """Representation of a MultiZone Thermostat device."""
 
     _attr_should_poll = False
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.PRESET_MODE
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+    )
 
     def __init__(
         self,
@@ -2133,15 +2138,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         return return_val
 
-    @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return (
-            ClimateEntityFeature.TURN_OFF
-            | ClimateEntityFeature.TURN_ON
-            | ClimateEntityFeature.PRESET_MODE
-            | ClimateEntityFeature.TARGET_TEMPERATURE
-        )
+
 
     @property
     def precision(self) -> float:
