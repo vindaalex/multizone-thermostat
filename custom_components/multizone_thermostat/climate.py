@@ -64,6 +64,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.template import state_attr
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting, services
@@ -1097,8 +1098,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         # operated by master and check if currently active
         if self._self_controlled != OperationMode.SELF:
-            state = self.hass.states.get("climate.master")
-            master_mode = state.attributes.get("hvac_action") if state else None
+            master_mode = state_attr(
+                # self.hass, "climate." + self._self_controlled, "hvac_action"
+                self.hass,
+                "climate.master",
+                "hvac_action",
+            )
 
             # cancel when master in operation
             if master_mode in [HVACAction.HEATING, HVACAction.COOLING]:
@@ -1772,9 +1777,9 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
             valve_pos = control_val
 
         if self._self_controlled == OperationMode.MASTER:
-            state = self.hass.states.get("climate." + self._self_controlled)
-            master_mode = state.attributes.get(ATTR_HVAC_DEFINITION)
-
+            master_mode = state_attr(
+                self.hass, "climate." + self._self_controlled, ATTR_HVAC_DEFINITION
+            )
             if self.hvac_mode in master_mode and hvac_on.master_scaled_bound > 1:
                 master_control_val = master_mode[self.hvac_mode][ATTR_CONTROL_OUTPUT][
                     ATTR_CONTROL_PWM_OUTPUT
