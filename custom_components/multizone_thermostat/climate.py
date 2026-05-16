@@ -64,7 +64,6 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.reload import async_setup_reload_service
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.template import state_attr
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import DOMAIN, PLATFORMS, UKF_config, hvac_setting, services
@@ -117,6 +116,13 @@ ERROR_STATE = [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_PROBLEM]
 NOT_SUPPORTED_SWITCH_STATES = [STATE_OPEN, STATE_OPENING, STATE_CLOSED, STATE_CLOSING]
 HVAC_ACTIVE = [HVACMode.HEAT, HVACMode.COOL]
 
+# state_attr() was removed from homeassistant.helpers.template in HA 2026.5 
+def state_attr(hass, entity_id, attribute):
+    """Return the value of an attribute for an entity."""
+    state = hass.states.get(entity_id)
+    if state is None:
+        return None
+    return state.attributes.get(attribute)
 
 async def async_setup_platform(
     hass: HomeAssistant,
@@ -195,7 +201,12 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
     """Representation of a MultiZone Thermostat device."""
 
     _attr_should_poll = False
-    _enable_turn_on_off_backwards_compatibility = False
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.PRESET_MODE
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+    )
 
     def __init__(
         self,
@@ -1181,7 +1192,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
         ) in [True, OperationMode.PENDING]:
             # force satellite to master mode
             self._async_change_satelite_modes(
-                {new_state.name: 0},
+                {new_state.entity_id.split(".", 1)[1]: 0},
                 control_mode=OperationMode.MASTER,
             )
             return
@@ -2127,15 +2138,7 @@ class MultiZoneThermostat(ClimateEntity, RestoreEntity):
 
         return return_val
 
-    @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return (
-            ClimateEntityFeature.TURN_OFF
-            | ClimateEntityFeature.TURN_ON
-            | ClimateEntityFeature.PRESET_MODE
-            | ClimateEntityFeature.TARGET_TEMPERATURE
-        )
+
 
     @property
     def precision(self) -> float:
